@@ -1,0 +1,569 @@
+"use client";
+
+import { useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Crown, History, Settings, Trash2, X } from "lucide-react";
+import { Modal } from "@/components/ui/Modal";
+import { Toast } from "@/components/ui/Toast";
+
+type RoomMember = {
+  id: string;
+  userId: string;
+  nickname: string | null;
+  role: "creator" | "member";
+  joinedAt: string;
+};
+
+type PrayerPost = {
+  id: string;
+  userId: string;
+  authorNickname: string | null;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type RoomDetail = {
+  id: string;
+  title: string;
+  description: string;
+  creatorNickname: string | null;
+  createdAt: string;
+  isCreator: boolean;
+};
+
+type Props = {
+  room: RoomDetail;
+  currentUserId: string;
+  members: RoomMember[];
+  posts: PrayerPost[];
+};
+
+export function PrayerRoomDetail({ room, currentUserId, members, posts }: Props) {
+  const router = useRouter();
+  const [toast, setToast] = useState("");
+  const [writeOpen, setWriteOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
+  const [manageOpen, setManageOpen] = useState(false);
+  const [historyMember, setHistoryMember] = useState<RoomMember | null>(null);
+
+  const groupedPosts = useMemo(() => {
+    return posts.reduce<Record<string, PrayerPost[]>>((acc, post) => {
+      const key = new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium" }).format(new Date(post.createdAt));
+      acc[key] = acc[key] ?? [];
+      acc[key].push(post);
+      return acc;
+    }, {});
+  }, [posts]);
+
+  async function leaveRoom() {
+    if (!confirm("방에서 나가시겠습니까?")) return;
+
+    const res = await fetch(`/api/rooms/${room.id}/leave`, { method: "POST" });
+    const data = (await res.json()) as { error?: string };
+
+    if (!res.ok) {
+      setToast(data.error ?? "방 나가기에 실패했습니다.");
+      return;
+    }
+
+    router.push("/pray-room");
+    router.refresh();
+  }
+
+  return (
+    <main className="mx-auto flex min-h-dvh w-full max-w-xl flex-col bg-white/55">
+      <Toast message={toast} />
+      <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-white/70 bg-white/90 px-4 backdrop-blur">
+        <h1 className="min-w-0 truncate text-lg font-black text-slate-950">{room.title}</h1>
+        <button
+          type="button"
+          onClick={() => setSettingsOpen(true)}
+          className="grid h-10 w-10 place-items-center rounded-full border border-slate-200 bg-white text-slate-700"
+          aria-label="방 설정"
+        >
+          <Settings size={19} />
+        </button>
+      </header>
+
+      <section className="flex-1 px-4 pb-28 pt-4">
+        {Object.entries(groupedPosts).length ? (
+          Object.entries(groupedPosts).map(([date, datePosts]) => (
+            <div key={date} className="mb-6">
+              <div className="mb-3 flex justify-center">
+                <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-bold text-slate-600">{date}</span>
+              </div>
+              <div className="grid gap-3">
+                {datePosts.map((post) => (
+                  <PrayerPostCard
+                    key={post.id}
+                    post={post}
+                    canManage={post.userId === currentUserId}
+                    roomId={room.id}
+                    onToast={setToast}
+                  />
+                ))}
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="rounded-lg border border-dashed border-slate-300 bg-white p-6 text-center text-sm leading-6 text-slate-500">
+            아직 작성된 기도제목이 없습니다.
+          </div>
+        )}
+      </section>
+
+      <div className="fixed inset-x-0 bottom-0 z-20 safe-bottom">
+        <div className="mx-auto flex w-full max-w-xl justify-end px-4 pb-4">
+          <button
+            type="button"
+            onClick={() => setWriteOpen(true)}
+            className="grid h-14 w-14 place-items-center rounded-full bg-teal-700 text-2xl text-white shadow-soft"
+            aria-label="기도제목 작성"
+          >
+            ✏️
+          </button>
+        </div>
+      </div>
+
+      <PrayerPostModal
+        roomId={room.id}
+        open={writeOpen}
+        onClose={() => setWriteOpen(false)}
+        onToast={setToast}
+      />
+      <RoomSettingsDrawer
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        room={room}
+        members={members}
+        posts={posts}
+        onInfo={() => setInfoOpen(true)}
+        onManage={() => setManageOpen(true)}
+        onLeave={leaveRoom}
+        onHistory={setHistoryMember}
+        onToast={setToast}
+      />
+      <RoomInfoModal room={room} open={infoOpen} onClose={() => setInfoOpen(false)} />
+      <RoomManageModal
+        room={room}
+        open={manageOpen}
+        onClose={() => setManageOpen(false)}
+        onToast={setToast}
+      />
+      <MemberHistoryModal
+        member={historyMember}
+        posts={posts.filter((post) => post.userId === historyMember?.userId)}
+        onClose={() => setHistoryMember(null)}
+      />
+    </main>
+  );
+}
+
+function PrayerPostCard({
+  post,
+  canManage,
+  roomId,
+  onToast
+}: {
+  post: PrayerPost;
+  canManage: boolean;
+  roomId: string;
+  onToast: (message: string) => void;
+}) {
+  const router = useRouter();
+  const timerRef = useRef<number | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+
+  function openMenu() {
+    if (!canManage) return;
+    const action = confirm("수정하려면 확인, 삭제하려면 취소 후 길게 다시 누르지 말고 카드 하단 삭제 버튼을 사용하세요.");
+    if (action) setEditOpen(true);
+  }
+
+  async function deletePost() {
+    if (!confirm("기도제목을 삭제하시겠습니까?")) return;
+    const res = await fetch(`/api/rooms/${roomId}/posts/${post.id}`, { method: "DELETE" });
+    const data = (await res.json()) as { error?: string };
+
+    if (!res.ok) {
+      onToast(data.error ?? "삭제에 실패했습니다.");
+      return;
+    }
+
+    router.refresh();
+  }
+
+  return (
+    <article
+      onContextMenu={(event) => {
+        event.preventDefault();
+        openMenu();
+      }}
+      onPointerDown={() => {
+        timerRef.current = window.setTimeout(openMenu, 650);
+      }}
+      onPointerUp={() => {
+        if (timerRef.current) window.clearTimeout(timerRef.current);
+      }}
+      onPointerLeave={() => {
+        if (timerRef.current) window.clearTimeout(timerRef.current);
+      }}
+      className="rounded-lg bg-white p-4 shadow-soft"
+    >
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <p className="font-bold text-slate-900">{post.authorNickname ?? "알 수 없음"}</p>
+        <time className="text-xs font-semibold text-slate-400">
+          {new Intl.DateTimeFormat("ko-KR", { timeStyle: "short" }).format(new Date(post.createdAt))}
+        </time>
+      </div>
+      <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">{post.content}</p>
+      {canManage ? (
+        <div className="mt-4 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setEditOpen(true)}
+            className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600"
+          >
+            수정
+          </button>
+          <button
+            type="button"
+            onClick={deletePost}
+            className="inline-flex items-center gap-1 rounded-lg border border-rose-200 px-3 py-2 text-xs font-bold text-rose-700"
+          >
+            <Trash2 size={14} />
+            삭제
+          </button>
+        </div>
+      ) : null}
+      <PrayerPostModal
+        roomId={roomId}
+        post={post}
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        onToast={onToast}
+      />
+    </article>
+  );
+}
+
+function PrayerPostModal({
+  roomId,
+  post,
+  open,
+  onClose,
+  onToast
+}: {
+  roomId: string;
+  post?: PrayerPost;
+  open: boolean;
+  onClose: () => void;
+  onToast: (message: string) => void;
+}) {
+  const router = useRouter();
+  const [content, setContent] = useState(post?.content ?? "");
+  const [loading, setLoading] = useState(false);
+
+  async function submit() {
+    setLoading(true);
+    const endpoint = post ? `/api/rooms/${roomId}/posts/${post.id}` : `/api/rooms/${roomId}/posts`;
+    const res = await fetch(endpoint, {
+      method: post ? "PATCH" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content })
+    });
+    const data = (await res.json()) as { error?: string };
+    setLoading(false);
+
+    if (!res.ok) {
+      onToast(data.error ?? "저장에 실패했습니다.");
+      return;
+    }
+
+    if (!post) setContent("");
+    onClose();
+    router.refresh();
+  }
+
+  return (
+    <Modal title={post ? "기도제목 수정" : "기도제목 작성"} open={open} onClose={onClose}>
+      <div className="grid gap-3">
+        <textarea
+          value={content}
+          onChange={(event) => setContent(event.target.value)}
+          className="min-h-40 rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-teal-500"
+          placeholder="함께 기도할 내용을 적어주세요."
+          maxLength={1000}
+        />
+        <button
+          type="button"
+          onClick={submit}
+          disabled={loading}
+          className="rounded-lg bg-teal-700 px-4 py-3 font-bold text-white disabled:opacity-60"
+        >
+          저장
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+function RoomSettingsDrawer({
+  open,
+  onClose,
+  room,
+  members,
+  posts,
+  onInfo,
+  onManage,
+  onLeave,
+  onHistory,
+  onToast
+}: {
+  open: boolean;
+  onClose: () => void;
+  room: RoomDetail;
+  members: RoomMember[];
+  posts: PrayerPost[];
+  onInfo: () => void;
+  onManage: () => void;
+  onLeave: () => void;
+  onHistory: (member: RoomMember) => void;
+  onToast: (message: string) => void;
+}) {
+  const router = useRouter();
+
+  async function kick(member: RoomMember) {
+    if (!confirm(`${member.nickname ?? "멤버"}님을 내보내시겠습니까?`)) return;
+
+    const res = await fetch(`/api/rooms/${room.id}/members/${member.id}`, { method: "DELETE" });
+    const data = (await res.json()) as { error?: string };
+
+    if (!res.ok) {
+      onToast(data.error ?? "멤버 내보내기에 실패했습니다.");
+      return;
+    }
+
+    router.refresh();
+  }
+
+  return (
+    <div className={`fixed inset-0 z-30 ${open ? "" : "pointer-events-none"}`}>
+      <button
+        type="button"
+        onClick={onClose}
+        className={`absolute inset-0 bg-slate-950/30 transition-opacity ${open ? "opacity-100" : "opacity-0"}`}
+        aria-label="설정 닫기"
+      />
+      <aside
+        className={`absolute right-0 top-0 h-full w-[86%] max-w-sm bg-white p-5 shadow-soft transition-transform ${
+          open ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
+        <div className="mb-5 flex items-center justify-between">
+          <h2 className="text-lg font-black text-slate-950">방 설정</h2>
+          <button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-full border border-slate-200">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="mb-6 grid gap-2">
+          <button type="button" onClick={onInfo} className="rounded-lg bg-slate-100 px-4 py-3 text-left font-bold text-slate-800">
+            방 정보
+          </button>
+          {room.isCreator ? (
+            <button type="button" onClick={onManage} className="rounded-lg bg-slate-100 px-4 py-3 text-left font-bold text-slate-800">
+              방 관리
+            </button>
+          ) : null}
+          <button type="button" onClick={onLeave} className="rounded-lg bg-rose-50 px-4 py-3 text-left font-bold text-rose-700">
+            방 나가기
+          </button>
+        </div>
+
+        <h3 className="mb-3 text-sm font-black text-slate-500">멤버 {members.length}</h3>
+        <div className="grid gap-2">
+          {members.map((member) => (
+            <div key={member.id} className="flex items-center gap-2 rounded-lg border border-slate-200 p-3">
+              <div className="min-w-0 flex-1">
+                <p className="flex items-center gap-1 truncate font-bold text-slate-900">
+                  {member.nickname ?? "닉네임 없음"}
+                  {member.role === "creator" ? <Crown className="shrink-0 text-amber-500" size={16} /> : null}
+                </p>
+                <p className="text-xs text-slate-400">작성 {posts.filter((post) => post.userId === member.userId).length}개</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => onHistory(member)}
+                className="grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-slate-700"
+                aria-label="기도제목 history"
+              >
+                <History size={17} />
+              </button>
+              {room.isCreator && member.role !== "creator" ? (
+                <button
+                  type="button"
+                  onClick={() => kick(member)}
+                  className="grid h-9 w-9 place-items-center rounded-full bg-rose-50 text-rose-700"
+                  aria-label="멤버 내보내기"
+                >
+                  <Trash2 size={17} />
+                </button>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      </aside>
+    </div>
+  );
+}
+
+function RoomInfoModal({ room, open, onClose }: { room: RoomDetail; open: boolean; onClose: () => void }) {
+  return (
+    <Modal title="방 정보" open={open} onClose={onClose}>
+      <dl className="grid gap-3 text-sm">
+        <InfoRow label="방 제목" value={room.title} />
+        <InfoRow label="방 설명" value={room.description} />
+        <InfoRow label="생성자" value={room.creatorNickname ?? "알 수 없음"} />
+        <InfoRow label="생성일자" value={new Intl.DateTimeFormat("ko-KR", { dateStyle: "long" }).format(new Date(room.createdAt))} />
+      </dl>
+    </Modal>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="mb-1 font-bold text-slate-500">{label}</dt>
+      <dd className="whitespace-pre-wrap break-words text-slate-900">{value}</dd>
+    </div>
+  );
+}
+
+function RoomManageModal({
+  room,
+  open,
+  onClose,
+  onToast
+}: {
+  room: RoomDetail;
+  open: boolean;
+  onClose: () => void;
+  onToast: (message: string) => void;
+}) {
+  const router = useRouter();
+  const [title, setTitle] = useState(room.title);
+  const [description, setDescription] = useState(room.description);
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function save() {
+    setLoading(true);
+    const res = await fetch(`/api/rooms/${room.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, description, password })
+    });
+    const data = (await res.json()) as { error?: string };
+    setLoading(false);
+
+    if (!res.ok) {
+      onToast(data.error ?? "방 관리 저장에 실패했습니다.");
+      return;
+    }
+
+    onClose();
+    router.refresh();
+  }
+
+  async function deleteRoom() {
+    if (!confirm("방을 삭제하시겠습니까? 모든 멤버의 목록에서 제거됩니다.")) return;
+
+    const res = await fetch(`/api/rooms/${room.id}`, { method: "DELETE" });
+    const data = (await res.json()) as { error?: string };
+
+    if (!res.ok) {
+      onToast(data.error ?? "방 삭제에 실패했습니다.");
+      return;
+    }
+
+    router.push("/pray-room");
+    router.refresh();
+  }
+
+  return (
+    <Modal title="방 관리" open={open} onClose={onClose}>
+      <div className="grid gap-3">
+        <input
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+          className="rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-teal-500"
+          placeholder="방 제목"
+          maxLength={40}
+        />
+        <textarea
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+          className="min-h-24 rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-teal-500"
+          placeholder="방 설명"
+          maxLength={300}
+        />
+        <input
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          className="rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-teal-500"
+          placeholder="새 비밀번호, 변경하지 않으면 비워두세요"
+          type="password"
+        />
+        <button
+          type="button"
+          onClick={save}
+          disabled={loading}
+          className="rounded-lg bg-teal-700 px-4 py-3 font-bold text-white disabled:opacity-60"
+        >
+          저장
+        </button>
+        <button
+          type="button"
+          onClick={deleteRoom}
+          className="rounded-lg border border-rose-200 px-4 py-3 font-bold text-rose-700"
+        >
+          방 삭제
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+function MemberHistoryModal({
+  member,
+  posts,
+  onClose
+}: {
+  member: RoomMember | null;
+  posts: PrayerPost[];
+  onClose: () => void;
+}) {
+  return (
+    <Modal title={`${member?.nickname ?? "멤버"} history`} open={Boolean(member)} onClose={onClose}>
+      <div className="max-h-96 overflow-y-auto">
+        {posts.length ? (
+          <div className="grid gap-3">
+            {posts.map((post) => (
+              <article key={post.id} className="rounded-lg bg-slate-50 p-3">
+                <time className="text-xs font-bold text-slate-400">
+                  {new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(post.createdAt))}
+                </time>
+                <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">{post.content}</p>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="rounded-lg bg-slate-50 p-4 text-center text-sm text-slate-500">작성 내역이 없습니다.</p>
+        )}
+      </div>
+    </Modal>
+  );
+}

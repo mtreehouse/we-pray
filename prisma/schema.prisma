@@ -1,0 +1,106 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AuthProvider {
+  google
+  kakao
+  naver
+}
+
+enum UserRole {
+  user
+  admin
+}
+
+enum RoomMemberRole {
+  creator
+  member
+}
+
+model User {
+  id             String        @id @default(cuid())
+  provider       AuthProvider
+  providerUserId String
+  nickname       String?       @unique
+  role           UserRole      @default(user)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  deletedAt      DateTime?
+
+  createdRooms PrayerRoom[] @relation("RoomCreator")
+  memberships  RoomMember[]
+  prayerPosts  PrayerPost[]
+
+  @@unique([provider, providerUserId])
+  @@index([deletedAt])
+}
+
+model PrayerRoom {
+  id            String    @id @default(cuid())
+  title         String
+  description   String
+  passwordHash  String
+  creatorUserId String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  creator User         @relation("RoomCreator", fields: [creatorUserId], references: [id])
+  members RoomMember[]
+  posts   PrayerPost[]
+
+  @@index([creatorUserId])
+  @@index([deletedAt])
+}
+
+model RoomMember {
+  id       String         @id @default(cuid())
+  roomId   String
+  userId   String
+  role     RoomMemberRole @default(member)
+  joinedAt DateTime       @default(now())
+  kickedAt DateTime?
+  leftAt   DateTime?
+
+  room PrayerRoom @relation(fields: [roomId], references: [id])
+  user User       @relation(fields: [userId], references: [id])
+
+  @@unique([roomId, userId])
+  @@index([userId])
+  @@index([roomId])
+}
+
+model PrayerPost {
+  id        String    @id @default(cuid())
+  roomId    String
+  userId    String
+  content   String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  room PrayerRoom @relation(fields: [roomId], references: [id])
+  user User       @relation(fields: [userId], references: [id])
+
+  @@index([roomId, createdAt])
+  @@index([userId])
+  @@index([deletedAt])
+}
+
+model PrayNews {
+  id        String    @id @default(cuid())
+  title     String
+  content   String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([createdAt])
+  @@index([deletedAt])
+}
