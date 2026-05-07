@@ -12,9 +12,10 @@ export function WithdrawLink() {
 
     setLoading(true);
     const res = await fetch("/api/account", { method: "DELETE" });
+    const data = (await res.json()) as { error?: string };
 
     if (!res.ok) {
-      alert("탈퇴 처리에 실패했습니다.");
+      alert(data.error ?? "탈퇴 처리에 실패했습니다.");
       setLoading(false);
       return;
     }

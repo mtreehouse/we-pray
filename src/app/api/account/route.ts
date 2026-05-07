@@ -9,6 +9,21 @@ export async function DELETE() {
     return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
   }
 
+  const ownedRoom = await prisma.prayerRoom.findFirst({
+    where: {
+      creatorUserId: user.id,
+      deletedAt: null
+    },
+    select: { id: true }
+  });
+
+  if (ownedRoom) {
+    return NextResponse.json(
+      { error: "방장인 기도방이 있으면 탈퇴할 수 없습니다. 방을 삭제하거나 방장 권한을 정리해주세요." },
+      { status: 409 }
+    );
+  }
+
   await prisma.user.update({
     where: { id: user.id },
     data: {
