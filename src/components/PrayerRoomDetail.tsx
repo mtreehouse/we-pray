@@ -212,7 +212,9 @@ function PrayerPostCard({
       className="rounded-lg bg-white p-4 shadow-soft"
     >
       <div className="mb-3 flex items-center justify-between gap-3">
-        <p className="font-bold text-slate-900">{post.authorNickname ?? "알 수 없음"}</p>
+        <p className={`font-bold ${canManage ? "text-teal-700" : "text-slate-900"}`}>
+          {post.authorNickname ?? "알 수 없음"}
+        </p>
         <time className="text-xs font-semibold text-slate-400">
           {new Intl.DateTimeFormat("ko-KR", { timeStyle: "short" }).format(new Date(post.createdAt))}
         </time>

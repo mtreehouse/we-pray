@@ -56,7 +56,7 @@ export function PrayRoomList({ rooms }: { rooms: RoomSummary[] }) {
           <button
             type="button"
             onClick={() => setFindOpen(true)}
-            className="grid h-14 w-14 place-items-center rounded-full bg-slate-900 text-2xl text-white shadow-soft"
+            className="grid h-14 w-14 place-items-center rounded-full bg-white text-2xl text-slate-900 shadow-soft"
             aria-label="방 찾기"
           >
             🔍
