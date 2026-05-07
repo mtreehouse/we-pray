@@ -180,44 +180,35 @@ function PrayerPostCard({
   roomId: string;
   onToast: (message: string) => void;
 }) {
-  const router = useRouter();
   const timerRef = useRef<number | null>(null);
   const [editOpen, setEditOpen] = useState(false);
 
-  function openMenu() {
-    if (!canManage) return;
-    const action = confirm("수정하려면 확인, 삭제하려면 취소 후 길게 다시 누르지 말고 카드 하단 삭제 버튼을 사용하세요.");
-    if (action) setEditOpen(true);
+  function clearPressTimer() {
+    if (timerRef.current) {
+      window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
   }
 
-  async function deletePost() {
-    if (!confirm("기도제목을 삭제하시겠습니까?")) return;
-    const res = await fetch(`/api/rooms/${roomId}/posts/${post.id}`, { method: "DELETE" });
-    const data = (await res.json()) as { error?: string };
-
-    if (!res.ok) {
-      onToast(data.error ?? "삭제에 실패했습니다.");
-      return;
-    }
-
-    router.refresh();
+  function openEdit() {
+    if (!canManage) return;
+    setEditOpen(true);
   }
 
   return (
     <article
       onContextMenu={(event) => {
         event.preventDefault();
-        openMenu();
+        openEdit();
       }}
       onPointerDown={() => {
-        timerRef.current = window.setTimeout(openMenu, 650);
+        if (!canManage) return;
+        clearPressTimer();
+        timerRef.current = window.setTimeout(openEdit, 650);
       }}
-      onPointerUp={() => {
-        if (timerRef.current) window.clearTimeout(timerRef.current);
-      }}
-      onPointerLeave={() => {
-        if (timerRef.current) window.clearTimeout(timerRef.current);
-      }}
+      onPointerUp={clearPressTimer}
+      onPointerCancel={clearPressTimer}
+      onPointerLeave={clearPressTimer}
       className="rounded-lg bg-white p-4 shadow-soft"
     >
       <div className="mb-3 flex items-center justify-between gap-3">
@@ -227,25 +218,6 @@ function PrayerPostCard({
         </time>
       </div>
       <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">{post.content}</p>
-      {canManage ? (
-        <div className="mt-4 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={() => setEditOpen(true)}
-            className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600"
-          >
-            수정
-          </button>
-          <button
-            type="button"
-            onClick={deletePost}
-            className="inline-flex items-center gap-1 rounded-lg border border-rose-200 px-3 py-2 text-xs font-bold text-rose-700"
-          >
-            <Trash2 size={14} />
-            삭제
-          </button>
-        </div>
-      ) : null}
       <PrayerPostModal
         roomId={roomId}
         post={post}
@@ -273,6 +245,7 @@ function PrayerPostModal({
   const router = useRouter();
   const [content, setContent] = useState(post?.content ?? "");
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   async function submit() {
     setLoading(true);
@@ -295,6 +268,24 @@ function PrayerPostModal({
     router.refresh();
   }
 
+  async function deletePost() {
+    if (!post) return;
+    if (!confirm("기도제목을 삭제하시겠습니까?")) return;
+
+    setDeleting(true);
+    const res = await fetch(`/api/rooms/${roomId}/posts/${post.id}`, { method: "DELETE" });
+    const data = (await res.json()) as { error?: string };
+    setDeleting(false);
+
+    if (!res.ok) {
+      onToast(data.error ?? "삭제에 실패했습니다.");
+      return;
+    }
+
+    onClose();
+    router.refresh();
+  }
+
   return (
     <Modal title={post ? "기도제목 수정" : "기도제목 작성"} open={open} onClose={onClose}>
       <div className="grid gap-3">
@@ -308,11 +299,22 @@ function PrayerPostModal({
         <button
           type="button"
           onClick={submit}
-          disabled={loading}
+          disabled={loading || deleting}
           className="rounded-lg bg-teal-700 px-4 py-3 font-bold text-white disabled:opacity-60"
         >
           저장
         </button>
+        {post ? (
+          <button
+            type="button"
+            onClick={deletePost}
+            disabled={loading || deleting}
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-rose-200 px-4 py-3 font-bold text-rose-700 disabled:opacity-60"
+          >
+            <Trash2 size={17} />
+            삭제
+          </button>
+        ) : null}
       </div>
     </Modal>
   );

@@ -45,23 +45,33 @@ export const authOptions: NextAuthOptions = {
       const provider = providerFromId(account.provider);
       const admin = isAdminOAuth(provider, account.providerAccountId);
 
-      await prisma.user.upsert({
+      const existingUser = await prisma.user.findUnique({
         where: {
           provider_providerUserId: {
             provider,
             providerUserId: account.providerAccountId
           }
-        },
-        create: {
-          provider,
-          providerUserId: account.providerAccountId,
-          role: admin ? "admin" : "user"
-        },
-        update: {
-          deletedAt: null,
-          ...(admin ? { role: "admin" } : {})
         }
       });
+
+      if (existingUser) {
+        await prisma.user.update({
+          where: { id: existingUser.id },
+          data: {
+            deletedAt: null,
+            ...(existingUser.deletedAt ? { nickname: null } : {}),
+            ...(admin ? { role: "admin" } : {})
+          }
+        });
+      } else {
+        await prisma.user.create({
+          data: {
+            provider,
+            providerUserId: account.providerAccountId,
+            role: admin ? "admin" : "user"
+          }
+        });
+      }
 
       return true;
     },

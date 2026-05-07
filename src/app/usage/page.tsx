@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
+import { WithdrawLink } from "@/components/WithdrawLink";
 
 const sections = [
   {
@@ -59,6 +60,9 @@ export default function UsagePage() {
           </article>
         ))}
       </section>
+      <div className="mt-8 flex justify-center">
+        <WithdrawLink />
+      </div>
     </main>
   );
 }

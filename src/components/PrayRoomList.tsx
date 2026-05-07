@@ -30,7 +30,7 @@ export function PrayRoomList({ rooms }: { rooms: RoomSummary[] }) {
             <Link
               key={room.id}
               href={`/pray-room/${room.id}`}
-              className="rounded-lg border border-white/80 bg-white p-4 shadow-soft"
+              className="block rounded-lg border border-white/80 bg-white p-4 shadow-soft transition hover:-translate-y-0.5 hover:border-teal-300 hover:bg-teal-50/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 active:translate-y-0"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -42,9 +42,6 @@ export function PrayRoomList({ rooms }: { rooms: RoomSummary[] }) {
               <p className="mt-3 text-xs font-semibold text-slate-500">
                 생성자 {room.creatorNickname ?? "알 수 없음"}
               </p>
-              <span className="mt-4 inline-flex rounded-lg bg-teal-700 px-3 py-2 text-sm font-bold text-white">
-                입장
-              </span>
             </Link>
           ))
         ) : (
