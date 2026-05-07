@@ -1,15 +1,29 @@
 "use client";
 
 import { signIn, signOut, useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
 
 const providers = [
-  { id: "google", label: "Google로 로그인", className: "border-slate-200 bg-white text-slate-900" },
-  { id: "kakao", label: "Kakao로 로그인", className: "border-yellow-300 bg-yellow-300 text-slate-950" },
-  { id: "naver", label: "Naver로 로그인", className: "border-emerald-500 bg-emerald-500 text-white" }
+  { id: "google", name: "Google", label: "Google로 로그인", className: "border-slate-200 bg-white text-slate-900" },
+  { id: "kakao", name: "Kakao", label: "Kakao로 로그인", className: "border-yellow-300 bg-yellow-300 text-slate-950" },
+  { id: "naver", name: "Naver", label: "Naver로 로그인", className: "border-emerald-500 bg-emerald-500 text-white" }
 ];
+
+const LAST_LOGIN_PROVIDER_KEY = "wepray:last-login-provider";
 
 export function LoginButtonGroup() {
   const { data: session, status } = useSession();
+  const [lastProviderId, setLastProviderId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLastProviderId(window.localStorage.getItem(LAST_LOGIN_PROVIDER_KEY));
+  }, []);
+
+  function startLogin(providerId: string) {
+    window.localStorage.setItem(LAST_LOGIN_PROVIDER_KEY, providerId);
+    setLastProviderId(providerId);
+    void signIn(providerId, { callbackUrl: "/auth/complete" });
+  }
 
   if (status === "loading") {
     return <p className="text-sm text-slate-500">로그인 상태를 확인 중입니다.</p>;
@@ -38,10 +52,15 @@ export function LoginButtonGroup() {
         <button
           key={provider.id}
           type="button"
-          onClick={() => signIn(provider.id, { callbackUrl: "/auth/complete" })}
-          className={`rounded-lg border px-4 py-3 font-bold shadow-soft ${provider.className}`}
+          onClick={() => startLogin(provider.id)}
+          className={`flex min-h-12 items-center justify-between gap-3 rounded-lg border px-4 py-3 font-bold shadow-soft ${provider.className}`}
         >
-          {provider.label}
+          <span>{provider.label}</span>
+          {lastProviderId === provider.id ? (
+            <span className="shrink-0 rounded-full bg-white/70 px-2 py-1 text-[11px] font-black text-slate-700">
+              최근 로그인 수단
+            </span>
+          ) : null}
         </button>
       ))}
     </div>
