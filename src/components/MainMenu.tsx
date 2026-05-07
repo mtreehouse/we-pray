@@ -13,13 +13,15 @@ export function MainMenu({ isLoggedIn, role }: MainMenuProps) {
 
   return (
     <nav className="grid gap-3">
-      <Link href="/login" className={itemClass}>
-        <LogIn className="text-teal-700" size={22} />
-        <span>
-          <span className="block font-bold text-slate-900">로그인</span>
-          <span className="text-sm text-slate-500">Google, Kakao, Naver</span>
-        </span>
-      </Link>
+      {!isLoggedIn ? (
+        <Link href="/login" className={itemClass}>
+          <LogIn className="text-teal-700" size={22} />
+          <span>
+            <span className="block font-bold text-slate-900">로그인</span>
+            <span className="text-sm text-slate-500">Google, Kakao, Naver</span>
+          </span>
+        </Link>
+      ) : null}
 
       {isLoggedIn ? (
         <Link href="/pray-room" className={itemClass}>

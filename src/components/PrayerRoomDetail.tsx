@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Crown, History, Settings, Trash2, X } from "lucide-react";
+import { ChevronLeft, Crown, History, Settings, Trash2, X } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Toast } from "@/components/ui/Toast";
 
@@ -75,8 +76,15 @@ export function PrayerRoomDetail({ room, currentUserId, members, posts }: Props)
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-xl flex-col bg-white/55">
       <Toast message={toast} />
-      <header className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-white/70 bg-white/90 px-4 backdrop-blur">
-        <h1 className="min-w-0 truncate text-lg font-black text-slate-950">{room.title}</h1>
+      <header className="sticky top-0 z-20 grid h-14 grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] items-center gap-2 border-b border-white/70 bg-white/90 px-4 backdrop-blur">
+        <Link
+          href="/pray-room"
+          className="grid h-10 w-10 place-items-center rounded-full border border-slate-200 bg-white text-slate-700"
+          aria-label="방 목록으로"
+        >
+          <ChevronLeft size={20} />
+        </Link>
+        <h1 className="min-w-0 truncate text-center text-lg font-black text-slate-950">{room.title}</h1>
         <button
           type="button"
           onClick={() => setSettingsOpen(true)}

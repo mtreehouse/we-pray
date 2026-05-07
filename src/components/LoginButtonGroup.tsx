@@ -38,7 +38,7 @@ export function LoginButtonGroup() {
         <button
           key={provider.id}
           type="button"
-          onClick={() => signIn(provider.id, { callbackUrl: "/" })}
+          onClick={() => signIn(provider.id, { callbackUrl: "/auth/complete" })}
           className={`rounded-lg border px-4 py-3 font-bold shadow-soft ${provider.className}`}
         >
           {provider.label}
