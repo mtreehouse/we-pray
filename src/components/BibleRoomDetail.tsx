@@ -11,11 +11,14 @@ import {
   ChevronLeft,
   ChevronRight,
   Clipboard,
+  Crown,
   Edit3,
   Heart,
+  History,
   MessageCircle,
   Pencil,
   Send,
+  Settings,
   Trash2,
   X
 } from "lucide-react";
@@ -80,6 +83,7 @@ type Reflection = {
   verseContent?: unknown;
   content: string;
   createdAt: string;
+  userId: string;
   authorNickname: string | null;
   isMine: boolean;
 };
@@ -160,6 +164,12 @@ export function BibleRoomDetail({
   const [reflectionTarget, setReflectionTarget] = useState<VerseTarget | null>(null);
   const [editingReflection, setEditingReflection] = useState<Reflection | null>(null);
   const [passage, setPassage] = useState<Passage | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
+  const [manageOpen, setManageOpen] = useState(false);
+  const [historyMember, setHistoryMember] = useState<RoomMember | null>(null);
+  const [historyReflections, setHistoryReflections] = useState<Reflection[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [headerCollapseProgress, setHeaderCollapseProgress] = useState(0);
   const roomHeaderRef = useRef<HTMLElement | null>(null);
@@ -302,6 +312,21 @@ export function BibleRoomDetail({
     };
   }, [activeTab, currentChapter]);
 
+  async function leaveRoom() {
+    if (!confirm("성경방에서 나가시겠습니까?")) return;
+
+    const res = await fetch(`/api/bible-rooms/${room.id}/leave`, { method: "POST" });
+    const data = (await res.json()) as { error?: string };
+
+    if (!res.ok) {
+      showToast(data.error ?? "성경방 나가기에 실패했습니다.");
+      return;
+    }
+
+    router.push("/bible-room");
+    router.refresh();
+  }
+
   async function toggleComplete() {
     if (!selectedPlanDay) return;
     setCompleting(true);
@@ -401,6 +426,22 @@ export function BibleRoomDetail({
     await Promise.all([loadReading(), loadReflections(true)]);
   }
 
+  async function openMemberHistory(member: RoomMember) {
+    setHistoryMember(member);
+    setHistoryReflections([]);
+    setHistoryLoading(true);
+    const res = await fetch(`/api/bible-rooms/${room.id}/members/${member.id}/reflections`);
+    const data = (await res.json()) as { reflections?: Reflection[]; error?: string };
+    setHistoryLoading(false);
+
+    if (!res.ok) {
+      showToast(data.error ?? "묵상 history를 불러오지 못했습니다.");
+      return;
+    }
+
+    setHistoryReflections(data.reflections ?? []);
+  }
+
   async function openPassage(reflection: Pick<Reflection, "bookCode" | "chapter" | "verse">) {
     const query = new URLSearchParams({
       bookCode: reflection.bookCode,
@@ -439,12 +480,12 @@ export function BibleRoomDetail({
           <h1 className="min-w-0 truncate text-center text-lg font-black text-slate-950">{room.title}</h1>
           <button
             type="button"
-            onClick={() => router.refresh()}
+            onClick={() => setSettingsOpen(true)}
             className="grid h-10 w-10 place-items-center rounded-full border border-slate-200 bg-white text-slate-700"
-            aria-label="새로고침"
-            title="새로고침"
+            aria-label="성경방 설정"
+            title="성경방 설정"
           >
-            <CalendarDays size={18} />
+            <Settings size={19} />
           </button>
         </div>
         <nav className="grid grid-cols-3 gap-2 pb-3">
@@ -510,6 +551,35 @@ export function BibleRoomDetail({
         />
       ) : null}
 
+      <BibleRoomSettingsDrawer
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        room={room}
+        members={members}
+        reflections={reflections}
+        onInfo={() => setInfoOpen(true)}
+        onManage={() => setManageOpen(true)}
+        onLeave={leaveRoom}
+        onHistory={openMemberHistory}
+        onToast={showToast}
+      />
+      <BibleRoomInfoModal room={room} open={infoOpen} onClose={() => setInfoOpen(false)} />
+      <BibleRoomManageModal
+        room={room}
+        open={manageOpen}
+        onClose={() => setManageOpen(false)}
+        onToast={showToast}
+      />
+      <MemberReflectionHistoryModal
+        member={historyMember}
+        reflections={historyReflections}
+        loading={historyLoading}
+        onClose={() => {
+          setHistoryMember(null);
+          setHistoryReflections([]);
+        }}
+      />
+
       <ReflectionComposeScreen
         target={reflectionTarget}
         onClose={() => setReflectionTarget(null)}
@@ -537,6 +607,275 @@ function TabButton({ active, icon, label, onClick }: { active: boolean; icon: Re
       {icon}
       {label}
     </button>
+  );
+}
+
+function BibleRoomSettingsDrawer({
+  open,
+  onClose,
+  room,
+  members,
+  reflections,
+  onInfo,
+  onManage,
+  onLeave,
+  onHistory,
+  onToast
+}: {
+  open: boolean;
+  onClose: () => void;
+  room: RoomDetail;
+  members: RoomMember[];
+  reflections: Reflection[];
+  onInfo: () => void;
+  onManage: () => void;
+  onLeave: () => void;
+  onHistory: (member: RoomMember) => void;
+  onToast: (message: string) => void;
+}) {
+  const router = useRouter();
+
+  async function kick(member: RoomMember) {
+    if (!confirm(`${member.nickname ?? "멤버"}님을 내보내시겠습니까?`)) return;
+
+    const res = await fetch(`/api/bible-rooms/${room.id}/members/${member.id}`, { method: "DELETE" });
+    const data = (await res.json()) as { error?: string };
+
+    if (!res.ok) {
+      onToast(data.error ?? "멤버 내보내기에 실패했습니다.");
+      return;
+    }
+
+    router.refresh();
+  }
+
+  return (
+    <div className={`fixed inset-0 z-40 ${open ? "" : "pointer-events-none"}`}>
+      <button
+        type="button"
+        onClick={onClose}
+        className={`absolute inset-0 bg-slate-950/30 transition-opacity ${open ? "opacity-100" : "opacity-0"}`}
+        aria-label="설정 닫기"
+      />
+      <aside
+        className={`absolute right-0 top-0 h-full w-[86%] max-w-sm overflow-y-auto bg-white p-5 shadow-soft transition-transform ${
+          open ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
+        <div className="mb-5 flex items-center justify-between">
+          <h2 className="text-lg font-black text-slate-950">성경방 설정</h2>
+          <button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-full border border-slate-200">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="mb-6 grid gap-2">
+          <button type="button" onClick={onInfo} className="rounded-lg bg-slate-100 px-4 py-3 text-left font-bold text-slate-800">
+            방 정보
+          </button>
+          {room.isCreator ? (
+            <button type="button" onClick={onManage} className="rounded-lg bg-slate-100 px-4 py-3 text-left font-bold text-slate-800">
+              방 관리
+            </button>
+          ) : null}
+          <button type="button" onClick={onLeave} className="rounded-lg bg-rose-50 px-4 py-3 text-left font-bold text-rose-700">
+            방 나가기
+          </button>
+        </div>
+
+        <h3 className="mb-3 text-sm font-black text-slate-500">멤버 {members.length}</h3>
+        <div className="grid gap-2">
+          {members.map((member) => (
+            <div key={member.id} className="flex items-center gap-2 rounded-lg border border-slate-200 p-3">
+              <div className="min-w-0 flex-1">
+                <p className="flex items-center gap-1 truncate font-bold text-slate-900">
+                  {member.nickname ?? "닉네임 없음"}
+                  {member.role === "creator" ? <Crown className="shrink-0 text-amber-500" size={16} /> : null}
+                </p>
+                <p className="text-xs text-slate-400">묵상 {reflections.filter((reflection) => reflection.userId === member.userId).length}개</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => onHistory(member)}
+                className="grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-slate-700"
+                aria-label="묵상 history"
+              >
+                <History size={17} />
+              </button>
+              {room.isCreator && member.role !== "creator" ? (
+                <button
+                  type="button"
+                  onClick={() => kick(member)}
+                  className="grid h-9 w-9 place-items-center rounded-full bg-rose-50 text-rose-700"
+                  aria-label="멤버 내보내기"
+                >
+                  <Trash2 size={17} />
+                </button>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      </aside>
+    </div>
+  );
+}
+
+function BibleRoomInfoModal({ room, open, onClose }: { room: RoomDetail; open: boolean; onClose: () => void }) {
+  return (
+    <Modal title="성경방 정보" open={open} onClose={onClose}>
+      <dl className="grid gap-3 text-sm">
+        <InfoRow label="방 제목" value={room.title} />
+        <InfoRow label="방 설명" value={room.description} />
+        <InfoRow label="생성자" value={room.creatorNickname ?? "알 수 없음"} />
+        <InfoRow label="통독 범위" value={scopeLabels[room.scope] ?? room.scope} />
+        <InfoRow label="통독 기간" value={`${room.durationMonths}개월`} />
+        <InfoRow label="통독 방식" value={planTypeLabels[room.planType] ?? room.planType} />
+        <InfoRow label="주일 제외" value={room.excludeSunday ? "예" : "아니오"} />
+        <InfoRow label="생성일자" value={new Intl.DateTimeFormat("ko-KR", { dateStyle: "long" }).format(new Date(room.createdAt))} />
+      </dl>
+    </Modal>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="mb-1 font-bold text-slate-500">{label}</dt>
+      <dd className="whitespace-pre-wrap break-words text-slate-900">{value}</dd>
+    </div>
+  );
+}
+
+function BibleRoomManageModal({
+  room,
+  open,
+  onClose,
+  onToast
+}: {
+  room: RoomDetail;
+  open: boolean;
+  onClose: () => void;
+  onToast: (message: string) => void;
+}) {
+  const router = useRouter();
+  const [title, setTitle] = useState(room.title);
+  const [description, setDescription] = useState(room.description);
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function save() {
+    setLoading(true);
+    const res = await fetch(`/api/bible-rooms/${room.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, description, password })
+    });
+    const data = (await res.json()) as { error?: string };
+    setLoading(false);
+
+    if (!res.ok) {
+      onToast(data.error ?? "성경방 관리 저장에 실패했습니다.");
+      return;
+    }
+
+    onClose();
+    router.refresh();
+  }
+
+  async function deleteRoom() {
+    if (!confirm("성경방을 삭제하시겠습니까? 모든 멤버의 목록에서 제거됩니다.")) return;
+
+    const res = await fetch(`/api/bible-rooms/${room.id}`, { method: "DELETE" });
+    const data = (await res.json()) as { error?: string };
+
+    if (!res.ok) {
+      onToast(data.error ?? "성경방 삭제에 실패했습니다.");
+      return;
+    }
+
+    router.push("/bible-room");
+    router.refresh();
+  }
+
+  return (
+    <Modal title="성경방 관리" open={open} onClose={onClose}>
+      <div className="grid gap-3">
+        <input
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+          className="rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-teal-500"
+          placeholder="방 제목"
+          maxLength={40}
+        />
+        <textarea
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+          className="min-h-24 rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-teal-500"
+          placeholder="방 설명"
+          maxLength={300}
+        />
+        <input
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          className="rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-teal-500"
+          placeholder="새 비밀번호, 변경하지 않으면 비워두세요"
+          type="password"
+        />
+        <button
+          type="button"
+          onClick={save}
+          disabled={loading}
+          className="rounded-lg bg-teal-700 px-4 py-3 font-bold text-white disabled:opacity-60"
+        >
+          저장
+        </button>
+        <button
+          type="button"
+          onClick={deleteRoom}
+          className="rounded-lg border border-rose-200 px-4 py-3 font-bold text-rose-700"
+        >
+          성경방 삭제
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+function MemberReflectionHistoryModal({
+  member,
+  reflections,
+  loading,
+  onClose
+}: {
+  member: RoomMember | null;
+  reflections: Reflection[];
+  loading: boolean;
+  onClose: () => void;
+}) {
+  return (
+    <Modal title={`${member?.nickname ?? "멤버"} history`} open={Boolean(member)} onClose={onClose}>
+      <div className="max-h-96 overflow-y-auto">
+        {loading ? (
+          <p className="rounded-lg bg-slate-50 p-4 text-center text-sm text-slate-500">묵상 내역을 불러오는 중입니다.</p>
+        ) : reflections.length ? (
+          <div className="grid gap-3">
+            {reflections.map((reflection) => (
+              <article key={reflection.id} className="rounded-lg bg-slate-50 p-3">
+                <time className="text-xs font-bold text-slate-400">
+                  {new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(reflection.createdAt))}
+                </time>
+                <p className="mt-1 text-xs font-black text-teal-700">
+                  {reflection.bookName ?? reflection.bookCode} {reflection.chapter}:{reflection.verse}
+                </p>
+                <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">{reflection.content}</p>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="rounded-lg bg-slate-50 p-4 text-center text-sm text-slate-500">불러온 묵상 내역이 없습니다.</p>
+        )}
+      </div>
+    </Modal>
   );
 }
 

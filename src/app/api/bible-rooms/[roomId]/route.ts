@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { RoomMemberRole } from "@prisma/client";
+import { hashPassword } from "@/lib/password";
 import { requireBibleRoomMember, requireNickname } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 
@@ -54,4 +56,56 @@ export async function GET(_req: Request, { params }: Params) {
       _count: undefined
     }
   });
+}
+
+export async function PATCH(req: Request, { params }: Params) {
+  const user = await requireNickname();
+  const { roomId } = await params;
+  const member = await requireBibleRoomMember(roomId, user.id);
+
+  if (!member || member.role !== RoomMemberRole.creator) {
+    return NextResponse.json({ error: "성경방 생성자만 관리할 수 있습니다." }, { status: 403 });
+  }
+
+  const body = (await req.json()) as {
+    title?: string;
+    description?: string;
+    password?: string;
+  };
+
+  if (!body.title?.trim()) {
+    return NextResponse.json({ error: "성경방 제목을 입력해주세요." }, { status: 400 });
+  }
+
+  if (!body.description?.trim()) {
+    return NextResponse.json({ error: "성경방 설명을 입력해주세요." }, { status: 400 });
+  }
+
+  await prisma.bibleRoom.update({
+    where: { id: roomId },
+    data: {
+      title: body.title.trim(),
+      description: body.description.trim(),
+      ...(body.password?.trim() ? { passwordHash: await hashPassword(body.password.trim()) } : {})
+    }
+  });
+
+  return NextResponse.json({ ok: true });
+}
+
+export async function DELETE(_req: Request, { params }: Params) {
+  const user = await requireNickname();
+  const { roomId } = await params;
+  const member = await requireBibleRoomMember(roomId, user.id);
+
+  if (!member || member.role !== RoomMemberRole.creator) {
+    return NextResponse.json({ error: "성경방 생성자만 삭제할 수 있습니다." }, { status: 403 });
+  }
+
+  await prisma.bibleRoom.update({
+    where: { id: roomId },
+    data: { deletedAt: new Date() }
+  });
+
+  return NextResponse.json({ ok: true });
 }

@@ -74,6 +74,7 @@ export async function GET(req: Request, { params }: Params) {
         verseContent: verse?.content ?? null,
         content: reflection.content,
         createdAt: reflection.createdAt,
+        userId: reflection.userId,
         authorNickname: reflection.user.nickname,
         isMine: reflection.userId === user.id
       };
@@ -160,6 +161,7 @@ export async function POST(req: Request, { params }: Params) {
       verseContent: verse.content,
       content,
       createdAt: new Date().toISOString(),
+      userId: user.id,
       authorNickname: user.nickname,
       isMine: true
     }
