@@ -161,6 +161,10 @@ export function BibleRoomDetail({
   const [editingReflection, setEditingReflection] = useState<Reflection | null>(null);
   const [passage, setPassage] = useState<Passage | null>(null);
   const [completing, setCompleting] = useState(false);
+  const [headerCollapseProgress, setHeaderCollapseProgress] = useState(0);
+  const roomHeaderRef = useRef<HTMLElement | null>(null);
+  const lastScrollYRef = useRef(0);
+  const forceCompactHeaderUntilRef = useRef(0);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   const selectedPlanDay = useMemo(
@@ -172,6 +176,11 @@ export function BibleRoomDetail({
   const showToast = useCallback((message: string) => {
     setToast(message);
     window.setTimeout(() => setToast(""), 2400);
+  }, []);
+
+  const holdCompactReadingHeader = useCallback(() => {
+    forceCompactHeaderUntilRef.current = Date.now() + 900;
+    setHeaderCollapseProgress(1);
   }, []);
 
   const loadPlans = useCallback(async () => {
@@ -252,6 +261,46 @@ export function BibleRoomDetail({
     observer.observe(sentinelRef.current);
     return () => observer.disconnect();
   }, [activeTab, feedLoading, loadReflections, nextCursor]);
+
+  useEffect(() => {
+    if (activeTab !== "bible" || !currentChapter) {
+      setHeaderCollapseProgress(0);
+      return;
+    }
+
+    function handleScroll() {
+      const currentY = window.scrollY;
+      const previousY = lastScrollYRef.current;
+      const scrollingDown = currentY > previousY + 1;
+      const scrollingUp = currentY < previousY - 1;
+      const readingArea = document.querySelector<HTMLElement>("[data-reading-area='true']");
+      const headerHeight = roomHeaderRef.current?.offsetHeight ?? 104;
+      const readingTop = readingArea?.getBoundingClientRect().top ?? headerHeight;
+      const overlap = Math.max(0, headerHeight - readingTop);
+      const progress = Math.min(1, overlap / headerHeight);
+
+      if (Date.now() < forceCompactHeaderUntilRef.current) {
+        setHeaderCollapseProgress(1);
+      } else if (scrollingUp || currentY < 24) {
+        setHeaderCollapseProgress(0);
+      } else if (scrollingDown) {
+        setHeaderCollapseProgress(progress);
+      } else if (progress === 0) {
+        setHeaderCollapseProgress(0);
+      }
+
+      lastScrollYRef.current = currentY;
+    }
+
+    lastScrollYRef.current = window.scrollY;
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("resize", handleScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleScroll);
+    };
+  }, [activeTab, currentChapter]);
 
   async function toggleComplete() {
     if (!selectedPlanDay) return;
@@ -372,7 +421,11 @@ export function BibleRoomDetail({
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-xl flex-col bg-white/55">
       <Toast message={toast} />
-      <header className="sticky top-0 z-20 border-b border-white/70 bg-white/90 px-4 backdrop-blur">
+      <header
+        ref={roomHeaderRef}
+        className="sticky top-0 z-20 border-b border-white/70 bg-white/90 px-4 backdrop-blur will-change-transform"
+        style={{ transform: `translateY(${-headerCollapseProgress * 100}%)` }}
+      >
         <div className="grid h-14 grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] items-center gap-2">
           <Link
             href="/bible-room"
@@ -399,6 +452,19 @@ export function BibleRoomDetail({
         </nav>
       </header>
 
+      {activeTab === "bible" && currentChapter ? (
+        <div
+          className="fixed left-1/2 top-0 z-30 flex h-11 w-full max-w-xl items-center justify-center border-b border-slate-200 bg-white/95 px-4 text-sm font-black text-slate-950 shadow-soft backdrop-blur will-change-transform"
+          style={{
+            opacity: headerCollapseProgress,
+            pointerEvents: headerCollapseProgress > 0.95 ? "auto" : "none",
+            transform: `translate(-50%, ${-100 + headerCollapseProgress * 100}%)`
+          }}
+        >
+          {currentChapter.bookName} {currentChapter.chapter}장
+        </div>
+      ) : null}
+
       {activeTab === "bible" ? (
         <BibleTab
           days={planDays}
@@ -413,6 +479,7 @@ export function BibleRoomDetail({
           onToggleComplete={selectedPlanDay ? toggleComplete : undefined}
           onPrev={() => setChapterIndex((index) => Math.max(0, index - 1))}
           onNext={() => setChapterIndex((index) => Math.min(chapters.length - 1, index + 1))}
+          onChapterJump={holdCompactReadingHeader}
           onReflect={setReflectionTarget}
           onToast={showToast}
         />
@@ -484,6 +551,7 @@ function BibleTab({
   onToggleComplete,
   onPrev,
   onNext,
+  onChapterJump,
   onReflect,
   onToast
 }: {
@@ -499,29 +567,39 @@ function BibleTab({
   onToggleComplete?: () => void;
   onPrev: () => void;
   onNext: () => void;
+  onChapterJump: () => void;
   onReflect: (target: VerseTarget) => void;
   onToast: (message: string) => void;
 }) {
   const touchStartRef = useRef<number | null>(null);
   const readingTopRef = useRef<HTMLDivElement | null>(null);
+  const firstVerseRef = useRef<HTMLDivElement | null>(null);
+  const pendingChapterScrollRef = useRef(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
 
-  function scrollToReadingTop() {
+  function scrollToFirstVerse() {
     window.requestAnimationFrame(() => {
-      readingTopRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+      firstVerseRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
     });
   }
 
+  useEffect(() => {
+    if (!pendingChapterScrollRef.current || !currentChapter) return;
+    pendingChapterScrollRef.current = false;
+    onChapterJump();
+    scrollToFirstVerse();
+  }, [chapterIndex, currentChapter]);
+
   function goPrev() {
     if (chapterIndex === 0) return;
+    pendingChapterScrollRef.current = true;
     onPrev();
-    scrollToReadingTop();
   }
 
   function goNext() {
     if (chapterIndex >= chapters.length - 1) return;
+    pendingChapterScrollRef.current = true;
     onNext();
-    scrollToReadingTop();
   }
 
   return (
@@ -553,7 +631,8 @@ function BibleTab({
 
       <div
         ref={readingTopRef}
-        className="mt-4 scroll-mt-32"
+        data-reading-area="true"
+        className="mt-4 scroll-mt-12"
         onTouchStart={(event) => {
           touchStartRef.current = event.touches[0]?.clientX ?? null;
         }}
@@ -596,7 +675,7 @@ function BibleTab({
                 <ChevronRight size={19} />
               </button>
             </div>
-            <div className="grid gap-1.5">
+            <div ref={firstVerseRef} className="grid scroll-mt-12 gap-1.5">
               {currentChapter.verses.map((verse) => (
                 <VerseRow
                   key={verse.verse}
