@@ -34,6 +34,14 @@ export async function GET(_req: Request, { params }: Params) {
     })
   ]);
 
+  const bookCodes = [...new Set(plans.map((plan) => plan.bookCode))];
+  const books = bookCodes.length
+    ? await prisma.bibleVerse.groupBy({
+        by: ["bookCode", "bookName"],
+        where: { bookCode: { in: bookCodes } }
+      })
+    : [];
+  const bookNameByCode = new Map(books.map((book) => [book.bookCode, book.bookName]));
   const completedDates = new Set(progress.map((item) => toDateKey(item.readingDate)));
   const byDate = new Map<string, Array<(typeof plans)[number]>>();
 
@@ -49,6 +57,7 @@ export async function GET(_req: Request, { params }: Params) {
       plans: items.map((item) => ({
         id: item.id,
         bookCode: item.bookCode,
+        bookName: bookNameByCode.get(item.bookCode) ?? item.bookCode,
         startChapter: item.startChapter,
         endChapter: item.endChapter
       }))

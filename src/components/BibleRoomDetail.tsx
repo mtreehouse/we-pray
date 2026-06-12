@@ -46,6 +46,7 @@ type RoomDetail = {
 type PlanRange = {
   id: string;
   bookCode: string;
+  bookName?: string;
   startChapter: number;
   endChapter: number;
 };
@@ -407,6 +408,9 @@ export function BibleRoomDetail({
           currentChapter={currentChapter}
           chapterIndex={chapterIndex}
           readingLoading={readingLoading}
+          isCompleted={Boolean(selectedPlanDay?.isCompleted)}
+          completing={completing}
+          onToggleComplete={selectedPlanDay ? toggleComplete : undefined}
           onPrev={() => setChapterIndex((index) => Math.max(0, index - 1))}
           onNext={() => setChapterIndex((index) => Math.min(chapters.length - 1, index + 1))}
           onReflect={setReflectionTarget}
@@ -435,24 +439,6 @@ export function BibleRoomDetail({
           progress={progress}
           onSelectDate={setSelectedDate}
         />
-      ) : null}
-
-      {activeTab === "bible" && selectedPlanDay ? (
-        <div className="fixed inset-x-0 bottom-0 z-20 safe-bottom">
-          <div className="mx-auto w-full max-w-xl px-4 pb-4">
-            <button
-              type="button"
-              onClick={toggleComplete}
-              disabled={completing}
-              className={`flex h-13 w-full items-center justify-center gap-2 rounded-lg px-4 py-3 font-black shadow-soft disabled:opacity-60 ${
-                selectedPlanDay.isCompleted ? "bg-emerald-600 text-white" : "bg-teal-700 text-white"
-              }`}
-            >
-              <Check size={18} />
-              {selectedPlanDay.isCompleted ? "말씀 읽기 완료됨" : "말씀 읽기 완료"}
-            </button>
-          </div>
-        </div>
       ) : null}
 
       <ReflectionComposeScreen
@@ -493,6 +479,9 @@ function BibleTab({
   currentChapter,
   chapterIndex,
   readingLoading,
+  isCompleted,
+  completing,
+  onToggleComplete,
   onPrev,
   onNext,
   onReflect,
@@ -505,19 +494,66 @@ function BibleTab({
   currentChapter: ReadingChapter | null;
   chapterIndex: number;
   readingLoading: boolean;
+  isCompleted: boolean;
+  completing: boolean;
+  onToggleComplete?: () => void;
   onPrev: () => void;
   onNext: () => void;
   onReflect: (target: VerseTarget) => void;
   onToast: (message: string) => void;
 }) {
   const touchStartRef = useRef<number | null>(null);
+  const readingTopRef = useRef<HTMLDivElement | null>(null);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+
+  function scrollToReadingTop() {
+    window.requestAnimationFrame(() => {
+      readingTopRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+    });
+  }
+
+  function goPrev() {
+    if (chapterIndex === 0) return;
+    onPrev();
+    scrollToReadingTop();
+  }
+
+  function goNext() {
+    if (chapterIndex >= chapters.length - 1) return;
+    onNext();
+    scrollToReadingTop();
+  }
 
   return (
-    <section className="flex-1 px-4 pb-28 pt-4">
-      <PlanCalendar days={days} selectedDate={selectedDate} onSelectDate={onSelectDate} compact />
+    <section className="flex-1 px-4 pb-8 pt-4">
+      <div className="rounded-lg bg-white p-3 shadow-soft">
+        <button
+          type="button"
+          onClick={() => setDatePickerOpen((open) => !open)}
+          className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-slate-50 px-4 text-base font-black text-slate-900"
+          aria-expanded={datePickerOpen}
+        >
+          <CalendarDays size={17} className="text-teal-700" />
+          {formatDateKey(selectedDate)}
+        </button>
+        {datePickerOpen ? (
+          <div className="mt-3">
+            <PlanCalendar
+              days={days}
+              selectedDate={selectedDate}
+              onSelectDate={(date) => {
+                onSelectDate(date);
+                setDatePickerOpen(false);
+              }}
+              compact
+            />
+          </div>
+        ) : null}
+      </div>
 
       <div
-        className="mt-4"
+        ref={readingTopRef}
+        className="mt-4 scroll-mt-32"
         onTouchStart={(event) => {
           touchStartRef.current = event.touches[0]?.clientX ?? null;
         }}
@@ -526,8 +562,8 @@ function BibleTab({
           const endX = event.changedTouches[0]?.clientX ?? null;
           touchStartRef.current = null;
           if (startX === null || endX === null) return;
-          if (startX - endX > 45) onNext();
-          if (endX - startX > 45) onPrev();
+          if (startX - endX > 45) goNext();
+          if (endX - startX > 45) goPrev();
         }}
       >
         {readingLoading ? (
@@ -537,7 +573,7 @@ function BibleTab({
             <div className="mb-4 flex items-center justify-between gap-3">
               <button
                 type="button"
-                onClick={onPrev}
+                onClick={goPrev}
                 disabled={chapterIndex === 0}
                 className="grid h-10 w-10 place-items-center rounded-full border border-slate-200 text-slate-700 disabled:opacity-30"
                 aria-label="이전 장"
@@ -551,7 +587,7 @@ function BibleTab({
               </div>
               <button
                 type="button"
-                onClick={onNext}
+                onClick={goNext}
                 disabled={chapterIndex >= chapters.length - 1}
                 className="grid h-10 w-10 place-items-center rounded-full border border-slate-200 text-slate-700 disabled:opacity-30"
                 aria-label="다음 장"
@@ -571,6 +607,47 @@ function BibleTab({
                 />
               ))}
             </div>
+            <div className="mt-5 grid grid-cols-2 gap-2 border-t border-slate-100 pt-4">
+              <button
+                type="button"
+                onClick={goPrev}
+                disabled={chapterIndex === 0}
+                className="flex min-h-12 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-black text-slate-700 disabled:opacity-35"
+              >
+                <ChevronLeft size={17} />
+                이전 장
+              </button>
+              <button
+                type="button"
+                onClick={goNext}
+                disabled={chapterIndex >= chapters.length - 1}
+                className="flex min-h-12 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-black text-slate-700 disabled:opacity-35"
+              >
+                다음 장
+                <ChevronRight size={17} />
+              </button>
+            </div>
+            {chapterIndex >= chapters.length - 1 && onToggleComplete ? (
+              <button
+                type="button"
+                onClick={onToggleComplete}
+                disabled={completing}
+                className={`mt-3 flex min-h-14 w-full items-center justify-center gap-2 rounded-lg border px-4 py-3 font-black transition disabled:opacity-60 ${
+                  isCompleted
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                    : "border-slate-200 bg-slate-100 text-slate-500"
+                }`}
+              >
+                <span
+                  className={`grid h-6 w-6 place-items-center rounded-full ${
+                    isCompleted ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-400"
+                  }`}
+                >
+                  <Check size={15} strokeWidth={3} />
+                </span>
+                말씀 읽기 완료
+              </button>
+            ) : null}
           </article>
         ) : (
           <div className="rounded-lg border border-dashed border-slate-300 bg-white p-6 text-center text-sm leading-6 text-slate-500">
@@ -794,7 +871,7 @@ function PlanTab({
           <div className="grid gap-2">
             {selectedDay.plans.map((plan) => (
               <div key={plan.id} className="rounded-lg bg-slate-50 px-3 py-2 text-sm font-bold text-slate-700">
-                {plan.bookCode} {plan.startChapter === plan.endChapter ? `${plan.startChapter}장` : `${plan.startChapter}-${plan.endChapter}장`}
+                {plan.bookName ?? plan.bookCode} {plan.startChapter === plan.endChapter ? `${plan.startChapter}장` : `${plan.startChapter}-${plan.endChapter}장`}
               </div>
             ))}
           </div>
@@ -1072,6 +1149,10 @@ function verseText(content: unknown) {
     if (typeof first === "string") return first;
   }
   return "";
+}
+
+function formatDateKey(date: string) {
+  return date.slice(0, 10).replaceAll("-", ".");
 }
 
 function formatDate(date: string) {
