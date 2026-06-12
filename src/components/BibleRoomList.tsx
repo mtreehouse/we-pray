@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { BookOpen, CalendarDays, Crown, Plus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { BookOpen, CalendarDays, Crown, Plus, Search } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Toast } from "@/components/ui/Toast";
 
@@ -18,6 +18,7 @@ type BibleRoomSummary = {
   excludeSunday: boolean;
   planType: string;
   memberCount: number;
+  isJoined?: boolean;
 };
 
 const scopeLabels: Record<string, string> = {
@@ -41,6 +42,7 @@ const planTypeLabels: Record<string, string> = {
 export function BibleRoomList({ rooms }: { rooms: BibleRoomSummary[] }) {
   const router = useRouter();
   const [createOpen, setCreateOpen] = useState(false);
+  const [findOpen, setFindOpen] = useState(false);
   const [toast, setToast] = useState("");
 
   return (
@@ -79,7 +81,16 @@ export function BibleRoomList({ rooms }: { rooms: BibleRoomSummary[] }) {
       </div>
 
       <div className="fixed inset-x-0 bottom-0 z-20 safe-bottom">
-        <div className="mx-auto flex w-full max-w-xl justify-end px-4 pb-4">
+        <div className="mx-auto flex w-full max-w-xl justify-end gap-3 px-4 pb-4">
+          <button
+            type="button"
+            onClick={() => setFindOpen(true)}
+            className="grid h-14 w-14 place-items-center rounded-full bg-white text-slate-900 shadow-soft"
+            aria-label="성경방 찾기"
+            title="성경방 찾기"
+          >
+            <Search size={23} />
+          </button>
           <button
             type="button"
             onClick={() => setCreateOpen(true)}
@@ -102,7 +113,166 @@ export function BibleRoomList({ rooms }: { rooms: BibleRoomSummary[] }) {
           router.refresh();
         }}
       />
+      <FindBibleRoomModal open={findOpen} onClose={() => setFindOpen(false)} onToast={setToast} />
     </div>
+  );
+}
+
+function FindBibleRoomModal({
+  open,
+  onClose,
+  onToast
+}: {
+  open: boolean;
+  onClose: () => void;
+  onToast: (message: string) => void;
+}) {
+  const router = useRouter();
+  const [q, setQ] = useState("");
+  const [password, setPassword] = useState("");
+  const [selectedRoom, setSelectedRoom] = useState<BibleRoomSummary | null>(null);
+  const [results, setResults] = useState<BibleRoomSummary[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setPassword("");
+    setSelectedRoom(null);
+  }, [open]);
+
+  async function search() {
+    setLoading(true);
+    setPassword("");
+    setSelectedRoom(null);
+    const res = await fetch(`/api/bible-rooms/search?q=${encodeURIComponent(q)}`);
+    const data = (await res.json()) as { rooms?: BibleRoomSummary[]; error?: string };
+    setLoading(false);
+
+    if (!res.ok) {
+      onToast(data.error ?? "검색에 실패했습니다.");
+      return;
+    }
+
+    setResults(data.rooms ?? []);
+  }
+
+  async function join() {
+    if (!selectedRoom) return;
+
+    setLoading(true);
+    const res = await fetch("/api/bible-rooms/join", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ roomId: selectedRoom.id, password })
+    });
+    const data = (await res.json()) as { roomId?: string; error?: string };
+    setLoading(false);
+
+    if (!res.ok || !data.roomId) {
+      onToast(data.error ?? "성경방 입장에 실패했습니다.");
+      return;
+    }
+
+    onClose();
+    router.push(`/bible-room/${data.roomId}`);
+    router.refresh();
+  }
+
+  function openJoinedRoom() {
+    if (!selectedRoom) return;
+    onClose();
+    router.push(`/bible-room/${selectedRoom.id}`);
+    router.refresh();
+  }
+
+  return (
+    <Modal title="성경방 찾기" open={open} onClose={onClose}>
+      <div className="grid gap-3">
+        <div className="flex gap-2">
+          <input
+            value={q}
+            onChange={(event) => setQ(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") void search();
+            }}
+            className="min-w-0 flex-1 rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-teal-500"
+            placeholder="방 제목 또는 생성자"
+          />
+          <button
+            type="button"
+            onClick={search}
+            disabled={loading}
+            className="rounded-lg bg-slate-900 px-4 py-3 font-bold text-white disabled:opacity-60"
+          >
+            검색
+          </button>
+        </div>
+
+        <div className="max-h-64 overflow-y-auto">
+          {results.map((room) => (
+            <button
+              key={room.id}
+              type="button"
+              onClick={() => {
+                setSelectedRoom(room);
+                setPassword("");
+              }}
+              className={`mb-2 w-full rounded-lg border p-3 text-left ${
+                selectedRoom?.id === room.id ? "border-teal-500 bg-teal-50" : "border-slate-200 bg-white"
+              }`}
+            >
+              <span className="block font-bold text-slate-900">{room.title}</span>
+              <span className="mt-1 line-clamp-2 block text-xs leading-5 text-slate-500">{room.description}</span>
+              <span className="mt-2 flex flex-wrap gap-1.5 text-[11px] font-bold text-slate-600">
+                <span className="rounded-full bg-teal-50 px-2 py-0.5 text-teal-800">{scopeLabels[room.scope] ?? room.scope}</span>
+                <span className="rounded-full bg-slate-100 px-2 py-0.5">{room.durationMonths}개월</span>
+                <span className="rounded-full bg-slate-100 px-2 py-0.5">멤버 {room.memberCount}명</span>
+              </span>
+              <span className="mt-2 block text-xs text-slate-500">생성자 {room.creatorNickname ?? "알 수 없음"}</span>
+            </button>
+          ))}
+          {!loading && q && results.length === 0 ? (
+            <p className="py-6 text-center text-sm font-bold text-slate-400">검색 결과가 없습니다.</p>
+          ) : null}
+        </div>
+
+        {selectedRoom ? (
+          <div className="rounded-lg bg-slate-50 p-3">
+            {selectedRoom.isJoined ? (
+              <>
+                <p className="text-sm font-bold text-slate-700">이미 참여중인 성경방입니다.</p>
+                <button
+                  type="button"
+                  onClick={openJoinedRoom}
+                  className="mt-3 w-full rounded-lg bg-teal-700 px-4 py-3 font-bold text-white"
+                >
+                  들어가기
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="mb-2 text-sm font-bold text-slate-800">{selectedRoom.title} 입장</p>
+                <input
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  className="w-full rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-teal-500"
+                  placeholder="입장 비밀번호"
+                  type="password"
+                />
+                <button
+                  type="button"
+                  onClick={join}
+                  disabled={loading}
+                  className="mt-3 w-full rounded-lg bg-teal-700 px-4 py-3 font-bold text-white disabled:opacity-60"
+                >
+                  입장
+                </button>
+              </>
+            )}
+          </div>
+        ) : null}
+      </div>
+    </Modal>
   );
 }
 
