@@ -423,7 +423,9 @@ export function BibleRoomDetail({
       <Toast message={toast} />
       <header
         ref={roomHeaderRef}
-        className="sticky top-0 z-20 border-b border-white/70 bg-white/90 px-4 backdrop-blur will-change-transform"
+        className={`sticky top-0 z-20 bg-white/95 px-4 backdrop-blur will-change-transform ${
+          activeTab === "bible" ? "border-b border-transparent" : "border-b border-white/70"
+        }`}
         style={{ transform: `translateY(${-headerCollapseProgress * 100}%)` }}
       >
         <div className="grid h-14 grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] items-center gap-2">
@@ -605,24 +607,36 @@ function BibleTab({
     onNext();
   }
 
+  function goPrevInPlace() {
+    if (chapterIndex === 0) return;
+    setSwipeHint(null);
+    onPrev();
+  }
+
+  function goNextInPlace() {
+    if (chapterIndex >= chapters.length - 1) return;
+    setSwipeHint(null);
+    onNext();
+  }
+
   function clearSwipeHint() {
     setSwipeHint(null);
   }
 
   return (
-    <section className="flex-1 px-4 pb-8 pt-4">
-      <div className="rounded-lg bg-white p-3 shadow-soft">
+    <section className="flex-1 bg-white pb-8 pt-0">
+      <div className="bg-white px-4 py-1">
         <button
           type="button"
           onClick={() => setDatePickerOpen((open) => !open)}
-          className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-slate-50 px-4 text-base font-black text-slate-900"
+          className="flex min-h-11 w-full items-center justify-center gap-2 bg-white px-4 text-base font-black text-slate-900"
           aria-expanded={datePickerOpen}
         >
           <CalendarDays size={17} className="text-teal-700" />
           {formatDateKey(selectedDate)}
         </button>
         {datePickerOpen ? (
-          <div className="mt-3">
+          <div className="pt-2">
             <PlanCalendar
               days={days}
               selectedDate={selectedDate}
@@ -639,7 +653,7 @@ function BibleTab({
       <div
         ref={readingTopRef}
         data-reading-area="true"
-        className="mt-4 scroll-mt-12"
+        className="scroll-mt-12"
         onTouchStart={(event) => {
           const touch = event.touches[0];
           touchStartRef.current = touch ? { x: touch.clientX, y: touch.clientY } : null;
@@ -693,9 +707,9 @@ function BibleTab({
         }}
       >
         {readingLoading ? (
-          <div className="rounded-lg border border-slate-200 bg-white p-6 text-center text-sm font-bold text-slate-500">본문을 불러오는 중입니다.</div>
+          <div className="border-b border-slate-100 bg-white p-6 text-center text-sm font-bold text-slate-500">본문을 불러오는 중입니다.</div>
         ) : currentChapter ? (
-          <article className="rounded-lg bg-white p-4 shadow-soft">
+          <article className="bg-white px-4 pb-4 pt-3">
             {swipeHint ? (
               <div
                 className="pointer-events-none fixed top-1/2 z-40 grid h-12 w-12 place-items-center rounded-full border border-white/80 bg-white/95 text-teal-700 shadow-lg backdrop-blur"
@@ -712,7 +726,7 @@ function BibleTab({
             <div className="mb-4 flex items-center justify-between gap-3">
               <button
                 type="button"
-                onClick={goPrev}
+                onClick={goPrevInPlace}
                 disabled={chapterIndex === 0}
                 className="grid h-10 w-10 place-items-center rounded-full border border-slate-200 text-slate-700 disabled:opacity-30"
                 aria-label="이전 장"
@@ -726,7 +740,7 @@ function BibleTab({
               </div>
               <button
                 type="button"
-                onClick={goNext}
+                onClick={goNextInPlace}
                 disabled={chapterIndex >= chapters.length - 1}
                 className="grid h-10 w-10 place-items-center rounded-full border border-slate-200 text-slate-700 disabled:opacity-30"
                 aria-label="다음 장"
@@ -789,7 +803,7 @@ function BibleTab({
             ) : null}
           </article>
         ) : (
-          <div className="rounded-lg border border-dashed border-slate-300 bg-white p-6 text-center text-sm leading-6 text-slate-500">
+          <div className="border-y border-dashed border-slate-200 bg-white p-6 text-center text-sm leading-6 text-slate-500">
             선택한 날짜에 배정된 본문이 없습니다.
           </div>
         )}
