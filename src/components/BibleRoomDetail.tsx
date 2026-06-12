@@ -571,11 +571,12 @@ function BibleTab({
   onReflect: (target: VerseTarget) => void;
   onToast: (message: string) => void;
 }) {
-  const touchStartRef = useRef<number | null>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const readingTopRef = useRef<HTMLDivElement | null>(null);
   const firstVerseRef = useRef<HTMLDivElement | null>(null);
   const pendingChapterScrollRef = useRef(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [swipeHint, setSwipeHint] = useState<{ direction: "prev" | "next"; strength: number; offset: number } | null>(null);
 
   function scrollToFirstVerse() {
     window.requestAnimationFrame(() => {
@@ -592,14 +593,20 @@ function BibleTab({
 
   function goPrev() {
     if (chapterIndex === 0) return;
+    setSwipeHint(null);
     pendingChapterScrollRef.current = true;
     onPrev();
   }
 
   function goNext() {
     if (chapterIndex >= chapters.length - 1) return;
+    setSwipeHint(null);
     pendingChapterScrollRef.current = true;
     onNext();
+  }
+
+  function clearSwipeHint() {
+    setSwipeHint(null);
   }
 
   return (
@@ -634,21 +641,74 @@ function BibleTab({
         data-reading-area="true"
         className="mt-4 scroll-mt-12"
         onTouchStart={(event) => {
-          touchStartRef.current = event.touches[0]?.clientX ?? null;
+          const touch = event.touches[0];
+          touchStartRef.current = touch ? { x: touch.clientX, y: touch.clientY } : null;
+        }}
+        onTouchMove={(event) => {
+          const start = touchStartRef.current;
+          const touch = event.touches[0];
+          if (!start || !touch) return;
+
+          const deltaX = touch.clientX - start.x;
+          const deltaY = touch.clientY - start.y;
+          if (Math.abs(deltaX) < 16 || Math.abs(deltaX) < Math.abs(deltaY) * 1.15) {
+            setSwipeHint(null);
+            return;
+          }
+
+          const direction = deltaX > 0 ? "prev" : "next";
+          const canMove = direction === "prev" ? chapterIndex > 0 : chapterIndex < chapters.length - 1;
+          if (!canMove) {
+            setSwipeHint(null);
+            return;
+          }
+
+          const distance = Math.abs(deltaX);
+          setSwipeHint({
+            direction,
+            strength: Math.min(1, Math.max(0.2, distance / 110)),
+            offset: Math.min(54, distance * 0.45)
+          });
+        }}
+        onTouchCancel={() => {
+          touchStartRef.current = null;
+          setSwipeHint(null);
         }}
         onTouchEnd={(event) => {
-          const startX = touchStartRef.current;
-          const endX = event.changedTouches[0]?.clientX ?? null;
+          const start = touchStartRef.current;
+          const touch = event.changedTouches[0];
           touchStartRef.current = null;
-          if (startX === null || endX === null) return;
-          if (startX - endX > 45) goNext();
-          if (endX - startX > 45) goPrev();
+          if (!start || !touch) {
+            setSwipeHint(null);
+            return;
+          }
+
+          const deltaX = touch.clientX - start.x;
+          const deltaY = touch.clientY - start.y;
+          if (Math.abs(deltaX) > 45 && Math.abs(deltaX) > Math.abs(deltaY) * 1.15) {
+            if (deltaX < 0) goNext();
+            if (deltaX > 0) goPrev();
+          }
+          clearSwipeHint();
         }}
       >
         {readingLoading ? (
           <div className="rounded-lg border border-slate-200 bg-white p-6 text-center text-sm font-bold text-slate-500">본문을 불러오는 중입니다.</div>
         ) : currentChapter ? (
           <article className="rounded-lg bg-white p-4 shadow-soft">
+            {swipeHint ? (
+              <div
+                className="pointer-events-none fixed top-1/2 z-40 grid h-12 w-12 place-items-center rounded-full border border-white/80 bg-white/95 text-teal-700 shadow-lg backdrop-blur"
+                style={{
+                  left: `calc(50% + ${swipeHint.direction === "next" ? 74 + swipeHint.offset : -122 - swipeHint.offset}px)`,
+                  opacity: Math.min(0.95, swipeHint.strength),
+                  transform: "translateY(-50%)"
+                }}
+                aria-hidden
+              >
+                {swipeHint.direction === "prev" ? <ChevronLeft size={28} strokeWidth={2.8} /> : <ChevronRight size={28} strokeWidth={2.8} />}
+              </div>
+            ) : null}
             <div className="mb-4 flex items-center justify-between gap-3">
               <button
                 type="button"
