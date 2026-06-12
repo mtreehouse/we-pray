@@ -3,7 +3,7 @@ import { requireNickname } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(req: Request) {
-  await requireNickname();
+  const user = await requireNickname();
 
   const url = new URL(req.url);
   const q = (url.searchParams.get("q") ?? "").trim();
@@ -21,7 +21,15 @@ export async function GET(req: Request) {
       ]
     },
     include: {
-      creator: { select: { nickname: true } }
+      creator: { select: { nickname: true } },
+      members: {
+        where: {
+          userId: user.id,
+          leftAt: null,
+          kickedAt: null
+        },
+        select: { id: true }
+      }
     },
     orderBy: {
       createdAt: "desc"
@@ -34,7 +42,8 @@ export async function GET(req: Request) {
       id: room.id,
       title: room.title,
       description: room.description,
-      creatorNickname: room.creator.nickname
+      creatorNickname: room.creator.nickname,
+      isJoined: room.members.length > 0
     }))
   });
 }

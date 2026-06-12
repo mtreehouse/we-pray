@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Crown } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Toast } from "@/components/ui/Toast";
@@ -13,6 +13,7 @@ type RoomSummary = {
   description: string;
   creatorNickname: string | null;
   role?: "creator" | "member";
+  isJoined?: boolean;
 };
 
 export function PrayRoomList({ rooms }: { rooms: RoomSummary[] }) {
@@ -178,8 +179,16 @@ function FindRoomModal({
   const [results, setResults] = useState<RoomSummary[]>([]);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    if (!open) return;
+    setPassword("");
+    setSelectedRoom(null);
+  }, [open]);
+
   async function search() {
     setLoading(true);
+    setPassword("");
+    setSelectedRoom(null);
     const res = await fetch(`/api/rooms/search?q=${encodeURIComponent(q)}`);
     const data = (await res.json()) as { rooms?: RoomSummary[]; error?: string };
     setLoading(false);
@@ -253,22 +262,28 @@ function FindRoomModal({
 
         {selectedRoom ? (
           <div className="rounded-lg bg-slate-50 p-3">
-            <p className="mb-2 text-sm font-bold text-slate-800">{selectedRoom.title} 입장</p>
-            <input
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              className="w-full rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-teal-500"
-              placeholder="입장 비밀번호"
-              type="password"
-            />
-            <button
-              type="button"
-              onClick={join}
-              disabled={loading}
-              className="mt-3 w-full rounded-lg bg-teal-700 px-4 py-3 font-bold text-white disabled:opacity-60"
-            >
-              입장
-            </button>
+            {selectedRoom.isJoined ? (
+              <p className="text-sm font-bold text-slate-700">이미 참여중인 방입니다.</p>
+            ) : (
+              <>
+                <p className="mb-2 text-sm font-bold text-slate-800">{selectedRoom.title} 입장</p>
+                <input
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  className="w-full rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-teal-500"
+                  placeholder="입장 비밀번호"
+                  type="password"
+                />
+                <button
+                  type="button"
+                  onClick={join}
+                  disabled={loading}
+                  className="mt-3 w-full rounded-lg bg-teal-700 px-4 py-3 font-bold text-white disabled:opacity-60"
+                >
+                  입장
+                </button>
+              </>
+            )}
           </div>
         ) : null}
       </div>
