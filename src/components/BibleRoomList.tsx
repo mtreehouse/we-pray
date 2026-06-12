@@ -199,7 +199,7 @@ function CreateBibleRoomModal({
             onChange={(event) => setDurationMonths(Number(event.target.value))}
             className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 font-bold text-slate-900 outline-none focus:border-teal-500"
           >
-            {[3, 6, 9, 12, 18, 24, 36].map((month) => (
+            {[1, 2, 3, 6, 12].map((month) => (
               <option key={month} value={month}>{month}개월</option>
             ))}
           </select>
