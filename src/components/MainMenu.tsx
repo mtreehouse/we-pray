@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { HeartHandshake, LogIn, Newspaper, Shield, Sparkles } from "lucide-react";
+import { BookOpen, HeartHandshake, LogIn, Newspaper, Shield, Sparkles } from "lucide-react";
 import type { UserRole } from "@prisma/client";
 
 type MainMenuProps = {
@@ -36,6 +36,24 @@ export function MainMenu({ isLoggedIn, role }: MainMenuProps) {
           <HeartHandshake size={22} />
           <span>
             <span className="block font-bold">Pray Room</span>
+            <span className="text-sm">로그인 후 이용 가능</span>
+          </span>
+        </div>
+      )}
+
+      {isLoggedIn ? (
+        <Link href="/bible-room" className={itemClass}>
+          <BookOpen className="text-teal-700" size={22} />
+          <span>
+            <span className="block font-bold text-slate-900">Bible Room</span>
+            <span className="text-sm text-slate-500">함께 성경 통독하기</span>
+          </span>
+        </Link>
+      ) : (
+        <div className="flex min-h-20 items-center gap-3 rounded-lg border border-slate-200 bg-white/60 p-4 text-left text-slate-400 shadow-soft">
+          <BookOpen size={22} />
+          <span>
+            <span className="block font-bold">Bible Room</span>
             <span className="text-sm">로그인 후 이용 가능</span>
           </span>
         </div>

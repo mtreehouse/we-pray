@@ -23,6 +23,18 @@ enum RoomMemberRole {
   member
 }
 
+enum BibleScope {
+  OLD_TESTAMENT @map("구약")
+  NEW_TESTAMENT @map("신약")
+  ALL           @map("전체")
+}
+
+enum BiblePlanType {
+  SEQUENTIAL    @map("정주행")
+  CHRONOLOGICAL @map("연대기순")
+  PARALLEL      @map("병행")
+}
+
 model User {
   id             String        @id @default(cuid())
   provider       AuthProvider
@@ -36,6 +48,11 @@ model User {
   createdRooms PrayerRoom[] @relation("RoomCreator")
   memberships  RoomMember[]
   prayerPosts  PrayerPost[]
+
+  createdBibleRooms BibleRoom[]        @relation("BibleRoomCreator")
+  bibleMemberships  BibleRoomMember[]
+  bibleReflections  BibleReflection[]
+  bibleProgress     BibleProgress[]
 
   @@unique([provider, providerUserId])
   @@index([deletedAt])
@@ -103,4 +120,113 @@ model PrayNews {
 
   @@index([createdAt])
   @@index([deletedAt])
+}
+
+model BibleVerse {
+  id         String @id @default(cuid())
+  bookNumber Int
+  bookCode   String
+  bookName   String
+  chapter    Int
+  verse      Int
+  content    Json
+
+  @@unique([bookCode, chapter, verse])
+  @@index([bookCode])
+  @@index([bookNumber, chapter, verse])
+}
+
+model BibleRoom {
+  id             String        @id @default(cuid())
+  title          String
+  description    String
+  passwordHash   String
+  scope          BibleScope
+  durationMonths Int
+  excludeSunday  Boolean       @default(false)
+  planType       BiblePlanType @default(SEQUENTIAL)
+  creatorUserId  String
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  deletedAt      DateTime?
+
+  creator     User               @relation("BibleRoomCreator", fields: [creatorUserId], references: [id])
+  members     BibleRoomMember[]
+  plans       BiblePlan[]
+  reflections BibleReflection[]
+  progress    BibleProgress[]
+
+  @@index([creatorUserId])
+  @@index([deletedAt])
+}
+
+model BibleRoomMember {
+  id       String         @id @default(cuid())
+  roomId   String
+  userId   String
+  role     RoomMemberRole @default(member)
+  joinedAt DateTime       @default(now())
+  kickedAt DateTime?
+  leftAt   DateTime?
+
+  room BibleRoom @relation(fields: [roomId], references: [id])
+  user User      @relation(fields: [userId], references: [id])
+
+  @@unique([roomId, userId])
+  @@index([roomId])
+  @@index([userId])
+  @@index([joinedAt])
+}
+
+model BiblePlan {
+  id           String   @id @default(cuid())
+  roomId       String
+  readingDate  DateTime
+  bookCode     String
+  startChapter Int
+  endChapter   Int
+
+  room BibleRoom @relation(fields: [roomId], references: [id])
+
+  @@unique([roomId, readingDate, bookCode, startChapter, endChapter])
+  @@index([roomId, readingDate])
+  @@index([bookCode, startChapter, endChapter])
+}
+
+model BibleReflection {
+  id        String    @id @default(cuid())
+  roomId    String
+  userId    String
+  bookCode  String
+  chapter   Int
+  verse     Int
+  content   String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  room BibleRoom @relation(fields: [roomId], references: [id])
+  user User      @relation(fields: [userId], references: [id])
+
+  @@index([roomId, createdAt])
+  @@index([roomId, bookCode, chapter, verse])
+  @@index([userId])
+  @@index([deletedAt])
+}
+
+model BibleProgress {
+  id          String   @id @default(cuid())
+  roomId      String
+  userId      String
+  readingDate DateTime
+  isCompleted Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  room BibleRoom @relation(fields: [roomId], references: [id])
+  user User      @relation(fields: [userId], references: [id])
+
+  @@unique([roomId, userId, readingDate])
+  @@index([roomId, readingDate])
+  @@index([userId])
 }

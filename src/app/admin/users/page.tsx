@@ -10,6 +10,13 @@ export default async function AdminUsersPage() {
   const currentUser = await requireAdmin();
   const users = await prisma.user.findMany({
     where: { deletedAt: null },
+    select: {
+      id: true,
+      nickname: true,
+      provider: true,
+      role: true,
+      createdAt: true
+    },
     orderBy: { createdAt: "desc" }
   });
 

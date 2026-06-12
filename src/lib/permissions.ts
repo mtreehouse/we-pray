@@ -10,6 +10,14 @@ export async function getCurrentUser() {
     where: {
       id: session.user.id,
       deletedAt: null
+    },
+    select: {
+      id: true,
+      provider: true,
+      providerUserId: true,
+      nickname: true,
+      role: true,
+      deletedAt: true
     }
   });
 }
@@ -48,6 +56,39 @@ export async function requireRoomMember(roomId: string, userId: string) {
     },
     include: {
       room: true
+    }
+  });
+}
+
+
+export async function requireBibleRoomMember(roomId: string, userId: string) {
+  return prisma.bibleRoomMember.findFirst({
+    where: {
+      roomId,
+      userId,
+      leftAt: null,
+      kickedAt: null,
+      room: {
+        deletedAt: null
+      },
+      user: {
+        deletedAt: null
+      }
+    },
+    select: {
+      id: true,
+      roomId: true,
+      userId: true,
+      role: true,
+      joinedAt: true,
+      leftAt: true,
+      kickedAt: true,
+      room: {
+        select: {
+          id: true,
+          deletedAt: true
+        }
+      }
     }
   });
 }
