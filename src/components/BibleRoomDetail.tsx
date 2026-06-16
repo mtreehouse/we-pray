@@ -533,6 +533,8 @@ export function BibleRoomDetail({
           onToggleComplete={selectedPlanDay ? toggleComplete : undefined}
           onPrev={() => setChapterIndex((index) => Math.max(0, index - 1))}
           onNext={() => setChapterIndex((index) => Math.min(chapters.length - 1, index + 1))}
+          onFirst={() => setChapterIndex(0)}
+          onLast={() => setChapterIndex(Math.max(0, chapters.length - 1))}
           onChapterJump={holdCompactReadingHeader}
           onReflect={setReflectionTarget}
           onToast={showToast}
@@ -905,6 +907,8 @@ function BibleTab({
   onToggleComplete,
   onPrev,
   onNext,
+  onFirst,
+  onLast,
   onChapterJump,
   onReflect,
   onToast
@@ -922,6 +926,8 @@ function BibleTab({
   onToggleComplete?: () => void;
   onPrev: () => void;
   onNext: () => void;
+  onFirst: () => void;
+  onLast: () => void;
   onChapterJump: () => void;
   onReflect: (target: VerseTarget) => void;
   onToast: (message: string) => void;
@@ -958,6 +964,20 @@ function BibleTab({
     setSwipeHint(null);
     pendingChapterScrollRef.current = true;
     onNext();
+  }
+
+  function goFirst() {
+    if (chapterIndex === 0) return;
+    setSwipeHint(null);
+    pendingChapterScrollRef.current = true;
+    onFirst();
+  }
+
+  function goLast() {
+    if (chapterIndex >= chapters.length - 1) return;
+    setSwipeHint(null);
+    pendingChapterScrollRef.current = true;
+    onLast();
   }
 
   function goPrevInPlace() {
@@ -1114,12 +1134,21 @@ function BibleTab({
                 />
               ))}
             </div>
-            <div className="mt-5 grid grid-cols-2 gap-2 border-t border-slate-100 pt-4">
+            <div className="mt-5 flex items-center gap-2 border-t border-slate-100 pt-4">
+              {chapterIndex > 0 ? (
+                <button
+                  type="button"
+                  onClick={goFirst}
+                  className="min-h-12 w-12 rounded-lg border border-slate-200 bg-white px-2 text-xs font-black text-slate-500"
+                >
+                  처음
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={goPrev}
                 disabled={chapterIndex === 0}
-                className="flex min-h-12 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-black text-slate-700 disabled:opacity-35"
+                className="flex min-h-12 flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-black text-slate-700 disabled:opacity-35"
               >
                 <ChevronLeft size={17} />
                 이전 장
@@ -1128,11 +1157,20 @@ function BibleTab({
                 type="button"
                 onClick={goNext}
                 disabled={chapterIndex >= chapters.length - 1}
-                className="flex min-h-12 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-black text-slate-700 disabled:opacity-35"
+                className="flex min-h-12 flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-black text-slate-700 disabled:opacity-35"
               >
                 다음 장
                 <ChevronRight size={17} />
               </button>
+              {chapterIndex < chapters.length - 1 ? (
+                <button
+                  type="button"
+                  onClick={goLast}
+                  className="min-h-12 w-12 rounded-lg border border-slate-200 bg-white px-2 text-xs font-black text-slate-500"
+                >
+                  끝
+                </button>
+              ) : null}
             </div>
             {chapterIndex >= chapters.length - 1 && onToggleComplete ? (
               <button
