@@ -120,6 +120,11 @@ type VerseTarget = {
   text: string;
 };
 
+type DateRange = {
+  startDate: string;
+  endDate: string;
+};
+
 const scopeLabels: Record<string, string> = {
   OLD_TESTAMENT: "구약",
   NEW_TESTAMENT: "신약",
@@ -181,6 +186,7 @@ export function BibleRoomDetail({
     () => planDays.find((day) => day.date === selectedDate) ?? null,
     [planDays, selectedDate]
   );
+  const planDateRange = useMemo(() => getPlanDateRange(room, planDays), [planDays, room]);
   const currentChapter = chapters[chapterIndex] ?? null;
 
   const showToast = useCallback((message: string) => {
@@ -255,8 +261,15 @@ export function BibleRoomDetail({
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (selectedDate) void loadReading();
-  }, [loadReading, selectedDate]);
+    if (!planDateRange || isDateInRange(selectedDate, planDateRange)) return;
+    setSelectedDate(planDateRange.startDate);
+  }, [planDateRange, selectedDate]);
+
+  useEffect(() => {
+    if (!selectedDate) return;
+    if (planDateRange && !isDateInRange(selectedDate, planDateRange)) return;
+    void loadReading();
+  }, [loadReading, planDateRange, selectedDate]);
 
   useEffect(() => {
     if (activeTab !== "sharing" || !sentinelRef.current) return;
@@ -509,6 +522,7 @@ export function BibleRoomDetail({
         <BibleTab
           days={planDays}
           selectedDate={selectedDate}
+          planDateRange={planDateRange}
           onSelectDate={setSelectedDate}
           chapters={chapters}
           currentChapter={currentChapter}
@@ -543,6 +557,7 @@ export function BibleRoomDetail({
           members={members}
           days={planDays}
           selectedDate={selectedDate}
+          planDateRange={planDateRange}
           progress={progress}
           onSelectDate={setSelectedDate}
         />
@@ -879,6 +894,7 @@ function MemberReflectionHistoryModal({
 function BibleTab({
   days,
   selectedDate,
+  planDateRange,
   onSelectDate,
   chapters,
   currentChapter,
@@ -895,6 +911,7 @@ function BibleTab({
 }: {
   days: PlanDay[];
   selectedDate: string;
+  planDateRange: DateRange | null;
   onSelectDate: (date: string) => void;
   chapters: ReadingChapter[];
   currentChapter: ReadingChapter | null;
@@ -976,6 +993,7 @@ function BibleTab({
             <PlanCalendar
               days={days}
               selectedDate={selectedDate}
+              planDateRange={planDateRange}
               onSelectDate={(date) => {
                 onSelectDate(date);
                 setDatePickerOpen(false);
@@ -1139,9 +1157,7 @@ function BibleTab({
             ) : null}
           </article>
         ) : (
-          <div className="border-y border-dashed border-slate-200 bg-white p-6 text-center text-sm leading-6 text-slate-500">
-            선택한 날짜에 배정된 본문이 없습니다.
-          </div>
+          <RestDayMessage />
         )}
       </div>
     </section>
@@ -1326,6 +1342,7 @@ function PlanTab({
   members,
   days,
   selectedDate,
+  planDateRange,
   progress,
   onSelectDate
 }: {
@@ -1333,6 +1350,7 @@ function PlanTab({
   members: RoomMember[];
   days: PlanDay[];
   selectedDate: string;
+  planDateRange: DateRange | null;
   progress: ProgressSummary | null;
   onSelectDate: (date: string) => void;
 }) {
@@ -1352,7 +1370,7 @@ function PlanTab({
         </div>
       </div>
 
-      <PlanCalendar days={days} selectedDate={selectedDate} onSelectDate={onSelectDate} />
+      <PlanCalendar days={days} selectedDate={selectedDate} planDateRange={planDateRange} onSelectDate={onSelectDate} />
 
       <div className="mt-4 rounded-lg bg-white p-4 shadow-soft">
         <h3 className="mb-3 font-black text-slate-950">{formatDate(selectedDate)} 플랜</h3>
@@ -1365,7 +1383,7 @@ function PlanTab({
             ))}
           </div>
         ) : (
-          <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-500">선택한 날짜에 배정된 플랜이 없습니다.</p>
+          <RestDayMessage />
         )}
       </div>
 
@@ -1403,14 +1421,27 @@ function PlanTab({
   );
 }
 
+function RestDayMessage() {
+  return (
+    <div className="grid min-h-40 place-items-center bg-white px-6 py-10 text-center">
+      <div>
+        <p className="text-base font-black text-slate-950">[쉬어가는 날]</p>
+        <p className="mt-3 text-sm font-bold leading-6 text-slate-500">참된 쉼과 은혜가 있는 하루 되세요!</p>
+      </div>
+    </div>
+  );
+}
+
 function PlanCalendar({
   days,
   selectedDate,
+  planDateRange,
   onSelectDate,
   compact = false
 }: {
   days: PlanDay[];
   selectedDate: string;
+  planDateRange: DateRange | null;
   onSelectDate: (date: string) => void;
   compact?: boolean;
 }) {
@@ -1446,21 +1477,26 @@ function PlanCalendar({
         {cells.map((date, index) => {
           if (!date) return <div key={`empty-${index}`} className={compact ? "h-9" : "h-10"} />;
           const plan = dayMap.get(date);
-          const active = selectedDate === date;
+          const selectable = Boolean(planDateRange && isDateInRange(date, planDateRange));
+          const active = selectable && selectedDate === date;
           return (
             <button
               key={date}
               type="button"
-              onClick={() => plan && onSelectDate(date)}
-              disabled={!plan}
+              onClick={() => {
+                if (selectable) onSelectDate(date);
+              }}
+              disabled={!selectable}
               className={`${compact ? "h-9" : "h-10"} rounded-lg text-sm font-black transition ${
-                active
-                  ? "bg-teal-700 text-white"
-                  : plan?.isCompleted
-                    ? "bg-emerald-50 text-emerald-700"
-                    : plan
-                      ? "bg-slate-100 text-slate-700"
-                      : "bg-transparent text-slate-300"
+                !selectable
+                  ? "bg-transparent text-slate-200"
+                  : active
+                    ? "bg-teal-700 text-white"
+                    : plan?.isCompleted
+                      ? "bg-emerald-50 text-emerald-700"
+                      : plan
+                        ? "bg-slate-100 text-slate-700"
+                        : "bg-transparent text-slate-400"
               } disabled:cursor-default`}
             >
               {Number(date.slice(8, 10))}
@@ -1600,6 +1636,49 @@ function PassageModal({ passage, onClose }: { passage: Passage | null; onClose: 
       </div>
     </Modal>
   );
+}
+
+function getPlanDateRange(room: RoomDetail, days: PlanDay[]): DateRange | null {
+  if (!days.length) return null;
+
+  const dates = days.map((day) => day.date).sort();
+  const firstPlanDate = dates[0];
+  const lastPlanDate = dates[dates.length - 1];
+  const createdDate = dateKeyInTimeZone(room.createdAt);
+  const startDate = createdDate < firstPlanDate ? createdDate : firstPlanDate;
+  const durationEndDate = addDaysToDateKey(addMonthsToDateKey(startDate, room.durationMonths), -1);
+  const endDate = durationEndDate > lastPlanDate ? durationEndDate : lastPlanDate;
+
+  return { startDate, endDate };
+}
+
+function isDateInRange(date: string, range: DateRange) {
+  return date >= range.startDate && date <= range.endDate;
+}
+
+function dateKeyInTimeZone(value: string | Date, timeZone = "Asia/Seoul") {
+  const date = typeof value === "string" ? new Date(value) : value;
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function addMonthsToDateKey(dateKey: string, months: number) {
+  const date = new Date(`${dateKey}T00:00:00.000Z`);
+  date.setUTCMonth(date.getUTCMonth() + months);
+  return date.toISOString().slice(0, 10);
+}
+
+function addDaysToDateKey(dateKey: string, days: number) {
+  const date = new Date(`${dateKey}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
 }
 
 function buildCalendarCells(monthKey: string) {
