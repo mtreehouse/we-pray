@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { BibleRoomDetail } from "@/components/BibleRoomDetail";
-import { toDateKey } from "@/lib/bible-plan";
+import { todayDateKey } from "@/lib/bible-plan";
 import { prisma } from "@/lib/prisma";
 import { requireBibleRoomMember, requireNickname } from "@/lib/permissions";
 
@@ -17,8 +17,7 @@ export default async function BibleRoomDetailPage({ params }: PageProps) {
 
   if (!membership) notFound();
 
-  const [room, firstPlan] = await Promise.all([
-    prisma.bibleRoom.findFirst({
+  const room = await prisma.bibleRoom.findFirst({
       where: { id: roomId, deletedAt: null },
       select: {
         id: true,
@@ -42,20 +41,14 @@ export default async function BibleRoomDetailPage({ params }: PageProps) {
           orderBy: [{ role: "asc" }, { joinedAt: "asc" }]
         }
       }
-    }),
-    prisma.biblePlan.findFirst({
-      where: { roomId },
-      select: { readingDate: true },
-      orderBy: { readingDate: "asc" }
-    })
-  ]);
+    });
 
   if (!room) notFound();
 
   return (
     <BibleRoomDetail
       currentUserId={user.id}
-      initialDate={firstPlan ? toDateKey(firstPlan.readingDate) : toDateKey(new Date())}
+      initialDate={todayDateKey()}
       room={{
         id: room.id,
         title: room.title,

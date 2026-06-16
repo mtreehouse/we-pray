@@ -102,6 +102,22 @@ export function toDateKey(date: Date) {
   return startOfUtcDay(date).toISOString().slice(0, 10);
 }
 
+export function todayDateKey(timeZone = "Asia/Seoul") {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+export function todayUtcDate(timeZone = "Asia/Seoul") {
+  return parseDateKey(todayDateKey(timeZone)) ?? startOfUtcDay(new Date());
+}
+
 function addUtcDays(date: Date, days: number) {
   const next = new Date(date);
   next.setUTCDate(next.getUTCDate() + days);

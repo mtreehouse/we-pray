@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { RoomMemberRole } from "@prisma/client";
-import { buildBiblePlanRows } from "@/lib/bible-plan";
+import { buildBiblePlanRows, todayUtcDate } from "@/lib/bible-plan";
 import { normalizeBiblePlanType, normalizeBibleScope, numericBodyValue } from "@/lib/bible-api";
 import { hashPassword } from "@/lib/password";
 import { requireNickname } from "@/lib/permissions";
@@ -113,7 +113,7 @@ export async function POST(req: Request) {
         durationMonths,
         excludeSunday: Boolean(body.excludeSunday),
         planType: planType!,
-        startDate: new Date()
+        startDate: todayUtcDate()
       });
 
       await tx.biblePlan.createMany({

@@ -203,10 +203,7 @@ export function BibleRoomDetail({
     }
 
     setPlanDays(data.days ?? []);
-    if (!data.days?.some((day) => day.date === selectedDate) && data.days?.[0]) {
-      setSelectedDate(data.days[0].date);
-    }
-  }, [room.id, selectedDate, showToast]);
+  }, [room.id, showToast]);
 
   const loadReading = useCallback(async () => {
     setReadingLoading(true);
