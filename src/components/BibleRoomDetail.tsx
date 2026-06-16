@@ -131,6 +131,8 @@ type DateRange = {
   endDate: string;
 };
 
+type BibleTranslationCode = "ko_krv" | "ko_nkrv";
+
 const scopeLabels: Record<string, string> = {
   OLD_TESTAMENT: "구약",
   NEW_TESTAMENT: "신약",
@@ -148,6 +150,18 @@ const planTypeLabels: Record<string, string> = {
   연대기순: "연대기순",
   병행: "병행"
 };
+
+const bibleTranslationLabels: Record<BibleTranslationCode, string> = {
+  ko_krv: "개역한글",
+  ko_nkrv: "개역개정"
+};
+
+const DEFAULT_BIBLE_TRANSLATION: BibleTranslationCode = "ko_krv";
+const BIBLE_TRANSLATION_STORAGE_KEY = "wepray:bible-translation";
+
+function isBibleTranslationCode(value: unknown): value is BibleTranslationCode {
+  return value === "ko_krv" || value === "ko_nkrv";
+}
 
 export function BibleRoomDetail({
   room,
@@ -178,6 +192,8 @@ export function BibleRoomDetail({
   const [editingReflection, setEditingReflection] = useState<Reflection | null>(null);
   const [passage, setPassage] = useState<Passage | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [translationOpen, setTranslationOpen] = useState(false);
+  const [translation, setTranslation] = useState<BibleTranslationCode>(DEFAULT_BIBLE_TRANSLATION);
   const [infoOpen, setInfoOpen] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
   const [historyMember, setHistoryMember] = useState<RoomMember | null>(null);
@@ -207,6 +223,15 @@ export function BibleRoomDetail({
   const holdCompactReadingHeader = useCallback(() => {
     forceCompactHeaderUntilRef.current = Date.now() + 900;
     setHeaderCollapseProgress(1);
+  }, []);
+
+  const selectTranslation = useCallback((nextTranslation: BibleTranslationCode) => {
+    setTranslation(nextTranslation);
+    try {
+      window.localStorage.setItem(BIBLE_TRANSLATION_STORAGE_KEY, nextTranslation);
+    } catch {
+      // localStorage may be unavailable in private browsing or restricted webviews.
+    }
   }, []);
 
   const loadPlans = useCallback(async () => {
@@ -292,6 +317,15 @@ export function BibleRoomDetail({
       setStoredLocationLoaded(true);
     }
   }, [readingLocationStorageKey]);
+
+  useEffect(() => {
+    try {
+      const savedTranslation = window.localStorage.getItem(BIBLE_TRANSLATION_STORAGE_KEY);
+      if (isBibleTranslationCode(savedTranslation)) setTranslation(savedTranslation);
+    } catch {
+      // Keep the default translation when localStorage cannot be read.
+    }
+  }, []);
 
   useEffect(() => {
     void loadPlans();
@@ -592,6 +626,7 @@ export function BibleRoomDetail({
           onFirst={() => setChapterIndex(0)}
           onLast={() => setChapterIndex(Math.max(0, chapters.length - 1))}
           onChapterJump={holdCompactReadingHeader}
+          translation={translation}
           onReflect={setReflectionTarget}
           onToast={showToast}
         />
@@ -603,6 +638,7 @@ export function BibleRoomDetail({
           loading={feedLoading}
           nextCursor={nextCursor}
           sentinelRef={sentinelRef}
+          translation={translation}
           onOpenPassage={openPassage}
           onEdit={setEditingReflection}
           onDelete={deleteReflection}
@@ -627,11 +663,19 @@ export function BibleRoomDetail({
         room={room}
         members={members}
         reflections={reflections}
+        translationLabel={bibleTranslationLabels[translation]}
         onInfo={() => setInfoOpen(true)}
+        onTranslation={() => setTranslationOpen(true)}
         onManage={() => setManageOpen(true)}
         onLeave={leaveRoom}
         onHistory={openMemberHistory}
         onToast={showToast}
+      />
+      <BibleTranslationModal
+        open={translationOpen}
+        selected={translation}
+        onClose={() => setTranslationOpen(false)}
+        onSelect={selectTranslation}
       />
       <BibleRoomInfoModal room={room} open={infoOpen} onClose={() => setInfoOpen(false)} />
       <BibleRoomManageModal
@@ -660,7 +704,7 @@ export function BibleRoomDetail({
         onClose={() => setEditingReflection(null)}
         onSubmit={updateReflection}
       />
-      <PassageModal passage={passage} onClose={() => setPassage(null)} />
+      <PassageModal passage={passage} translation={translation} onClose={() => setPassage(null)} />
     </main>
   );
 }
@@ -686,7 +730,9 @@ function BibleRoomSettingsDrawer({
   room,
   members,
   reflections,
+  translationLabel,
   onInfo,
+  onTranslation,
   onManage,
   onLeave,
   onHistory,
@@ -697,7 +743,9 @@ function BibleRoomSettingsDrawer({
   room: RoomDetail;
   members: RoomMember[];
   reflections: Reflection[];
+  translationLabel: string;
   onInfo: () => void;
+  onTranslation: () => void;
   onManage: () => void;
   onLeave: () => void;
   onHistory: (member: RoomMember) => void;
@@ -742,6 +790,14 @@ function BibleRoomSettingsDrawer({
         <div className="mb-6 grid gap-2">
           <button type="button" onClick={onInfo} className="rounded-lg bg-slate-100 px-4 py-3 text-left font-bold text-slate-800">
             방 정보
+          </button>
+          <button
+            type="button"
+            onClick={onTranslation}
+            className="flex items-center justify-between gap-3 rounded-lg bg-slate-100 px-4 py-3 text-left font-bold text-slate-800"
+          >
+            <span>번역본 설정</span>
+            <span className="shrink-0 text-xs font-black text-teal-700">{translationLabel}</span>
           </button>
           {room.isCreator ? (
             <button type="button" onClick={onManage} className="rounded-lg bg-slate-100 px-4 py-3 text-left font-bold text-slate-800">
@@ -813,6 +869,53 @@ function InfoRow({ label, value }: { label: string; value: string }) {
       <dt className="mb-1 font-bold text-slate-500">{label}</dt>
       <dd className="whitespace-pre-wrap break-words text-slate-900">{value}</dd>
     </div>
+  );
+}
+
+function BibleTranslationModal({
+  open,
+  selected,
+  onClose,
+  onSelect
+}: {
+  open: boolean;
+  selected: BibleTranslationCode;
+  onClose: () => void;
+  onSelect: (translation: BibleTranslationCode) => void;
+}) {
+  const options = Object.entries(bibleTranslationLabels) as Array<[BibleTranslationCode, string]>;
+
+  return (
+    <Modal title="번역본 설정" open={open} onClose={onClose}>
+      <div className="grid gap-2">
+        {options.map(([code, label]) => {
+          const active = selected === code;
+
+          return (
+            <button
+              key={code}
+              type="button"
+              onClick={() => {
+                onSelect(code);
+                onClose();
+              }}
+              className={`flex min-h-12 items-center justify-between gap-3 rounded-lg border px-4 py-3 text-left transition ${
+                active
+                  ? "border-teal-200 bg-teal-50 text-teal-900"
+                  : "border-slate-200 bg-white text-slate-800"
+              }`}
+            >
+              <span className="font-black">{label}</span>
+              {active ? (
+                <span className="grid h-6 w-6 place-items-center rounded-full bg-teal-700 text-white">
+                  <Check size={15} strokeWidth={3} />
+                </span>
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+    </Modal>
   );
 }
 
@@ -966,6 +1069,7 @@ function BibleTab({
   onFirst,
   onLast,
   onChapterJump,
+  translation,
   onReflect,
   onToast
 }: {
@@ -985,6 +1089,7 @@ function BibleTab({
   onFirst: () => void;
   onLast: () => void;
   onChapterJump: () => void;
+  translation: BibleTranslationCode;
   onReflect: (target: VerseTarget) => void;
   onToast: (message: string) => void;
 }) {
@@ -1185,6 +1290,7 @@ function BibleTab({
                   key={verse.verse}
                   chapter={currentChapter}
                   verse={verse}
+                  translation={translation}
                   onReflect={onReflect}
                   onToast={onToast}
                 />
@@ -1261,17 +1367,19 @@ function BibleTab({
 function VerseRow({
   chapter,
   verse,
+  translation,
   onReflect,
   onToast
 }: {
   chapter: ReadingChapter;
   verse: ReadingVerse;
+  translation: BibleTranslationCode;
   onReflect: (target: VerseTarget) => void;
   onToast: (message: string) => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const timerRef = useRef<number | null>(null);
-  const text = verseText(verse.content);
+  const text = verseText(verse.content, translation);
 
   function clearTimer() {
     if (timerRef.current) {
@@ -1345,6 +1453,7 @@ function SharingTab({
   loading,
   nextCursor,
   sentinelRef,
+  translation,
   onOpenPassage,
   onEdit,
   onDelete
@@ -1353,6 +1462,7 @@ function SharingTab({
   loading: boolean;
   nextCursor: string | null;
   sentinelRef: React.RefObject<HTMLDivElement>;
+  translation: BibleTranslationCode;
   onOpenPassage: (reflection: Reflection) => void;
   onEdit: (reflection: Reflection) => void;
   onDelete: (reflection: Reflection) => void;
@@ -1400,7 +1510,7 @@ function SharingTab({
                       onClick={() => onOpenPassage(reflection)}
                       className="mb-3 block w-full rounded-lg bg-teal-50 px-3 py-2 text-left text-sm leading-6 text-teal-950"
                     >
-                      {verseText(reflection.verseContent)}
+                      {verseText(reflection.verseContent, translation)}
                     </button>
                   ) : null}
                   <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">{reflection.content}</p>
@@ -1696,7 +1806,15 @@ function ReflectionEditModal({
   );
 }
 
-function PassageModal({ passage, onClose }: { passage: Passage | null; onClose: () => void }) {
+function PassageModal({
+  passage,
+  translation,
+  onClose
+}: {
+  passage: Passage | null;
+  translation: BibleTranslationCode;
+  onClose: () => void;
+}) {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const focusVerseRef = useRef<HTMLParagraphElement | null>(null);
 
@@ -1723,7 +1841,7 @@ function PassageModal({ passage, onClose }: { passage: Passage | null; onClose: 
               }`}
             >
               <span className="mr-2 text-xs font-black text-teal-700">{verseLabel(verse.content, verse.verse)}</span>
-              {verseText(verse.content)}
+              {verseText(verse.content, translation)}
             </p>
           );
         })}
@@ -1794,20 +1912,25 @@ function buildCalendarCells(monthKey: string) {
 
 function verseLabel(content: unknown, fallback: number) {
   if (content && typeof content === "object") {
-    const translations = content as Record<string, unknown>;
-    if (typeof translations.verse_label === "string") return translations.verse_label;
+    const verse = content as Record<string, unknown>;
+    if (typeof verse.verse_label === "string") return verse.verse_label;
   }
 
   return String(fallback);
 }
 
-function verseText(content: unknown) {
+function verseText(content: unknown, translation: BibleTranslationCode = DEFAULT_BIBLE_TRANSLATION) {
   if (typeof content === "string") return content;
   if (content && typeof content === "object") {
-    const translations = content as Record<string, unknown>;
-    const koKrv = translations.ko_krv;
-    if (typeof koKrv === "string") return koKrv;
-    const first = Object.values(translations).find((value) => typeof value === "string");
+    const verse = content as Record<string, unknown>;
+    const translations = verse.translations && typeof verse.translations === "object" && !Array.isArray(verse.translations)
+      ? verse.translations as Record<string, unknown>
+      : verse;
+    const selected = translations[translation];
+    if (typeof selected === "string") return selected;
+    const fallback = translations[DEFAULT_BIBLE_TRANSLATION];
+    if (typeof fallback === "string") return fallback;
+    const first = Object.entries(translations).find(([key, value]) => key !== "verse_label" && typeof value === "string")?.[1];
     if (typeof first === "string") return first;
   }
   return "";
