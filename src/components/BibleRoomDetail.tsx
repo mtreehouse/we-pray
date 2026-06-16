@@ -120,6 +120,12 @@ type VerseTarget = {
   text: string;
 };
 
+type ReadingLocation = {
+  date: string;
+  bookCode: string;
+  chapter: number;
+};
+
 type DateRange = {
   startDate: string;
   endDate: string;
@@ -162,6 +168,8 @@ export function BibleRoomDetail({
   const [chapters, setChapters] = useState<ReadingChapter[]>([]);
   const [chapterIndex, setChapterIndex] = useState(0);
   const [readingLoading, setReadingLoading] = useState(false);
+  const [loadedReadingDate, setLoadedReadingDate] = useState<string | null>(null);
+  const [storedLocationLoaded, setStoredLocationLoaded] = useState(false);
   const [reflections, setReflections] = useState<Reflection[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [feedLoading, setFeedLoading] = useState(false);
@@ -180,7 +188,9 @@ export function BibleRoomDetail({
   const roomHeaderRef = useRef<HTMLElement | null>(null);
   const lastScrollYRef = useRef(0);
   const forceCompactHeaderUntilRef = useRef(0);
+  const restoredLocationRef = useRef<ReadingLocation | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const readingLocationStorageKey = useMemo(() => `wepray:bible-room:${room.id}:reading-location`, [room.id]);
 
   const selectedPlanDay = useMemo(
     () => planDays.find((day) => day.date === selectedDate) ?? null,
@@ -213,6 +223,7 @@ export function BibleRoomDetail({
 
   const loadReading = useCallback(async () => {
     setReadingLoading(true);
+    setLoadedReadingDate(null);
     const res = await fetch(`/api/bible-rooms/${room.id}/reading?date=${selectedDate}`);
     const data = (await res.json()) as { chapters?: ReadingChapter[]; error?: string };
     setReadingLoading(false);
@@ -222,8 +233,15 @@ export function BibleRoomDetail({
       return;
     }
 
-    setChapters(data.chapters ?? []);
-    setChapterIndex(0);
+    const nextChapters = data.chapters ?? [];
+    const restoredLocation = restoredLocationRef.current;
+    const restoredIndex = restoredLocation?.date === selectedDate
+      ? nextChapters.findIndex((chapter) => chapter.bookCode === restoredLocation.bookCode && chapter.chapter === restoredLocation.chapter)
+      : -1;
+
+    setChapters(nextChapters);
+    setChapterIndex(restoredIndex >= 0 ? restoredIndex : 0);
+    setLoadedReadingDate(selectedDate);
   }, [room.id, selectedDate, showToast]);
 
   const loadProgress = useCallback(async () => {
@@ -255,6 +273,27 @@ export function BibleRoomDetail({
   }, [nextCursor, room.id, showToast]);
 
   useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(readingLocationStorageKey);
+      const location = raw ? (JSON.parse(raw) as Partial<ReadingLocation>) : null;
+
+      if (location?.date && location.bookCode && typeof location.chapter === "number" && Number.isInteger(location.chapter)) {
+        const restoredLocation: ReadingLocation = {
+          date: location.date,
+          bookCode: location.bookCode,
+          chapter: location.chapter
+        };
+        restoredLocationRef.current = restoredLocation;
+        setSelectedDate(restoredLocation.date);
+      }
+    } catch {
+      restoredLocationRef.current = null;
+    } finally {
+      setStoredLocationLoaded(true);
+    }
+  }, [readingLocationStorageKey]);
+
+  useEffect(() => {
     void loadPlans();
     void loadProgress();
     void loadReflections(true);
@@ -266,10 +305,27 @@ export function BibleRoomDetail({
   }, [planDateRange, selectedDate]);
 
   useEffect(() => {
-    if (!selectedDate) return;
+    if (!storedLocationLoaded || !selectedDate) return;
     if (planDateRange && !isDateInRange(selectedDate, planDateRange)) return;
     void loadReading();
-  }, [loadReading, planDateRange, selectedDate]);
+  }, [loadReading, planDateRange, selectedDate, storedLocationLoaded]);
+
+  useEffect(() => {
+    if (!storedLocationLoaded || loadedReadingDate !== selectedDate || !currentChapter) return;
+
+    try {
+      window.localStorage.setItem(
+        readingLocationStorageKey,
+        JSON.stringify({
+          date: selectedDate,
+          bookCode: currentChapter.bookCode,
+          chapter: currentChapter.chapter
+        })
+      );
+    } catch {
+      // localStorage may be unavailable in private browsing or restricted webviews.
+    }
+  }, [currentChapter, loadedReadingDate, readingLocationStorageKey, selectedDate, storedLocationLoaded]);
 
   useEffect(() => {
     if (activeTab !== "sharing" || !sentinelRef.current) return;
