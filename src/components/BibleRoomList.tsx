@@ -399,6 +399,10 @@ function CreateBibleRoomModal({
           onChange={setPlanType}
         />
 
+        <p className="rounded-lg bg-teal-50 px-3 py-2 text-xs font-bold text-teal-800">
+          생성한 날 기준으로 플랜이 시작됩니다!
+        </p>
+
         <button
           type="button"
           onClick={submit}
