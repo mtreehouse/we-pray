@@ -132,6 +132,7 @@ type DateRange = {
 };
 
 type BibleTranslationCode = "ko_krv" | "ko_nkrv";
+type BibleFontSize = "small" | "normal" | "large" | "xlarge";
 
 const scopeLabels: Record<string, string> = {
   OLD_TESTAMENT: "구약",
@@ -156,11 +157,32 @@ const bibleTranslationLabels: Record<BibleTranslationCode, string> = {
   ko_nkrv: "개역개정"
 };
 
+const bibleFontSizeLabels: Record<BibleFontSize, string> = {
+  small: "작게",
+  normal: "기본",
+  large: "크게",
+  xlarge: "아주 크게"
+};
+
+const bibleFontSizeClasses: Record<BibleFontSize, string> = {
+  small: "text-[14px] leading-7",
+  normal: "text-[15px] leading-7",
+  large: "text-[17px] leading-8",
+  xlarge: "text-[19px] leading-9"
+};
+
 const DEFAULT_BIBLE_TRANSLATION: BibleTranslationCode = "ko_krv";
+const DEFAULT_BIBLE_FONT_SIZE: BibleFontSize = "normal";
 const BIBLE_TRANSLATION_STORAGE_KEY = "wepray:bible-translation";
+const BIBLE_FONT_SIZE_STORAGE_KEY = "wepray:bible-font-size";
+const BIBLE_DARK_MODE_STORAGE_KEY = "wepray:bible-room-dark-mode";
 
 function isBibleTranslationCode(value: unknown): value is BibleTranslationCode {
   return value === "ko_krv" || value === "ko_nkrv";
+}
+
+function isBibleFontSize(value: unknown): value is BibleFontSize {
+  return value === "small" || value === "normal" || value === "large" || value === "xlarge";
 }
 
 export function BibleRoomDetail({
@@ -194,6 +216,8 @@ export function BibleRoomDetail({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [translationOpen, setTranslationOpen] = useState(false);
   const [translation, setTranslation] = useState<BibleTranslationCode>(DEFAULT_BIBLE_TRANSLATION);
+  const [bibleFontSize, setBibleFontSize] = useState<BibleFontSize>(DEFAULT_BIBLE_FONT_SIZE);
+  const [darkMode, setDarkMode] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
   const [historyMember, setHistoryMember] = useState<RoomMember | null>(null);
@@ -229,6 +253,24 @@ export function BibleRoomDetail({
     setTranslation(nextTranslation);
     try {
       window.localStorage.setItem(BIBLE_TRANSLATION_STORAGE_KEY, nextTranslation);
+    } catch {
+      // localStorage may be unavailable in private browsing or restricted webviews.
+    }
+  }, []);
+
+  const selectBibleFontSize = useCallback((nextFontSize: BibleFontSize) => {
+    setBibleFontSize(nextFontSize);
+    try {
+      window.localStorage.setItem(BIBLE_FONT_SIZE_STORAGE_KEY, nextFontSize);
+    } catch {
+      // localStorage may be unavailable in private browsing or restricted webviews.
+    }
+  }, []);
+
+  const selectDarkMode = useCallback((enabled: boolean) => {
+    setDarkMode(enabled);
+    try {
+      window.localStorage.setItem(BIBLE_DARK_MODE_STORAGE_KEY, enabled ? "true" : "false");
     } catch {
       // localStorage may be unavailable in private browsing or restricted webviews.
     }
@@ -321,9 +363,13 @@ export function BibleRoomDetail({
   useEffect(() => {
     try {
       const savedTranslation = window.localStorage.getItem(BIBLE_TRANSLATION_STORAGE_KEY);
+      const savedFontSize = window.localStorage.getItem(BIBLE_FONT_SIZE_STORAGE_KEY);
+      const savedDarkMode = window.localStorage.getItem(BIBLE_DARK_MODE_STORAGE_KEY);
       if (isBibleTranslationCode(savedTranslation)) setTranslation(savedTranslation);
+      if (isBibleFontSize(savedFontSize)) setBibleFontSize(savedFontSize);
+      if (savedDarkMode === "true" || savedDarkMode === "false") setDarkMode(savedDarkMode === "true");
     } catch {
-      // Keep the default translation when localStorage cannot be read.
+      // Keep the default display settings when localStorage cannot be read.
     }
   }, []);
 
@@ -560,28 +606,28 @@ export function BibleRoomDetail({
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-xl flex-col bg-white/55">
+    <main className={`mx-auto flex min-h-dvh w-full max-w-xl flex-col ${darkMode ? "dark bg-slate-950 text-slate-100" : "bg-white/55 text-slate-900"}`}>
       <Toast message={toast} />
       <header
         ref={roomHeaderRef}
-        className={`sticky top-0 z-20 bg-white/95 px-4 backdrop-blur will-change-transform ${
-          activeTab === "bible" ? "border-b border-transparent" : "border-b border-white/70"
+        className={`sticky top-0 z-20 bg-white/95 px-4 backdrop-blur will-change-transform dark:bg-slate-950/95 ${
+          activeTab === "bible" ? "border-b border-transparent" : "border-b border-white/70 dark:border-slate-800"
         }`}
         style={{ transform: `translateY(${-headerCollapseProgress * 100}%)` }}
       >
         <div className="grid h-14 grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] items-center gap-2">
           <Link
             href="/bible-room"
-            className="grid h-10 w-10 place-items-center rounded-full border border-slate-200 bg-white text-slate-700"
+            className="grid h-10 w-10 place-items-center rounded-full border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
             aria-label="성경방 목록으로"
           >
             <ChevronLeft size={20} />
           </Link>
-          <h1 className="min-w-0 truncate text-center text-lg font-black text-slate-950">{room.title}</h1>
+          <h1 className="min-w-0 truncate text-center text-lg font-black text-slate-950 dark:text-slate-50">{room.title}</h1>
           <button
             type="button"
             onClick={() => setSettingsOpen(true)}
-            className="grid h-10 w-10 place-items-center rounded-full border border-slate-200 bg-white text-slate-700"
+            className="grid h-10 w-10 place-items-center rounded-full border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
             aria-label="성경방 설정"
             title="성경방 설정"
           >
@@ -597,7 +643,7 @@ export function BibleRoomDetail({
 
       {activeTab === "bible" && currentChapter ? (
         <div
-          className="fixed left-1/2 top-0 z-30 flex h-11 w-full max-w-xl items-center justify-center border-b border-slate-200 bg-white/95 px-4 text-sm font-black text-slate-950 shadow-soft backdrop-blur will-change-transform"
+          className="fixed left-1/2 top-0 z-30 flex h-11 w-full max-w-xl items-center justify-center border-b border-slate-200 bg-white/95 px-4 text-sm font-black text-slate-950 shadow-soft backdrop-blur will-change-transform dark:border-slate-800 dark:bg-slate-950/95 dark:text-slate-50"
           style={{
             opacity: headerCollapseProgress,
             pointerEvents: headerCollapseProgress > 0.95 ? "auto" : "none",
@@ -627,6 +673,7 @@ export function BibleRoomDetail({
           onLast={() => setChapterIndex(Math.max(0, chapters.length - 1))}
           onChapterJump={holdCompactReadingHeader}
           translation={translation}
+          fontSize={bibleFontSize}
           onReflect={setReflectionTarget}
           onToast={showToast}
         />
@@ -664,6 +711,10 @@ export function BibleRoomDetail({
         members={members}
         reflections={reflections}
         translationLabel={bibleTranslationLabels[translation]}
+        fontSize={bibleFontSize}
+        darkMode={darkMode}
+        onFontSizeChange={selectBibleFontSize}
+        onDarkModeChange={selectDarkMode}
         onInfo={() => setInfoOpen(true)}
         onTranslation={() => setTranslationOpen(true)}
         onManage={() => setManageOpen(true)}
@@ -715,7 +766,7 @@ function TabButton({ active, icon, label, onClick }: { active: boolean; icon: Re
       type="button"
       onClick={onClick}
       className={`flex h-10 items-center justify-center gap-1.5 rounded-lg text-sm font-black ${
-        active ? "bg-teal-700 text-white" : "bg-slate-100 text-slate-600"
+        active ? "bg-teal-700 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-900 dark:text-slate-300"
       }`}
     >
       {icon}
@@ -731,6 +782,10 @@ function BibleRoomSettingsDrawer({
   members,
   reflections,
   translationLabel,
+  fontSize,
+  darkMode,
+  onFontSizeChange,
+  onDarkModeChange,
   onInfo,
   onTranslation,
   onManage,
@@ -744,6 +799,10 @@ function BibleRoomSettingsDrawer({
   members: RoomMember[];
   reflections: Reflection[];
   translationLabel: string;
+  fontSize: BibleFontSize;
+  darkMode: boolean;
+  onFontSizeChange: (fontSize: BibleFontSize) => void;
+  onDarkModeChange: (enabled: boolean) => void;
   onInfo: () => void;
   onTranslation: () => void;
   onManage: () => void;
@@ -776,45 +835,84 @@ function BibleRoomSettingsDrawer({
         aria-label="설정 닫기"
       />
       <aside
-        className={`absolute right-0 top-0 h-full w-[86%] max-w-sm overflow-y-auto bg-white p-5 shadow-soft transition-transform ${
+        className={`absolute right-0 top-0 h-full w-[86%] max-w-sm overflow-y-auto bg-white p-5 shadow-soft transition-transform dark:bg-slate-950 ${
           open ? "translate-x-0" : "translate-x-full"
         }`}
       >
         <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-lg font-black text-slate-950">성경방 설정</h2>
-          <button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-full border border-slate-200">
+          <h2 className="text-lg font-black text-slate-950 dark:text-slate-50">성경방 설정</h2>
+          <button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-full border border-slate-200 dark:border-slate-700 dark:text-slate-100">
             <X size={18} />
           </button>
         </div>
 
         <div className="mb-6 grid gap-2">
-          <button type="button" onClick={onInfo} className="rounded-lg bg-slate-100 px-4 py-3 text-left font-bold text-slate-800">
+          <button type="button" onClick={onInfo} className="rounded-lg bg-slate-100 px-4 py-3 text-left font-bold text-slate-800 dark:bg-slate-900 dark:text-slate-100">
             방 정보
           </button>
           <button
             type="button"
             onClick={onTranslation}
-            className="flex items-center justify-between gap-3 rounded-lg bg-slate-100 px-4 py-3 text-left font-bold text-slate-800"
+            className="flex items-center justify-between gap-3 rounded-lg bg-slate-100 px-4 py-3 text-left font-bold text-slate-800 dark:bg-slate-900 dark:text-slate-100"
           >
             <span>번역본 설정</span>
-            <span className="shrink-0 text-xs font-black text-teal-700">{translationLabel}</span>
+            <span className="shrink-0 text-xs font-black text-teal-700 dark:text-teal-300">{translationLabel}</span>
           </button>
+          <div className="rounded-lg bg-slate-100 px-4 py-3 dark:bg-slate-900">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <p className="font-bold text-slate-800 dark:text-slate-100">성경본문 글씨 크기</p>
+              <span className="shrink-0 text-xs font-black text-teal-700 dark:text-teal-300">{bibleFontSizeLabels[fontSize]}</span>
+            </div>
+            <div className="grid grid-cols-4 gap-1.5">
+              {(Object.keys(bibleFontSizeLabels) as BibleFontSize[]).map((size) => (
+                <button
+                  key={size}
+                  type="button"
+                  onClick={() => onFontSizeChange(size)}
+                  className={`min-h-9 rounded-lg text-xs font-black transition ${
+                    fontSize === size
+                      ? "bg-teal-700 text-white"
+                      : "bg-white text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                  }`}
+                >
+                  {size === "small" ? "A-" : size === "normal" ? "A" : size === "large" ? "A+" : "A++"}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center justify-between gap-3 rounded-lg bg-slate-100 px-4 py-3 dark:bg-slate-900">
+            <div>
+              <p className="font-bold text-slate-800 dark:text-slate-100">다크모드</p>
+              <p className="mt-0.5 text-xs font-semibold text-slate-500 dark:text-slate-400">성경방 안에서만 유지됩니다.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => onDarkModeChange(!darkMode)}
+              className={`relative h-7 w-12 rounded-full transition ${darkMode ? "bg-teal-600" : "bg-slate-300"}`}
+              aria-pressed={darkMode}
+              aria-label="성경방 다크모드"
+            >
+              <span
+                className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition ${darkMode ? "left-6" : "left-1"}`}
+              />
+            </button>
+          </div>
           {room.isCreator ? (
-            <button type="button" onClick={onManage} className="rounded-lg bg-slate-100 px-4 py-3 text-left font-bold text-slate-800">
+            <button type="button" onClick={onManage} className="rounded-lg bg-slate-100 px-4 py-3 text-left font-bold text-slate-800 dark:bg-slate-900 dark:text-slate-100">
               방 관리
             </button>
           ) : null}
-          <button type="button" onClick={onLeave} className="rounded-lg bg-rose-50 px-4 py-3 text-left font-bold text-rose-700">
+          <button type="button" onClick={onLeave} className="rounded-lg bg-rose-50 px-4 py-3 text-left font-bold text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
             방 나가기
           </button>
         </div>
 
-        <h3 className="mb-3 text-sm font-black text-slate-500">멤버 {members.length}</h3>
+        <h3 className="mb-3 text-sm font-black text-slate-500 dark:text-slate-400">멤버 {members.length}</h3>
         <div className="grid gap-2">
           {members.map((member) => (
-            <div key={member.id} className="flex items-center gap-2 rounded-lg border border-slate-200 p-3">
+            <div key={member.id} className="flex items-center gap-2 rounded-lg border border-slate-200 p-3 dark:border-slate-800 dark:bg-slate-900/60">
               <div className="min-w-0 flex-1">
-                <p className="flex items-center gap-1 truncate font-bold text-slate-900">
+                <p className="flex items-center gap-1 truncate font-bold text-slate-900 dark:text-slate-100">
                   {member.nickname ?? "닉네임 없음"}
                   {member.role === "creator" ? <Crown className="shrink-0 text-amber-500" size={16} /> : null}
                 </p>
@@ -823,7 +921,7 @@ function BibleRoomSettingsDrawer({
               <button
                 type="button"
                 onClick={() => onHistory(member)}
-                className="grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-slate-700"
+                className="grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
                 aria-label="묵상 history"
               >
                 <History size={17} />
@@ -1070,6 +1168,7 @@ function BibleTab({
   onLast,
   onChapterJump,
   translation,
+  fontSize,
   onReflect,
   onToast
 }: {
@@ -1090,6 +1189,7 @@ function BibleTab({
   onLast: () => void;
   onChapterJump: () => void;
   translation: BibleTranslationCode;
+  fontSize: BibleFontSize;
   onReflect: (target: VerseTarget) => void;
   onToast: (message: string) => void;
 }) {
@@ -1189,15 +1289,15 @@ function BibleTab({
   }
 
   return (
-    <section className={`flex-1 bg-white pt-0 ${selectedVerse ? "pb-28" : "pb-8"}`}>
-      <div className="bg-white px-4 py-1">
+    <section className={`flex-1 bg-white pt-0 dark:bg-slate-950 ${selectedVerse ? "pb-28" : "pb-8"}`}>
+      <div className="bg-white px-4 py-1 dark:bg-slate-950">
         <button
           type="button"
           onClick={() => setDatePickerOpen((open) => !open)}
-          className="flex min-h-11 w-full items-center justify-center gap-2 bg-white px-4 text-base font-black text-slate-900"
+          className="flex min-h-11 w-full items-center justify-center gap-2 bg-white px-4 text-base font-black text-slate-900 dark:bg-slate-950 dark:text-slate-50"
           aria-expanded={datePickerOpen}
         >
-          <CalendarDays size={17} className="text-teal-700" />
+          <CalendarDays size={17} className="text-teal-700 dark:text-teal-300" />
           {formatDateKey(selectedDate)}
         </button>
         {datePickerOpen ? (
@@ -1274,9 +1374,9 @@ function BibleTab({
         }}
       >
         {readingLoading ? (
-          <div className="border-b border-slate-100 bg-white p-6 text-center text-sm font-bold text-slate-500">본문을 불러오는 중입니다.</div>
+          <div className="border-b border-slate-100 bg-white p-6 text-center text-sm font-bold text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400">본문을 불러오는 중입니다.</div>
         ) : currentChapter ? (
-          <article className="bg-white px-4 pb-4 pt-3">
+          <article className="bg-white px-4 pb-4 pt-3 dark:bg-slate-950">
             {swipeHint ? (
               <div
                 className="pointer-events-none fixed top-1/2 z-40 grid h-12 w-12 place-items-center rounded-full border border-white/80 bg-white/95 text-teal-700 shadow-lg backdrop-blur"
@@ -1295,21 +1395,21 @@ function BibleTab({
                 type="button"
                 onClick={goPrevInPlace}
                 disabled={chapterIndex === 0}
-                className="grid h-10 w-10 place-items-center rounded-full border border-slate-200 text-slate-700 disabled:opacity-30"
+                className="grid h-10 w-10 place-items-center rounded-full border border-slate-200 text-slate-700 disabled:opacity-30 dark:border-slate-700 dark:text-slate-200"
                 aria-label="이전 장"
                 title="이전 장"
               >
                 <ChevronLeft size={19} />
               </button>
               <div className="min-w-0 text-center">
-                <h2 className="truncate text-lg font-black text-slate-950">{currentChapter.bookName} {currentChapter.chapter}장</h2>
-                <p className="text-xs font-bold text-slate-400">{chapterIndex + 1} / {chapters.length}</p>
+                <h2 className="truncate text-lg font-black text-slate-950 dark:text-slate-50">{currentChapter.bookName} {currentChapter.chapter}장</h2>
+                <p className="text-xs font-bold text-slate-400 dark:text-slate-500">{chapterIndex + 1} / {chapters.length}</p>
               </div>
               <button
                 type="button"
                 onClick={goNextInPlace}
                 disabled={chapterIndex >= chapters.length - 1}
-                className="grid h-10 w-10 place-items-center rounded-full border border-slate-200 text-slate-700 disabled:opacity-30"
+                className="grid h-10 w-10 place-items-center rounded-full border border-slate-200 text-slate-700 disabled:opacity-30 dark:border-slate-700 dark:text-slate-200"
                 aria-label="다음 장"
                 title="다음 장"
               >
@@ -1323,6 +1423,7 @@ function BibleTab({
                   chapter={currentChapter}
                   verse={verse}
                   translation={translation}
+                  fontSize={fontSize}
                   selected={Boolean(
                     selectedVerse
                       && selectedVerse.bookCode === currentChapter.bookCode
@@ -1333,12 +1434,12 @@ function BibleTab({
                 />
               ))}
             </div>
-            <div className="mt-5 flex items-center gap-2 border-t border-slate-100 pt-4">
+            <div className="mt-5 flex items-center gap-2 border-t border-slate-100 pt-4 dark:border-slate-800">
               {chapterIndex > 0 ? (
                 <button
                   type="button"
                   onClick={goFirst}
-                  className="min-h-12 w-12 rounded-lg border border-slate-200 bg-white px-2 text-xs font-black text-slate-500"
+                  className="min-h-12 w-12 rounded-lg border border-slate-200 bg-white px-2 text-xs font-black text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
                 >
                   처음
                 </button>
@@ -1347,7 +1448,7 @@ function BibleTab({
                 type="button"
                 onClick={goPrev}
                 disabled={chapterIndex === 0}
-                className="flex min-h-12 flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-black text-slate-700 disabled:opacity-35"
+                className="flex min-h-12 flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-black text-slate-700 disabled:opacity-35 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
               >
                 <ChevronLeft size={17} />
                 이전 장
@@ -1356,7 +1457,7 @@ function BibleTab({
                 type="button"
                 onClick={goNext}
                 disabled={chapterIndex >= chapters.length - 1}
-                className="flex min-h-12 flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-black text-slate-700 disabled:opacity-35"
+                className="flex min-h-12 flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-black text-slate-700 disabled:opacity-35 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
               >
                 다음 장
                 <ChevronRight size={17} />
@@ -1365,7 +1466,7 @@ function BibleTab({
                 <button
                   type="button"
                   onClick={goLast}
-                  className="min-h-12 w-12 rounded-lg border border-slate-200 bg-white px-2 text-xs font-black text-slate-500"
+                  className="min-h-12 w-12 rounded-lg border border-slate-200 bg-white px-2 text-xs font-black text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
                 >
                   끝
                 </button>
@@ -1378,8 +1479,8 @@ function BibleTab({
                 disabled={completing}
                 className={`mt-3 flex min-h-14 w-full items-center justify-center gap-2 rounded-lg border px-4 py-3 font-black transition disabled:opacity-60 ${
                   isCompleted
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                    : "border-slate-200 bg-slate-100 text-slate-500"
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200"
+                    : "border-slate-200 bg-slate-100 text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400"
                 }`}
               >
                 <span
@@ -1400,17 +1501,17 @@ function BibleTab({
 
       {selectedVerse ? (
         <div
-          className="fixed left-1/2 z-30 w-[15.5rem] max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-2xl border border-slate-200/80 bg-white/95 p-2 shadow-[0_14px_40px_rgba(15,23,42,0.20)] backdrop-blur"
+          className="fixed left-1/2 z-30 w-[15.5rem] max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-2xl border border-slate-200/80 bg-white/95 p-2 shadow-[0_14px_40px_rgba(15,23,42,0.20)] backdrop-blur dark:border-slate-700 dark:bg-slate-900/95"
           style={{ bottom: "max(1rem, env(safe-area-inset-bottom))" }}
         >
-          <p className="mb-1 truncate text-center text-[11px] font-black text-slate-500">
+          <p className="mb-1 truncate text-center text-[11px] font-black text-slate-500 dark:text-slate-400">
             {selectedVerse.bookName} {selectedVerse.chapter}:{selectedVerse.verse}
           </p>
           <div className="grid grid-cols-2 gap-1">
             <button
               type="button"
               onClick={copySelectedVerse}
-              className="flex min-h-10 items-center justify-center gap-1 rounded-xl bg-slate-100 px-2.5 text-xs font-black text-slate-800"
+              className="flex min-h-10 items-center justify-center gap-1 rounded-xl bg-slate-100 px-2.5 text-xs font-black text-slate-800 dark:bg-slate-800 dark:text-slate-100"
             >
               <Clipboard size={14} />
               복사
@@ -1434,19 +1535,21 @@ function VerseRow({
   chapter,
   verse,
   translation,
+  fontSize,
   selected,
   onToggle
 }: {
   chapter: ReadingChapter;
   verse: ReadingVerse;
   translation: BibleTranslationCode;
+  fontSize: BibleFontSize;
   selected: boolean;
   onToggle: (target: VerseTarget) => void;
 }) {
   const text = verseText(verse.content, translation);
 
   return (
-    <div className={`rounded-md px-1 py-1.5 transition ${selected ? "bg-teal-50" : "hover:bg-slate-50"}`}>
+    <div className={`rounded-md px-1 py-1.5 transition ${selected ? "bg-teal-50 dark:bg-teal-950/50" : "hover:bg-slate-50 dark:hover:bg-slate-900/70"}`}>
       <button
         type="button"
         onClick={() => {
@@ -1458,9 +1561,9 @@ function VerseRow({
             text
           });
         }}
-        className={`w-full rounded-md px-1 text-left text-[15px] leading-7 transition ${selected ? "text-teal-950" : "text-slate-800"}`}
+        className={`w-full rounded-md px-1 text-left transition ${bibleFontSizeClasses[fontSize]} ${selected ? "text-teal-950 dark:text-teal-100" : "text-slate-800 dark:text-slate-100"}`}
       >
-        <span className="mr-2 align-baseline text-xs font-black text-teal-700">{verseLabel(verse.content, verse.verse)}</span>
+        <span className="mr-2 align-baseline text-xs font-black text-teal-700 dark:text-teal-300">{verseLabel(verse.content, verse.verse)}</span>
         {text}
         {verse.reflectionCount > 0 ? <span className="ml-1 align-baseline">❤️</span> : null}
       </button>
@@ -1497,7 +1600,7 @@ function SharingTab({
   }, [reflections]);
 
   return (
-    <section className="flex-1 px-4 pb-8 pt-4">
+    <section className="flex-1 px-4 pb-8 pt-4 dark:bg-slate-950">
       {Object.entries(grouped).length ? (
         Object.entries(grouped).map(([date, items]) => (
           <div key={date} className="mb-6">
@@ -1506,16 +1609,16 @@ function SharingTab({
             </div>
             <div className="grid gap-3">
               {items.map((reflection) => (
-                <article key={reflection.id} className="rounded-lg bg-white p-4 shadow-soft">
+                <article key={reflection.id} className="rounded-lg bg-white p-4 shadow-soft dark:bg-slate-900 dark:shadow-none">
                   <div className="mb-3 flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className={`truncate font-bold ${reflection.isMine ? "text-teal-700" : "text-slate-900"}`}>
+                      <p className={`truncate font-bold ${reflection.isMine ? "text-teal-700 dark:text-teal-300" : "text-slate-900 dark:text-slate-100"}`}>
                         {reflection.authorNickname ?? "알 수 없음"}
                       </p>
                       <button
                         type="button"
                         onClick={() => onOpenPassage(reflection)}
-                        className="mt-1 text-left text-xs font-black text-slate-500 underline decoration-slate-300 underline-offset-2"
+                        className="mt-1 text-left text-xs font-black text-slate-500 underline decoration-slate-300 underline-offset-2 dark:text-slate-400 dark:decoration-slate-600"
                       >
                         {reflection.bookName ?? reflection.bookCode} {reflection.chapter}:{verseLabel(reflection.verseContent, reflection.verse)}
                       </button>
@@ -1528,15 +1631,15 @@ function SharingTab({
                     <button
                       type="button"
                       onClick={() => onOpenPassage(reflection)}
-                      className="mb-3 block w-full rounded-lg bg-teal-50 px-3 py-2 text-left text-sm leading-6 text-teal-950"
+                      className="mb-3 block w-full rounded-lg bg-teal-50 px-3 py-2 text-left text-sm leading-6 text-teal-950 dark:bg-teal-950/50 dark:text-teal-100"
                     >
                       {verseText(reflection.verseContent, translation)}
                     </button>
                   ) : null}
-                  <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">{reflection.content}</p>
+                  <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700 dark:text-slate-300">{reflection.content}</p>
                   {reflection.isMine ? (
                     <div className="mt-3 flex justify-end gap-2">
-                      <button type="button" onClick={() => onEdit(reflection)} className="grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-slate-700" aria-label="묵상 수정" title="묵상 수정">
+                      <button type="button" onClick={() => onEdit(reflection)} className="grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200" aria-label="묵상 수정" title="묵상 수정">
                         <Edit3 size={16} />
                       </button>
                       <button type="button" onClick={() => onDelete(reflection)} className="grid h-9 w-9 place-items-center rounded-full bg-rose-50 text-rose-700" aria-label="묵상 삭제" title="묵상 삭제">
@@ -1550,7 +1653,7 @@ function SharingTab({
           </div>
         ))
       ) : (
-        <div className="rounded-lg border border-dashed border-slate-300 bg-white p-6 text-center text-sm leading-6 text-slate-500">
+        <div className="rounded-lg border border-dashed border-slate-300 bg-white p-6 text-center text-sm leading-6 text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
           아직 작성된 묵상이 없습니다.
         </div>
       )}
@@ -1582,26 +1685,26 @@ function PlanTab({
   const progressByUser = new Map(progress?.members.map((member) => [member.userId, member]) ?? []);
 
   return (
-    <section className="flex-1 px-4 pb-8 pt-4">
-      <div className="mb-4 rounded-lg bg-white p-4 shadow-soft">
-        <h2 className="font-black text-slate-950">{room.title}</h2>
-        <p className="mt-1 text-sm leading-6 text-slate-600">{room.description}</p>
-        <div className="mt-3 flex flex-wrap gap-2 text-xs font-bold text-slate-600">
-          <span className="rounded-full bg-teal-50 px-2.5 py-1 text-teal-800">{scopeLabels[room.scope] ?? room.scope}</span>
-          <span className="rounded-full bg-slate-100 px-2.5 py-1">{room.durationMonths}개월</span>
-          <span className="rounded-full bg-slate-100 px-2.5 py-1">{planTypeLabels[room.planType] ?? room.planType}</span>
-          {room.excludeSunday ? <span className="rounded-full bg-slate-100 px-2.5 py-1">주일 제외</span> : null}
+    <section className="flex-1 px-4 pb-8 pt-4 dark:bg-slate-950">
+      <div className="mb-4 rounded-lg bg-white p-4 shadow-soft dark:bg-slate-900 dark:shadow-none">
+        <h2 className="font-black text-slate-950 dark:text-slate-50">{room.title}</h2>
+        <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">{room.description}</p>
+        <div className="mt-3 flex flex-wrap gap-2 text-xs font-bold text-slate-600 dark:text-slate-300">
+          <span className="rounded-full bg-teal-50 px-2.5 py-1 text-teal-800 dark:bg-teal-950/50 dark:text-teal-200">{scopeLabels[room.scope] ?? room.scope}</span>
+          <span className="rounded-full bg-slate-100 px-2.5 py-1 dark:bg-slate-800 dark:text-slate-300">{room.durationMonths}개월</span>
+          <span className="rounded-full bg-slate-100 px-2.5 py-1 dark:bg-slate-800 dark:text-slate-300">{planTypeLabels[room.planType] ?? room.planType}</span>
+          {room.excludeSunday ? <span className="rounded-full bg-slate-100 px-2.5 py-1 dark:bg-slate-800 dark:text-slate-300">주일 제외</span> : null}
         </div>
       </div>
 
       <PlanCalendar days={days} selectedDate={selectedDate} planDateRange={planDateRange} onSelectDate={onSelectDate} />
 
-      <div className="mt-4 rounded-lg bg-white p-4 shadow-soft">
-        <h3 className="mb-3 font-black text-slate-950">{formatDate(selectedDate)} 플랜</h3>
+      <div className="mt-4 rounded-lg bg-white p-4 shadow-soft dark:bg-slate-900 dark:shadow-none">
+        <h3 className="mb-3 font-black text-slate-950 dark:text-slate-50">{formatDate(selectedDate)} 플랜</h3>
         {selectedDay?.plans.length ? (
           <div className="grid gap-2">
             {selectedDay.plans.map((plan) => (
-              <div key={plan.id} className="rounded-lg bg-slate-50 px-3 py-2 text-sm font-bold text-slate-700">
+              <div key={plan.id} className="rounded-lg bg-slate-50 px-3 py-2 text-sm font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
                 {plan.bookName ?? plan.bookCode} {plan.startChapter === plan.endChapter ? `${plan.startChapter}장` : `${plan.startChapter}-${plan.endChapter}장`}
               </div>
             ))}
@@ -1611,10 +1714,10 @@ function PlanTab({
         )}
       </div>
 
-      <div className="mt-4 rounded-lg bg-white p-4 shadow-soft">
+      <div className="mt-4 rounded-lg bg-white p-4 shadow-soft dark:bg-slate-900 dark:shadow-none">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h3 className="font-black text-slate-950">달성률</h3>
-          <span className="rounded-full bg-emerald-50 px-3 py-1 text-sm font-black text-emerald-700">
+          <h3 className="font-black text-slate-950 dark:text-slate-50">달성률</h3>
+          <span className="rounded-full bg-emerald-50 px-3 py-1 text-sm font-black text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-200">
             {progress?.overallRate ?? 0}%
           </span>
         </div>
@@ -1622,17 +1725,17 @@ function PlanTab({
           {members.map((member) => {
             const item = progressByUser.get(member.userId);
             return (
-              <div key={member.id} className="flex items-center gap-3 rounded-lg border border-slate-200 p-3">
-                <div className="grid h-9 w-9 place-items-center rounded-full bg-teal-50 text-sm font-black text-teal-800">
+              <div key={member.id} className="flex items-center gap-3 rounded-lg border border-slate-200 p-3 dark:border-slate-800 dark:bg-slate-900">
+                <div className="grid h-9 w-9 place-items-center rounded-full bg-teal-50 text-sm font-black text-teal-800 dark:bg-teal-950/50 dark:text-teal-200">
                   {(member.nickname ?? "?").slice(0, 1)}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-bold text-slate-900">{member.nickname ?? "닉네임 없음"}</p>
+                  <p className="truncate font-bold text-slate-900 dark:text-slate-100">{member.nickname ?? "닉네임 없음"}</p>
                   <p className="text-xs font-semibold text-slate-400">
                     {item?.completedCount ?? 0}/{item?.totalCount ?? 0}일
                   </p>
                 </div>
-                <span className="shrink-0 text-sm font-black text-slate-700">{item?.rate ?? 0}%</span>
+                <span className="shrink-0 text-sm font-black text-slate-700 dark:text-slate-200">{item?.rate ?? 0}%</span>
                 <span className="shrink-0" aria-label={(item?.rate ?? 0) >= 100 ? "완료" : "진행중"}>
                   {(item?.rate ?? 0) >= 100 ? "✅" : "▫️"}
                 </span>
@@ -1647,10 +1750,10 @@ function PlanTab({
 
 function RestDayMessage() {
   return (
-    <div className="grid min-h-40 place-items-center bg-white px-6 py-10 text-center">
+    <div className="grid min-h-40 place-items-center bg-white px-6 py-10 text-center dark:bg-slate-950">
       <div>
-        <p className="text-base font-black text-slate-950">[쉬어가는 날]</p>
-        <p className="mt-3 text-sm font-bold leading-6 text-slate-500">참된 쉼과 은혜가 있는 하루 되세요!</p>
+        <p className="text-base font-black text-slate-950 dark:text-slate-50">[쉬어가는 날]</p>
+        <p className="mt-3 text-sm font-bold leading-6 text-slate-500 dark:text-slate-400">참된 쉼과 은혜가 있는 하루 되세요!</p>
       </div>
     </div>
   );
@@ -1684,17 +1787,17 @@ function PlanCalendar({
   }
 
   return (
-    <div className="rounded-lg bg-white p-4 shadow-soft">
+    <div className="rounded-lg bg-white p-4 shadow-soft dark:bg-slate-900 dark:shadow-none">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <button type="button" onClick={() => moveMonth(-1)} className="grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-slate-700" aria-label="이전 달" title="이전 달">
+        <button type="button" onClick={() => moveMonth(-1)} className="grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200" aria-label="이전 달" title="이전 달">
           <ChevronLeft size={17} />
         </button>
-        <p className="font-black text-slate-950">{visibleMonth.replace("-", ".")}</p>
-        <button type="button" onClick={() => moveMonth(1)} className="grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-slate-700" aria-label="다음 달" title="다음 달">
+        <p className="font-black text-slate-950 dark:text-slate-50">{visibleMonth.replace("-", ".")}</p>
+        <button type="button" onClick={() => moveMonth(1)} className="grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200" aria-label="다음 달" title="다음 달">
           <ChevronRight size={17} />
         </button>
       </div>
-      <div className="mb-1 grid grid-cols-7 text-center text-[11px] font-black text-slate-400">
+      <div className="mb-1 grid grid-cols-7 text-center text-[11px] font-black text-slate-400 dark:text-slate-500">
         {["일", "월", "화", "수", "목", "금", "토"].map((day) => <span key={day}>{day}</span>)}
       </div>
       <div className="grid grid-cols-7 gap-1">
@@ -1713,14 +1816,14 @@ function PlanCalendar({
               disabled={!selectable}
               className={`${compact ? "h-9" : "h-10"} rounded-lg text-sm font-black transition ${
                 !selectable
-                  ? "bg-transparent text-slate-200"
+                  ? "bg-transparent text-slate-200 dark:text-slate-700"
                   : active
                     ? "bg-teal-700 text-white"
                     : plan?.isCompleted
                       ? "bg-emerald-50 text-emerald-700"
                       : plan
-                        ? "bg-slate-100 text-slate-700"
-                        : "bg-transparent text-slate-400"
+                        ? "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                        : "bg-transparent text-slate-400 dark:text-slate-600"
               } disabled:cursor-default`}
             >
               {Number(date.slice(8, 10))}
