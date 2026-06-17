@@ -12,7 +12,7 @@ type BibleJsonVerse = {
 };
 
 const prisma = new PrismaClient();
-const BATCH_SIZE = 1_000;
+const BATCH_SIZE = 100;
 
 function resolveBibleJsonPath() {
   const candidates = [
@@ -69,7 +69,7 @@ function normalizeVerseNumber(value: number | string) {
   return null;
 }
 
-function toBibleVerseCreateInput(verse: BibleJsonVerse) {
+function toBibleVerseCreateInput(verse: BibleJsonVerse): Prisma.BibleVerseCreateManyInput {
   const normalizedVerse = normalizeVerseNumber(verse.verse);
 
   if (
@@ -103,21 +103,35 @@ function toBibleVerseCreateInput(verse: BibleJsonVerse) {
 async function main() {
   const bibleJsonPath = resolveBibleJsonPath();
   const verses = readBibleJson(bibleJsonPath).map(toBibleVerseCreateInput);
-  let inserted = 0;
+  let synced = 0;
 
   for (let index = 0; index < verses.length; index += BATCH_SIZE) {
     const batch = verses.slice(index, index + BATCH_SIZE);
-    const result = await prisma.bibleVerse.createMany({
-      data: batch,
-      skipDuplicates: true
-    });
 
-    inserted += result.count;
+    await prisma.$transaction(
+      batch.map((verse) =>
+        prisma.bibleVerse.upsert({
+          where: {
+            bookCode_chapter_verse: {
+              bookCode: verse.bookCode,
+              chapter: verse.chapter,
+              verse: verse.verse
+            }
+          },
+          create: verse,
+          update: {
+            bookNumber: verse.bookNumber,
+            bookName: verse.bookName,
+            content: verse.content
+          }
+        })
+      )
+    );
+
+    synced += batch.length;
   }
 
-  console.log(
-    `Bible seed 완료: ${inserted}개 신규 절 입력, ${verses.length - inserted}개 중복 건너뜀`
-  );
+  console.log(`Bible seed 완료: ${synced}개 절 생성/업데이트`);
 }
 
 main()
