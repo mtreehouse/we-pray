@@ -1325,7 +1325,7 @@ function BibleTab({
 
   return (
     <section className={`flex-1 bg-white pt-0 dark:bg-slate-950 ${selectedVerse ? "pb-28" : "pb-8"}`}>
-      <div className="bg-white px-4 pb-1 pt-1 dark:bg-slate-950">
+      <div className="relative z-20 bg-white px-4 pb-1 pt-1 dark:bg-slate-950">
         <button
           type="button"
           onClick={() => setDatePickerOpen((open) => !open)}
@@ -1336,18 +1336,27 @@ function BibleTab({
           {formatDateKey(selectedDate)}
         </button>
         {datePickerOpen ? (
-          <div className="-mx-4 mt-1 bg-teal-50/35 px-4 pb-3 pt-3 dark:bg-slate-900/70">
-            <PlanCalendar
-              days={days}
-              selectedDate={selectedDate}
-              planDateRange={planDateRange}
-              onSelectDate={(date) => {
-                onSelectDate(date);
-                setDatePickerOpen(false);
-              }}
-              compact
+          <>
+            <button
+              type="button"
+              className="fixed inset-0 z-20 cursor-default bg-transparent"
+              onClick={() => setDatePickerOpen(false)}
+              aria-label="달력 닫기"
+              tabIndex={-1}
             />
-          </div>
+            <div className="absolute left-4 right-4 top-full z-30 mt-2 rounded-lg border border-slate-200 bg-white p-3 shadow-[0_18px_45px_rgba(15,23,42,0.18)] dark:border-slate-800 dark:bg-slate-900">
+              <PlanCalendar
+                days={days}
+                selectedDate={selectedDate}
+                planDateRange={planDateRange}
+                onSelectDate={(date) => {
+                  onSelectDate(date);
+                  setDatePickerOpen(false);
+                }}
+                compact
+              />
+            </div>
+          </>
         ) : null}
       </div>
 
@@ -1411,7 +1420,7 @@ function BibleTab({
         {readingLoading ? (
           <div className="border-b border-slate-100 bg-white p-6 text-center text-sm font-bold text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400">본문을 불러오는 중입니다.</div>
         ) : currentChapter ? (
-          <article className={`bg-white px-4 pb-4 dark:bg-slate-950 ${datePickerOpen ? "pt-2" : "pt-3"}`}>
+          <article className="bg-white px-4 pb-4 pt-3 dark:bg-slate-950">
             {swipeHint ? (
               <div
                 className="pointer-events-none fixed top-1/2 z-40 grid h-12 w-12 place-items-center rounded-full border border-white/80 bg-white/95 text-teal-700 shadow-lg backdrop-blur"
