@@ -1727,7 +1727,7 @@ function PlanTab({
 
   return (
     <section className="flex-1 px-4 pb-8 pt-4 dark:bg-slate-950">
-      <PlanCalendar days={days} selectedDate={selectedDate} planDateRange={planDateRange} onSelectDate={onSelectDate} />
+      <PlanCalendar days={days} selectedDate={selectedDate} planDateRange={planDateRange} onSelectDate={onSelectDate} showLegend />
 
       <div className="mt-4 rounded-lg bg-white p-4 shadow-soft dark:bg-slate-900 dark:shadow-none">
         <h3 className="mb-3 font-black text-slate-950 dark:text-slate-50">{formatDate(selectedDate)} 플랜</h3>
@@ -1778,6 +1778,25 @@ function PlanTab({
   );
 }
 
+function CalendarLegend() {
+  return (
+    <div className="mt-3 flex items-center justify-center gap-4 border-t border-slate-100 pt-3 text-[11px] font-bold text-slate-500 dark:border-slate-800 dark:text-slate-400">
+      <span className="flex items-center gap-1.5">
+        <span className="h-3 w-3 rounded bg-teal-50 ring-1 ring-teal-100 dark:bg-teal-950/40 dark:ring-teal-800" aria-hidden />
+        오늘
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden />
+        읽기 완료
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden />
+        나눔 작성
+      </span>
+    </div>
+  );
+}
+
 function RestDayMessage() {
   return (
     <div className="grid min-h-40 place-items-center bg-white px-6 py-10 text-center dark:bg-slate-950">
@@ -1794,13 +1813,15 @@ function PlanCalendar({
   selectedDate,
   planDateRange,
   onSelectDate,
-  compact = false
+  compact = false,
+  showLegend = false
 }: {
   days: PlanDay[];
   selectedDate: string;
   planDateRange: DateRange | null;
   onSelectDate: (date: string) => void;
   compact?: boolean;
+  showLegend?: boolean;
 }) {
   const [visibleMonth, setVisibleMonth] = useState(() => selectedDate.slice(0, 7));
   const todayKey = dateKeyInTimeZone(new Date());
@@ -1867,6 +1888,7 @@ function PlanCalendar({
           );
         })}
       </div>
+      {showLegend ? <CalendarLegend /> : null}
     </div>
   );
 }
