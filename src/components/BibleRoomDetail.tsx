@@ -57,6 +57,7 @@ type PlanRange = {
 type PlanDay = {
   date: string;
   isCompleted: boolean;
+  hasReflection: boolean;
   plans: PlanRange[];
 };
 
@@ -81,6 +82,7 @@ type Reflection = {
   chapter: number;
   verse: number;
   verseContent?: unknown;
+  planDate?: string | null;
   content: string;
   createdAt: string;
   userId: string;
@@ -544,6 +546,9 @@ export function BibleRoomDetail({
     );
     if (data.reflection) {
       setReflections((items) => [data.reflection!, ...items.filter((item) => item.id !== data.reflection!.id)]);
+      if (data.reflection.planDate) {
+        setPlanDays((days) => days.map((day) => day.date === data.reflection!.planDate ? { ...day, hasReflection: true } : day));
+      }
     }
     window.requestAnimationFrame(() => window.scrollTo({ top: scrollY }));
     return true;
@@ -580,7 +585,7 @@ export function BibleRoomDetail({
       return;
     }
 
-    await Promise.all([loadReading(), loadReflections(true)]);
+    await Promise.all([loadPlans(), loadReading(), loadReflections(true)]);
   }
 
   async function openMemberHistory(member: RoomMember) {
@@ -1622,20 +1627,28 @@ function SharingTab({
 }) {
   const grouped = useMemo(() => {
     return reflections.reduce<Record<string, Reflection[]>>((acc, reflection) => {
-      const key = formatDate(reflection.createdAt);
+      const key = reflection.planDate ?? reflection.createdAt.slice(0, 10);
       acc[key] = acc[key] ?? [];
       acc[key].push(reflection);
       return acc;
     }, {});
   }, [reflections]);
+  const groupedEntries = useMemo(() => {
+    return Object.entries(grouped)
+      .sort(([dateA], [dateB]) => dateB.localeCompare(dateA))
+      .map(([date, items]) => [
+        date,
+        [...items].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      ] as const);
+  }, [grouped]);
 
   return (
     <section className="flex-1 px-4 pb-8 pt-4 dark:bg-slate-950">
-      {Object.entries(grouped).length ? (
-        Object.entries(grouped).map(([date, items]) => (
+      {groupedEntries.length ? (
+        groupedEntries.map(([date, items]) => (
           <div key={date} className="mb-6">
             <div className="mb-3 flex justify-center">
-              <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-bold text-slate-600">{date}</span>
+              <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{formatDate(date)}</span>
             </div>
             <div className="grid gap-3">
               {items.map((reflection) => (
@@ -1654,7 +1667,7 @@ function SharingTab({
                       </button>
                     </div>
                     <time className="shrink-0 text-xs font-semibold text-slate-400">
-                      {new Intl.DateTimeFormat("ko-KR", { timeStyle: "short" }).format(new Date(reflection.createdAt))}
+                      {new Intl.DateTimeFormat("ko-KR", { dateStyle: "short", timeStyle: "short" }).format(new Date(reflection.createdAt))}
                     </time>
                   </div>
                   {reflection.verseContent ? (
@@ -1790,6 +1803,7 @@ function PlanCalendar({
   compact?: boolean;
 }) {
   const [visibleMonth, setVisibleMonth] = useState(() => selectedDate.slice(0, 7));
+  const todayKey = dateKeyInTimeZone(new Date());
   const dayMap = useMemo(() => new Map(days.map((day) => [day.date, day])), [days]);
   const cells = useMemo(() => buildCalendarCells(visibleMonth), [visibleMonth]);
 
@@ -1823,6 +1837,7 @@ function PlanCalendar({
           const plan = dayMap.get(date);
           const selectable = Boolean(planDateRange && isDateInRange(date, planDateRange));
           const active = selectable && selectedDate === date;
+          const isToday = date === todayKey;
           return (
             <button
               key={date}
@@ -1831,19 +1846,23 @@ function PlanCalendar({
                 if (selectable) onSelectDate(date);
               }}
               disabled={!selectable}
-              className={`${compact ? "h-9" : "h-10"} rounded-lg text-sm font-black transition ${
+              className={`${compact ? "h-9" : "h-10"} relative rounded-lg pb-2 text-sm font-black transition ${
                 !selectable
                   ? "bg-transparent text-slate-200 dark:text-slate-700"
-                  : active
-                    ? "bg-teal-700 text-white"
-                    : plan?.isCompleted
-                      ? "bg-emerald-50 text-emerald-700"
-                      : plan
-                        ? "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
-                        : "bg-transparent text-slate-400 dark:text-slate-600"
-              } disabled:cursor-default`}
+                  : isToday
+                    ? "bg-teal-50 text-teal-900 dark:bg-teal-950/40 dark:text-teal-100"
+                    : plan
+                      ? "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                      : "bg-transparent text-slate-400 dark:text-slate-600"
+              } ${active ? "ring-2 ring-inset ring-teal-600 dark:ring-teal-400" : ""} disabled:cursor-default`}
             >
-              {Number(date.slice(8, 10))}
+              <span>{Number(date.slice(8, 10))}</span>
+              {selectable && (plan?.isCompleted || plan?.hasReflection) ? (
+                <span className="absolute bottom-1 left-1/2 flex -translate-x-1/2 gap-0.5" aria-hidden>
+                  {plan?.isCompleted ? <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> : null}
+                  {plan?.hasReflection ? <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> : null}
+                </span>
+              ) : null}
             </button>
           );
         })}

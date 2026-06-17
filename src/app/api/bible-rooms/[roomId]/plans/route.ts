@@ -16,7 +16,7 @@ export async function GET(_req: Request, { params }: Params) {
     return NextResponse.json({ error: "성경방 멤버만 조회할 수 있습니다." }, { status: 403 });
   }
 
-  const [plans, progress] = await Promise.all([
+  const [plans, progress, myReflections] = await Promise.all([
     prisma.biblePlan.findMany({
       where: { roomId },
       select: {
@@ -31,6 +31,10 @@ export async function GET(_req: Request, { params }: Params) {
     prisma.bibleProgress.findMany({
       where: { roomId, userId: user.id, isCompleted: true },
       select: { readingDate: true }
+    }),
+    prisma.bibleReflection.findMany({
+      where: { roomId, userId: user.id, deletedAt: null },
+      select: { bookCode: true, chapter: true }
     })
   ]);
 
@@ -43,6 +47,7 @@ export async function GET(_req: Request, { params }: Params) {
     : [];
   const bookNameByCode = new Map(books.map((book) => [book.bookCode, book.bookName]));
   const completedDates = new Set(progress.map((item) => toDateKey(item.readingDate)));
+  const reflectedDates = new Set<string>();
   const byDate = new Map<string, Array<(typeof plans)[number]>>();
 
   for (const plan of plans) {
@@ -50,10 +55,20 @@ export async function GET(_req: Request, { params }: Params) {
     byDate.set(dateKey, [...(byDate.get(dateKey) ?? []), plan]);
   }
 
+  for (const reflection of myReflections) {
+    const plan = plans.find((item) =>
+      item.bookCode === reflection.bookCode
+      && item.startChapter <= reflection.chapter
+      && item.endChapter >= reflection.chapter
+    );
+    if (plan) reflectedDates.add(toDateKey(plan.readingDate));
+  }
+
   return NextResponse.json({
     days: [...byDate.entries()].map(([date, items]) => ({
       date,
       isCompleted: completedDates.has(date),
+      hasReflection: reflectedDates.has(date),
       plans: items.map((item) => ({
         id: item.id,
         bookCode: item.bookCode,

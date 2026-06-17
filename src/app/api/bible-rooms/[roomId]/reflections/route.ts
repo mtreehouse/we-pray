@@ -2,10 +2,24 @@ import { NextResponse } from "next/server";
 import { requireBibleRoomMember, requireNickname } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { validateBibleReflection } from "@/lib/validation";
+import { toDateKey } from "@/lib/bible-plan";
 
 type Params = {
   params: Promise<{ roomId: string }>;
 };
+
+function findPlanDate(
+  plans: Array<{ readingDate: Date; bookCode: string; startChapter: number; endChapter: number }>,
+  reflection: { bookCode: string; chapter: number }
+) {
+  const plan = plans.find((item) =>
+    item.bookCode === reflection.bookCode
+    && item.startChapter <= reflection.chapter
+    && item.endChapter >= reflection.chapter
+  );
+
+  return plan ? toDateKey(plan.readingDate) : null;
+}
 
 export async function GET(req: Request, { params }: Params) {
   const user = await requireNickname();
@@ -45,26 +59,43 @@ export async function GET(req: Request, { params }: Params) {
     chapter: reflection.chapter,
     verse: reflection.verse
   }));
-  const verses = passageFilters.length
-    ? await prisma.bibleVerse.findMany({
-        where: { OR: passageFilters },
-        select: {
-          bookCode: true,
-          bookName: true,
-          chapter: true,
-          verse: true,
-          content: true
-        }
-      })
-    : [];
+  const [verses, plans] = await Promise.all([
+    passageFilters.length
+      ? prisma.bibleVerse.findMany({
+          where: { OR: passageFilters },
+          select: {
+            bookCode: true,
+            bookName: true,
+            chapter: true,
+            verse: true,
+            content: true
+          }
+        })
+      : Promise.resolve([]),
+    prisma.biblePlan.findMany({
+      where: { roomId },
+      select: { readingDate: true, bookCode: true, startChapter: true, endChapter: true },
+      orderBy: { readingDate: "asc" }
+    })
+  ]);
   const verseMap = new Map(
     verses.map((verse) => [`${verse.bookCode}:${verse.chapter}:${verse.verse}`, verse])
   );
 
-  return NextResponse.json({
-    reflections: items.map((reflection) => {
-      const verse = verseMap.get(`${reflection.bookCode}:${reflection.chapter}:${reflection.verse}`);
+  const responseItems = items
+    .map((reflection) => ({
+      reflection,
+      verse: verseMap.get(`${reflection.bookCode}:${reflection.chapter}:${reflection.verse}`),
+      planDate: findPlanDate(plans, reflection)
+    }))
+    .sort((a, b) => {
+      const planDateCompare = (b.planDate ?? "").localeCompare(a.planDate ?? "");
+      if (planDateCompare !== 0) return planDateCompare;
+      return new Date(b.reflection.createdAt).getTime() - new Date(a.reflection.createdAt).getTime();
+    });
 
+  return NextResponse.json({
+    reflections: responseItems.map(({ reflection, verse, planDate }) => {
       return {
         id: reflection.id,
         bookCode: reflection.bookCode,
@@ -72,6 +103,7 @@ export async function GET(req: Request, { params }: Params) {
         chapter: reflection.chapter,
         verse: reflection.verse,
         verseContent: verse?.content ?? null,
+        planDate,
         content: reflection.content,
         createdAt: reflection.createdAt,
         userId: reflection.userId,
@@ -131,7 +163,8 @@ export async function POST(req: Request, { params }: Params) {
       startChapter: { lte: verse.chapter },
       endChapter: { gte: verse.chapter }
     },
-    select: { id: true }
+    select: { id: true, readingDate: true },
+    orderBy: { readingDate: "asc" }
   });
 
   if (!planExists) {
@@ -159,6 +192,7 @@ export async function POST(req: Request, { params }: Params) {
       chapter: verse.chapter,
       verse: verse.verse,
       verseContent: verse.content,
+      planDate: toDateKey(planExists.readingDate),
       content,
       createdAt: new Date().toISOString(),
       userId: user.id,
