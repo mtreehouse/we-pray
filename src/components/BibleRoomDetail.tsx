@@ -237,6 +237,7 @@ export function BibleRoomDetail({
     [planDays, selectedDate]
   );
   const planDateRange = useMemo(() => getPlanDateRange(room, planDays), [planDays, room]);
+  const planDateRangeKey = planDateRange ? `${planDateRange.startDate}:${planDateRange.endDate}` : "";
   const currentChapter = chapters[chapterIndex] ?? null;
 
   const showToast = useCallback((message: string) => {
@@ -382,13 +383,13 @@ export function BibleRoomDetail({
   useEffect(() => {
     if (!planDateRange || isDateInRange(selectedDate, planDateRange)) return;
     setSelectedDate(planDateRange.startDate);
-  }, [planDateRange, selectedDate]);
+  }, [planDateRangeKey, selectedDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!storedLocationLoaded || !selectedDate) return;
     if (planDateRange && !isDateInRange(selectedDate, planDateRange)) return;
     void loadReading();
-  }, [loadReading, planDateRange, selectedDate, storedLocationLoaded]);
+  }, [loadReading, planDateRangeKey, selectedDate, storedLocationLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!storedLocationLoaded || loadedReadingDate !== selectedDate || !currentChapter) return;
@@ -475,22 +476,32 @@ export function BibleRoomDetail({
 
   async function toggleComplete() {
     if (!selectedPlanDay) return;
+
+    const scrollY = window.scrollY;
+    const nextCompleted = !selectedPlanDay.isCompleted;
     setCompleting(true);
-    const res = await fetch(`/api/bible-rooms/${room.id}/progress`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ date: selectedDate, isCompleted: !selectedPlanDay.isCompleted })
-    });
-    const data = (await res.json()) as { isCompleted?: boolean; progress?: ProgressSummary; error?: string };
-    setCompleting(false);
+    setPlanDays((days) => days.map((day) => day.date === selectedDate ? { ...day, isCompleted: nextCompleted } : day));
 
-    if (!res.ok) {
-      showToast(data.error ?? "완료 처리에 실패했습니다.");
-      return;
+    try {
+      const res = await fetch(`/api/bible-rooms/${room.id}/progress`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date: selectedDate, isCompleted: nextCompleted })
+      });
+      const data = (await res.json()) as { isCompleted?: boolean; progress?: ProgressSummary; error?: string };
+
+      if (!res.ok) {
+        setPlanDays((days) => days.map((day) => day.date === selectedDate ? { ...day, isCompleted: selectedPlanDay.isCompleted } : day));
+        showToast(data.error ?? "완료 처리에 실패했습니다.");
+        return;
+      }
+
+      setPlanDays((days) => days.map((day) => day.date === selectedDate ? { ...day, isCompleted: Boolean(data.isCompleted) } : day));
+      setProgress(data.progress ?? null);
+    } finally {
+      setCompleting(false);
+      window.requestAnimationFrame(() => window.scrollTo({ top: scrollY }));
     }
-
-    setPlanDays((days) => days.map((day) => day.date === selectedDate ? { ...day, isCompleted: Boolean(data.isCompleted) } : day));
-    setProgress(data.progress ?? null);
   }
 
   async function saveReflection(target: VerseTarget, content: string) {
