@@ -15,6 +15,7 @@ import {
   Edit3,
   Heart,
   History,
+  Info,
   MessageCircle,
   Pencil,
   Send,
@@ -92,8 +93,11 @@ type Reflection = {
 
 type ProgressSummary = {
   totalPlanDays: number;
+  currentPlanDays: number;
   completedCount: number;
   totalCount: number;
+  earnedPoints: number;
+  possiblePoints: number;
   overallRate: number;
   members: Array<{
     userId: string;
@@ -101,7 +105,10 @@ type ProgressSummary = {
     role: "creator" | "member";
     joinedAt: string;
     completedCount: number;
+    reflectionCount: number;
     totalCount: number;
+    earnedPoints: number;
+    possiblePoints: number;
     rate: number;
   }>;
 };
@@ -1733,6 +1740,7 @@ function PlanTab({
 }) {
   const selectedDay = days.find((day) => day.date === selectedDate) ?? null;
   const progressByUser = new Map(progress?.members.map((member) => [member.userId, member]) ?? []);
+  const [progressInfoOpen, setProgressInfoOpen] = useState(false);
 
   return (
     <section className="flex-1 px-4 pb-8 pt-4 dark:bg-slate-950">
@@ -1755,9 +1763,20 @@ function PlanTab({
 
       <div className="mt-4 rounded-lg bg-white p-4 shadow-soft dark:bg-slate-900 dark:shadow-none">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h3 className="font-black text-slate-950 dark:text-slate-50">달성률</h3>
+          <div className="flex items-center gap-1.5">
+            <h3 className="font-black text-slate-950 dark:text-slate-50">달성률</h3>
+            <button
+              type="button"
+              onClick={() => setProgressInfoOpen(true)}
+              className="grid h-7 w-7 place-items-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+              aria-label="달성률 계산 안내"
+              title="달성률 계산 안내"
+            >
+              <Info size={16} />
+            </button>
+          </div>
           <span className="rounded-full bg-emerald-50 px-3 py-1 text-sm font-black text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-200">
-            {progress?.overallRate ?? 0}%
+            전체 {progress?.overallRate ?? 0}%
           </span>
         </div>
         <div className="grid gap-2">
@@ -1771,19 +1790,31 @@ function PlanTab({
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-bold text-slate-900 dark:text-slate-100">{member.nickname ?? "닉네임 없음"}</p>
                   <p className="text-xs font-semibold text-slate-400">
-                    {item?.completedCount ?? 0}/{item?.totalCount ?? 0}일
+                    읽기 {item?.completedCount ?? 0}/{item?.totalCount ?? 0} · 나눔 {item?.reflectionCount ?? 0}/{item?.totalCount ?? 0}
                   </p>
                 </div>
                 <span className="shrink-0 text-sm font-black text-slate-700 dark:text-slate-200">{item?.rate ?? 0}%</span>
-                <span className="shrink-0" aria-label={(item?.rate ?? 0) >= 100 ? "완료" : "진행중"}>
-                  {(item?.rate ?? 0) >= 100 ? "✅" : "▫️"}
-                </span>
               </div>
             );
           })}
         </div>
       </div>
+
+      <ProgressInfoModal open={progressInfoOpen} onClose={() => setProgressInfoOpen(false)} />
     </section>
+  );
+}
+
+function ProgressInfoModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  return (
+    <Modal title="달성률 계산" open={open} onClose={onClose}>
+      <div className="space-y-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
+        <p>달성률은 플랜 시작일부터 오늘까지 도달한 날짜만 기준으로 계산합니다.</p>
+        <p>각 날짜는 말씀 읽기 완료 50%, 나눔 작성 50%로 반영됩니다.</p>
+        <p>전체 퍼센트는 모든 참여자의 기준 점수 합계 대비 획득 점수 합계입니다.</p>
+        <p>중도 참여자는 합류일 이후 날짜만 개인 기준에 포함됩니다.</p>
+      </div>
+    </Modal>
   );
 }
 

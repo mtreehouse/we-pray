@@ -1,6 +1,21 @@
 "use client";
 
-export function Toast({ message }: { message: string }) {
+import { useEffect } from "react";
+
+type ToastProps = {
+  message: string;
+  duration?: number;
+  onClose?: () => void;
+};
+
+export function Toast({ message, duration = 2400, onClose }: ToastProps) {
+  useEffect(() => {
+    if (!message || !onClose) return;
+
+    const timer = window.setTimeout(onClose, duration);
+    return () => window.clearTimeout(timer);
+  }, [duration, message, onClose]);
+
   if (!message) return null;
 
   return (

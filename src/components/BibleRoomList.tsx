@@ -47,7 +47,7 @@ export function BibleRoomList({ rooms }: { rooms: BibleRoomSummary[] }) {
 
   return (
     <div className="pb-24">
-      <Toast message={toast} />
+      <Toast message={toast} onClose={() => setToast("")} />
       <div className="grid gap-3">
         {rooms.length ? (
           rooms.map((room) => (

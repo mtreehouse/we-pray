@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { parseDateKey, startOfUtcDay, toDateKey } from "@/lib/bible-plan";
+import { parseDateKey, startOfUtcDay, todayDateKey, toDateKey } from "@/lib/bible-plan";
 import { requireBibleRoomMember, requireNickname } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 
@@ -8,7 +8,7 @@ type Params = {
 };
 
 async function buildProgressSummary(roomId: string) {
-  const [members, planDates, completed] = await Promise.all([
+  const [members, planRows, completed, reflections] = await Promise.all([
     prisma.bibleRoomMember.findMany({
       where: { roomId, leftAt: null, kickedAt: null, user: { deletedAt: null } },
       select: {
@@ -21,36 +21,57 @@ async function buildProgressSummary(roomId: string) {
     }),
     prisma.biblePlan.findMany({
       where: { roomId },
-      distinct: ["readingDate"],
-      select: { readingDate: true },
+      select: { readingDate: true, bookCode: true, startChapter: true, endChapter: true },
       orderBy: { readingDate: "asc" }
     }),
     prisma.bibleProgress.findMany({
       where: { roomId, isCompleted: true },
       select: { userId: true, readingDate: true }
+    }),
+    prisma.bibleReflection.findMany({
+      where: { roomId, deletedAt: null },
+      select: { userId: true, bookCode: true, chapter: true }
     })
   ]);
 
-  const allDateKeys = planDates.map((plan) => toDateKey(plan.readingDate));
+  const todayKey = todayDateKey();
+  const allDateKeys = [...new Set(planRows.map((plan) => toDateKey(plan.readingDate)))];
+  const currentDateKeys = allDateKeys.filter((dateKey) => dateKey <= todayKey);
   const completedKeys = new Set(
     completed.map((item) => `${item.userId}:${toDateKey(item.readingDate)}`)
   );
-  let completedTotal = 0;
-  let denominatorTotal = 0;
+  const reflectionKeys = new Set<string>();
+
+  for (const reflection of reflections) {
+    const plan = planRows.find((item) =>
+      item.bookCode === reflection.bookCode
+      && item.startChapter <= reflection.chapter
+      && item.endChapter >= reflection.chapter
+    );
+    if (plan) reflectionKeys.add(`${reflection.userId}:${toDateKey(plan.readingDate)}`);
+  }
+
+  let earnedTotal = 0;
+  let possibleTotal = 0;
 
   const memberProgress = members.map((member) => {
-    // 중도 참여자는 합류일 이후 배정된 플랜 날짜만 분모에 포함한다.
-    // 합류 전 통독 분량은 공동체 기록에는 남지만 개인 달성률 책임에서는 제외한다.
+    // 중도 참여자는 합류일 이후이면서 오늘까지 도달한 플랜 날짜만 분모에 포함한다.
+    // 각 날짜는 읽기 완료 50점, 나눔 작성 50점으로 계산한다.
     const joinedDateKey = toDateKey(member.joinedAt);
-    const eligibleDates = allDateKeys.filter((dateKey) => dateKey >= joinedDateKey);
+    const eligibleDates = currentDateKeys.filter((dateKey) => dateKey >= joinedDateKey);
     const completedCount = eligibleDates.filter((dateKey) =>
       completedKeys.has(`${member.userId}:${dateKey}`)
     ).length;
+    const reflectionCount = eligibleDates.filter((dateKey) =>
+      reflectionKeys.has(`${member.userId}:${dateKey}`)
+    ).length;
     const totalCount = eligibleDates.length;
-    const rate = totalCount === 0 ? 100 : Math.round((completedCount / totalCount) * 100);
+    const earnedPoints = completedCount * 50 + reflectionCount * 50;
+    const possiblePoints = totalCount * 100;
+    const rate = possiblePoints === 0 ? 100 : Math.round((earnedPoints / possiblePoints) * 100);
 
-    completedTotal += completedCount;
-    denominatorTotal += totalCount;
+    earnedTotal += earnedPoints;
+    possibleTotal += possiblePoints;
 
     return {
       userId: member.userId,
@@ -58,17 +79,22 @@ async function buildProgressSummary(roomId: string) {
       role: member.role,
       joinedAt: member.joinedAt,
       completedCount,
+      reflectionCount,
       totalCount,
+      earnedPoints,
+      possiblePoints,
       rate
     };
   });
 
   return {
     totalPlanDays: allDateKeys.length,
-    completedCount: completedTotal,
-    totalCount: denominatorTotal,
-    overallRate:
-      denominatorTotal === 0 ? 100 : Math.round((completedTotal / denominatorTotal) * 100),
+    currentPlanDays: currentDateKeys.length,
+    completedCount: Math.round(earnedTotal / 100),
+    totalCount: Math.round(possibleTotal / 100),
+    earnedPoints: earnedTotal,
+    possiblePoints: possibleTotal,
+    overallRate: possibleTotal === 0 ? 100 : Math.round((earnedTotal / possibleTotal) * 100),
     members: memberProgress
   };
 }
