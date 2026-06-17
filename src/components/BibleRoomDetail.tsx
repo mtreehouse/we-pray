@@ -1098,6 +1098,7 @@ function BibleTab({
   const firstVerseRef = useRef<HTMLDivElement | null>(null);
   const pendingChapterScrollRef = useRef(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [selectedVerse, setSelectedVerse] = useState<VerseTarget | null>(null);
   const [swipeHint, setSwipeHint] = useState<{ direction: "prev" | "next"; strength: number; offset: number } | null>(null);
 
   function scrollToFirstVerse() {
@@ -1112,6 +1113,10 @@ function BibleTab({
     onChapterJump();
     scrollToFirstVerse();
   }, [chapterIndex, currentChapter]);
+
+  useEffect(() => {
+    setSelectedVerse(null);
+  }, [currentChapter?.bookCode, currentChapter?.chapter, selectedDate, translation]);
 
   function goPrev() {
     if (chapterIndex === 0) return;
@@ -1157,8 +1162,34 @@ function BibleTab({
     setSwipeHint(null);
   }
 
+  function toggleSelectedVerse(target: VerseTarget) {
+    setSelectedVerse((current) => {
+      const sameVerse = current
+        && current.bookCode === target.bookCode
+        && current.chapter === target.chapter
+        && current.verse === target.verse;
+
+      return sameVerse ? null : target;
+    });
+  }
+
+  async function copySelectedVerse() {
+    if (!selectedVerse) return;
+
+    const citation = `${selectedVerse.bookName} ${selectedVerse.chapter}:${selectedVerse.verse}`;
+    await navigator.clipboard.writeText(`${citation} ${selectedVerse.text}`);
+    setSelectedVerse(null);
+    onToast("구절을 복사했습니다.");
+  }
+
+  function reflectSelectedVerse() {
+    if (!selectedVerse) return;
+    onReflect(selectedVerse);
+    setSelectedVerse(null);
+  }
+
   return (
-    <section className="flex-1 bg-white pb-8 pt-0">
+    <section className={`flex-1 bg-white pt-0 ${selectedVerse ? "pb-28" : "pb-8"}`}>
       <div className="bg-white px-4 py-1">
         <button
           type="button"
@@ -1235,6 +1266,7 @@ function BibleTab({
           const deltaX = touch.clientX - start.x;
           const deltaY = touch.clientY - start.y;
           if (Math.abs(deltaX) > 45 && Math.abs(deltaX) > Math.abs(deltaY) * 1.15) {
+            event.preventDefault();
             if (deltaX < 0) goNext();
             if (deltaX > 0) goPrev();
           }
@@ -1291,8 +1323,13 @@ function BibleTab({
                   chapter={currentChapter}
                   verse={verse}
                   translation={translation}
-                  onReflect={onReflect}
-                  onToast={onToast}
+                  selected={Boolean(
+                    selectedVerse
+                      && selectedVerse.bookCode === currentChapter.bookCode
+                      && selectedVerse.chapter === currentChapter.chapter
+                      && selectedVerse.verse === verse.verse
+                  )}
+                  onToggle={toggleSelectedVerse}
                 />
               ))}
             </div>
@@ -1360,6 +1397,35 @@ function BibleTab({
           <RestDayMessage />
         )}
       </div>
+
+      {selectedVerse ? (
+        <div
+          className="fixed left-1/2 z-30 w-[15.5rem] max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-2xl border border-slate-200/80 bg-white/95 p-2 shadow-[0_14px_40px_rgba(15,23,42,0.20)] backdrop-blur"
+          style={{ bottom: "max(1rem, env(safe-area-inset-bottom))" }}
+        >
+          <p className="mb-1 truncate text-center text-[11px] font-black text-slate-500">
+            {selectedVerse.bookName} {selectedVerse.chapter}:{selectedVerse.verse}
+          </p>
+          <div className="grid grid-cols-2 gap-1">
+            <button
+              type="button"
+              onClick={copySelectedVerse}
+              className="flex min-h-10 items-center justify-center gap-1 rounded-xl bg-slate-100 px-2.5 text-xs font-black text-slate-800"
+            >
+              <Clipboard size={14} />
+              복사
+            </button>
+            <button
+              type="button"
+              onClick={reflectSelectedVerse}
+              className="flex min-h-10 items-center justify-center gap-1 rounded-xl bg-teal-700 px-2.5 text-xs font-black text-white"
+            >
+              <Pencil size={14} />
+              묵상 작성
+            </button>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -1368,82 +1434,36 @@ function VerseRow({
   chapter,
   verse,
   translation,
-  onReflect,
-  onToast
+  selected,
+  onToggle
 }: {
   chapter: ReadingChapter;
   verse: ReadingVerse;
   translation: BibleTranslationCode;
-  onReflect: (target: VerseTarget) => void;
-  onToast: (message: string) => void;
+  selected: boolean;
+  onToggle: (target: VerseTarget) => void;
 }) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const timerRef = useRef<number | null>(null);
   const text = verseText(verse.content, translation);
 
-  function clearTimer() {
-    if (timerRef.current) {
-      window.clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-  }
-
-  async function copy() {
-    const citation = `${chapter.bookName} ${chapter.chapter}:${verse.verse}`;
-    await navigator.clipboard.writeText(`${citation} ${text}`);
-    setMenuOpen(false);
-    onToast("구절을 복사했습니다.");
-  }
-
   return (
-    <div className="relative rounded-md px-1 py-1.5 transition hover:bg-slate-50">
+    <div className={`rounded-md px-1 py-1.5 transition ${selected ? "bg-teal-50" : "hover:bg-slate-50"}`}>
       <button
         type="button"
-        onContextMenu={(event) => {
-          event.preventDefault();
-          setMenuOpen(true);
+        onClick={() => {
+          onToggle({
+            bookCode: chapter.bookCode,
+            bookName: chapter.bookName,
+            chapter: chapter.chapter,
+            verse: verse.verse,
+            text
+          });
         }}
-        onPointerDown={() => {
-          clearTimer();
-          timerRef.current = window.setTimeout(() => setMenuOpen(true), 550);
-        }}
-        onPointerUp={clearTimer}
-        onPointerCancel={clearTimer}
-        onPointerLeave={clearTimer}
-        className="w-full text-left text-[15px] leading-7 text-slate-800"
+        className={`w-full rounded-md px-1 text-left text-[15px] leading-7 transition ${selected ? "text-teal-950" : "text-slate-800"}`}
       >
         <span className="mr-2 align-baseline text-xs font-black text-teal-700">{verseLabel(verse.content, verse.verse)}</span>
         {text}
         {verse.reflectionCount > 0 ? <span className="ml-1 align-baseline">❤️</span> : null}
       </button>
-      {menuOpen ? (
-        <div className="absolute left-6 top-8 z-10 flex overflow-hidden rounded-lg border border-slate-200 bg-white shadow-soft">
-          <button
-            type="button"
-            onClick={() => {
-              setMenuOpen(false);
-              onReflect({
-                bookCode: chapter.bookCode,
-                bookName: chapter.bookName,
-                chapter: chapter.chapter,
-                verse: verse.verse,
-                text
-              });
-            }}
-            className="flex h-11 items-center gap-1.5 px-3 text-sm font-black text-teal-700"
-          >
-            <Pencil size={15} />
-            묵상 작성
-          </button>
-          <button type="button" onClick={copy} className="flex h-11 items-center gap-1.5 px-3 text-sm font-black text-slate-700">
-            <Clipboard size={15} />
-            복사
-          </button>
-          <button type="button" onClick={() => setMenuOpen(false)} className="grid h-11 w-10 place-items-center text-slate-400" aria-label="닫기">
-            <X size={15} />
-          </button>
-        </div>
-      ) : null}
     </div>
   );
 }
