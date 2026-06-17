@@ -705,7 +705,6 @@ export function BibleRoomDetail({
 
       {activeTab === "plan" ? (
         <PlanTab
-          room={room}
           members={members}
           days={planDays}
           selectedDate={selectedDate}
@@ -956,27 +955,47 @@ function BibleRoomSettingsDrawer({
 }
 
 function BibleRoomInfoModal({ room, open, onClose }: { room: RoomDetail; open: boolean; onClose: () => void }) {
+  const scopeLabel = scopeLabels[room.scope] ?? room.scope;
+  const planTypeLabel = planTypeLabels[room.planType] ?? room.planType;
+  const createdDate = new Intl.DateTimeFormat("ko-KR", { dateStyle: "long" }).format(new Date(room.createdAt));
+
   return (
     <Modal title="성경방 정보" open={open} onClose={onClose}>
-      <dl className="grid gap-3 text-sm">
-        <InfoRow label="방 제목" value={room.title} />
-        <InfoRow label="방 설명" value={room.description} />
-        <InfoRow label="생성자" value={room.creatorNickname ?? "알 수 없음"} />
-        <InfoRow label="통독 범위" value={scopeLabels[room.scope] ?? room.scope} />
-        <InfoRow label="통독 기간" value={`${room.durationMonths}개월`} />
-        <InfoRow label="통독 방식" value={planTypeLabels[room.planType] ?? room.planType} />
-        <InfoRow label="주일 제외" value={room.excludeSunday ? "예" : "아니오"} />
-        <InfoRow label="생성일자" value={new Intl.DateTimeFormat("ko-KR", { dateStyle: "long" }).format(new Date(room.createdAt))} />
-      </dl>
+      <div className="grid gap-4">
+        <section className="rounded-xl border border-teal-100 bg-teal-50 p-4 dark:border-slate-800 dark:bg-slate-900">
+          <p className="text-[11px] font-black text-teal-700 dark:text-teal-300">BIBLE ROOM</p>
+          <h3 className="mt-1 break-words text-xl font-black text-slate-950 dark:text-slate-50">{room.title}</h3>
+          {room.description ? (
+            <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-600 dark:text-slate-300">{room.description}</p>
+          ) : null}
+          <div className="mt-4 flex flex-wrap gap-2 text-xs font-black">
+            <span className="rounded-full bg-white px-3 py-1.5 text-teal-800 dark:bg-teal-950/50 dark:text-teal-200">{scopeLabel}</span>
+            <span className="rounded-full bg-white px-3 py-1.5 text-slate-700 dark:bg-slate-800 dark:text-slate-200">{room.durationMonths}개월</span>
+            <span className="rounded-full bg-white px-3 py-1.5 text-slate-700 dark:bg-slate-800 dark:text-slate-200">{planTypeLabel}</span>
+          </div>
+        </section>
+
+        <section className="grid grid-cols-2 gap-2 text-sm">
+          <InfoTile label="생성자" value={room.creatorNickname ?? "알 수 없음"} />
+          <InfoTile label="주일 제외" value={room.excludeSunday ? "예" : "아니오"} />
+          <InfoTile label="통독 범위" value={scopeLabel} />
+          <InfoTile label="통독 방식" value={planTypeLabel} />
+        </section>
+
+        <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
+          <p className="text-xs font-black text-slate-400 dark:text-slate-500">생성일자</p>
+          <p className="mt-1 font-bold text-slate-900 dark:text-slate-100">{createdDate}</p>
+        </div>
+      </div>
     </Modal>
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
+function InfoTile({ label, value }: { label: string; value: string }) {
   return (
-    <div>
-      <dt className="mb-1 font-bold text-slate-500">{label}</dt>
-      <dd className="whitespace-pre-wrap break-words text-slate-900">{value}</dd>
+    <div className="rounded-xl border border-transparent bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
+      <p className="text-xs font-black text-slate-400 dark:text-slate-500">{label}</p>
+      <p className="mt-1 break-words font-bold text-slate-900 dark:text-slate-100">{value}</p>
     </div>
   );
 }
@@ -1301,7 +1320,7 @@ function BibleTab({
 
   return (
     <section className={`flex-1 bg-white pt-0 dark:bg-slate-950 ${selectedVerse ? "pb-28" : "pb-8"}`}>
-      <div className="bg-white px-4 py-1 dark:bg-slate-950">
+      <div className="bg-white px-4 pb-1 pt-1 dark:bg-slate-950">
         <button
           type="button"
           onClick={() => setDatePickerOpen((open) => !open)}
@@ -1312,7 +1331,7 @@ function BibleTab({
           {formatDateKey(selectedDate)}
         </button>
         {datePickerOpen ? (
-          <div className="pt-2">
+          <div className="-mx-4 mt-1 bg-teal-50/35 px-4 pb-3 pt-3 dark:bg-slate-900/70">
             <PlanCalendar
               days={days}
               selectedDate={selectedDate}
@@ -1387,7 +1406,7 @@ function BibleTab({
         {readingLoading ? (
           <div className="border-b border-slate-100 bg-white p-6 text-center text-sm font-bold text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400">본문을 불러오는 중입니다.</div>
         ) : currentChapter ? (
-          <article className="bg-white px-4 pb-4 pt-3 dark:bg-slate-950">
+          <article className={`bg-white px-4 pb-4 dark:bg-slate-950 ${datePickerOpen ? "pt-2" : "pt-3"}`}>
             {swipeHint ? (
               <div
                 className="pointer-events-none fixed top-1/2 z-40 grid h-12 w-12 place-items-center rounded-full border border-white/80 bg-white/95 text-teal-700 shadow-lg backdrop-blur"
@@ -1676,7 +1695,6 @@ function SharingTab({
 }
 
 function PlanTab({
-  room,
   members,
   days,
   selectedDate,
@@ -1684,7 +1702,6 @@ function PlanTab({
   progress,
   onSelectDate
 }: {
-  room: RoomDetail;
   members: RoomMember[];
   days: PlanDay[];
   selectedDate: string;
@@ -1697,17 +1714,6 @@ function PlanTab({
 
   return (
     <section className="flex-1 px-4 pb-8 pt-4 dark:bg-slate-950">
-      <div className="mb-4 rounded-lg bg-white p-4 shadow-soft dark:bg-slate-900 dark:shadow-none">
-        <h2 className="font-black text-slate-950 dark:text-slate-50">{room.title}</h2>
-        <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">{room.description}</p>
-        <div className="mt-3 flex flex-wrap gap-2 text-xs font-bold text-slate-600 dark:text-slate-300">
-          <span className="rounded-full bg-teal-50 px-2.5 py-1 text-teal-800 dark:bg-teal-950/50 dark:text-teal-200">{scopeLabels[room.scope] ?? room.scope}</span>
-          <span className="rounded-full bg-slate-100 px-2.5 py-1 dark:bg-slate-800 dark:text-slate-300">{room.durationMonths}개월</span>
-          <span className="rounded-full bg-slate-100 px-2.5 py-1 dark:bg-slate-800 dark:text-slate-300">{planTypeLabels[room.planType] ?? room.planType}</span>
-          {room.excludeSunday ? <span className="rounded-full bg-slate-100 px-2.5 py-1 dark:bg-slate-800 dark:text-slate-300">주일 제외</span> : null}
-        </div>
-      </div>
-
       <PlanCalendar days={days} selectedDate={selectedDate} planDateRange={planDateRange} onSelectDate={onSelectDate} />
 
       <div className="mt-4 rounded-lg bg-white p-4 shadow-soft dark:bg-slate-900 dark:shadow-none">
@@ -1798,7 +1804,7 @@ function PlanCalendar({
   }
 
   return (
-    <div className="rounded-lg bg-white p-4 shadow-soft dark:bg-slate-900 dark:shadow-none">
+    <div className={compact ? "bg-transparent pb-2 pt-1" : "rounded-lg bg-white p-4 shadow-soft dark:bg-slate-900 dark:shadow-none"}>
       <div className="mb-3 flex items-center justify-between gap-3">
         <button type="button" onClick={() => moveMonth(-1)} className="grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200" aria-label="이전 달" title="이전 달">
           <ChevronLeft size={17} />
