@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -77,6 +77,15 @@ type ReadingChapter = {
   verses: ReadingVerse[];
 };
 
+type BibleReflectionReactionType = "LIKE" | "HEART";
+
+type ReflectionReactionState = {
+  likeCount: number;
+  heartCount: number;
+  isLikedByMe: boolean;
+  isHeartedByMe: boolean;
+};
+
 type Reflection = {
   id: string;
   bookCode: string;
@@ -90,7 +99,7 @@ type Reflection = {
   userId: string;
   authorNickname: string | null;
   isMine: boolean;
-};
+} & ReflectionReactionState;
 
 type ProgressSummary = {
   totalPlanDays: number;
@@ -646,6 +655,45 @@ export function BibleRoomDetail({
     setPassage(data.passage);
   }
 
+  function updateReflectionReactionState(reflectionId: string, state: ReflectionReactionState) {
+    const update = (reflection: Reflection) => reflection.id === reflectionId ? { ...reflection, ...state } : reflection;
+
+    setReflections((items) => items.map(update));
+    setHistoryReflections((items) => items.map(update));
+    setEditingReflection((reflection) => reflection ? update(reflection) : reflection);
+  }
+
+  async function toggleReflectionReaction(reflection: Reflection, type: BibleReflectionReactionType) {
+    try {
+      const res = await fetch(`/api/bible-rooms/${room.id}/reflections/${reflection.id}/reactions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type })
+      });
+      const data = (await res.json()) as Partial<ReflectionReactionState> & { error?: string };
+
+      if (!res.ok
+        || typeof data.likeCount !== "number"
+        || typeof data.heartCount !== "number"
+        || typeof data.isLikedByMe !== "boolean"
+        || typeof data.isHeartedByMe !== "boolean") {
+        showToast(data.error ?? "반응 저장에 실패했습니다.");
+        return false;
+      }
+
+      updateReflectionReactionState(reflection.id, {
+        likeCount: data.likeCount,
+        heartCount: data.heartCount,
+        isLikedByMe: data.isLikedByMe,
+        isHeartedByMe: data.isHeartedByMe
+      });
+      return true;
+    } catch {
+      showToast("반응 저장에 실패했습니다.");
+      return false;
+    }
+  }
+
   return (
     <main className={`mx-auto flex min-h-dvh w-full max-w-xl flex-col ${darkMode ? "dark bg-slate-950 text-slate-100" : "bg-white/55 text-slate-900"}`}>
       <Toast message={toast} />
@@ -731,6 +779,7 @@ export function BibleRoomDetail({
           onEdit={setEditingReflection}
           onDelete={deleteReflection}
           onToast={showToast}
+          onToggleReaction={toggleReflectionReaction}
         />
       ) : null}
 
@@ -1650,7 +1699,8 @@ function SharingTab({
   onOpenPassage,
   onEdit,
   onDelete,
-  onToast
+  onToast,
+  onToggleReaction
 }: {
   reflections: Reflection[];
   loading: boolean;
@@ -1661,6 +1711,7 @@ function SharingTab({
   onEdit: (reflection: Reflection) => void;
   onDelete: (reflection: Reflection) => void;
   onToast: (message: string) => void;
+  onToggleReaction: (reflection: Reflection, type: BibleReflectionReactionType) => Promise<boolean>;
 }) {
   const grouped = useMemo(() => {
     return reflections.reduce<Record<string, Reflection[]>>((acc, reflection) => {
@@ -1697,6 +1748,7 @@ function SharingTab({
                   onEdit={onEdit}
                   onDelete={onDelete}
                   onToast={onToast}
+                  onToggleReaction={onToggleReaction}
                 />
               ))}
             </div>
@@ -1720,7 +1772,8 @@ function SharingReflectionCard({
   onOpenPassage,
   onEdit,
   onDelete,
-  onToast
+  onToast,
+  onToggleReaction
 }: {
   reflection: Reflection;
   translation: BibleTranslationCode;
@@ -1728,10 +1781,15 @@ function SharingReflectionCard({
   onEdit: (reflection: Reflection) => void;
   onDelete: (reflection: Reflection) => void;
   onToast: (message: string) => void;
+  onToggleReaction: (reflection: Reflection, type: BibleReflectionReactionType) => Promise<boolean>;
 }) {
   const longPressTimerRef = useRef<number | null>(null);
-  const longPressCopiedRef = useRef(false);
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
+  const suppressClickRef = useRef(false);
+  const burstTimerRef = useRef<number | null>(null);
+  const [actionOpen, setActionOpen] = useState(false);
+  const [reactionLoading, setReactionLoading] = useState<BibleReflectionReactionType | null>(null);
+  const [reactionBurst, setReactionBurst] = useState<{ emoji: string; key: number } | null>(null);
 
   const clearLongPress = useCallback(() => {
     if (longPressTimerRef.current) {
@@ -1740,30 +1798,62 @@ function SharingReflectionCard({
     }
   }, []);
 
-  const copyReflection = useCallback(async () => {
+  const openActions = useCallback(() => {
     clearLongPress();
-    longPressCopiedRef.current = true;
+    suppressClickRef.current = true;
+    window.setTimeout(() => {
+      suppressClickRef.current = false;
+    }, 350);
+    setActionOpen(true);
+  }, [clearLongPress]);
 
+  const showReactionBurst = useCallback((emoji: string) => {
+    if (burstTimerRef.current) {
+      window.clearTimeout(burstTimerRef.current);
+    }
+
+    setReactionBurst({ emoji, key: Date.now() });
+    burstTimerRef.current = window.setTimeout(() => {
+      setReactionBurst(null);
+      burstTimerRef.current = null;
+    }, 1250);
+  }, []);
+
+  const copyReflection = useCallback(async () => {
     const bookName = reflection.bookName ?? reflection.bookCode;
     const verseNumber = verseLabel(reflection.verseContent, reflection.verse);
     const passageText = verseText(reflection.verseContent, translation);
-    const copyText = `[${bookName} ${reflection.chapter}:${verseNumber}]\n${passageText}\n\n${reflection.content}`;
+    const copyText = `[${bookName} ${reflection.chapter}:${verseNumber}]
+${passageText}
+
+${reflection.content}`;
 
     try {
       await navigator.clipboard.writeText(copyText);
       onToast("나눔을 복사했습니다.");
+      setActionOpen(false);
     } catch {
       onToast("복사에 실패했습니다.");
     }
-  }, [clearLongPress, onToast, reflection, translation]);
+  }, [onToast, reflection, translation]);
+
+  async function toggleReaction(type: BibleReflectionReactionType) {
+    if (reactionLoading) return;
+
+    const wasActive = type === "LIKE" ? reflection.isLikedByMe : reflection.isHeartedByMe;
+    setReactionLoading(type);
+    try {
+      const ok = await onToggleReaction(reflection, type);
+      if (ok && !wasActive) showReactionBurst(type === "LIKE" ? "👍" : "❤️");
+    } finally {
+      setReactionLoading(null);
+    }
+  }
 
   function startLongPress(event: React.PointerEvent<HTMLElement>) {
     clearLongPress();
-    longPressCopiedRef.current = false;
     pointerStartRef.current = { x: event.clientX, y: event.clientY };
-    longPressTimerRef.current = window.setTimeout(() => {
-      void copyReflection();
-    }, 650);
+    longPressTimerRef.current = window.setTimeout(openActions, 650);
   }
 
   function cancelLongPress() {
@@ -1779,17 +1869,22 @@ function SharingReflectionCard({
     if (dx > 10 || dy > 10) cancelLongPress();
   }
 
-  useEffect(() => clearLongPress, [clearLongPress]);
+  useEffect(() => {
+    return () => {
+      clearLongPress();
+      if (burstTimerRef.current) window.clearTimeout(burstTimerRef.current);
+    };
+  }, [clearLongPress]);
 
   return (
     <article
       className="rounded-lg bg-white p-4 shadow-soft dark:bg-slate-900 dark:shadow-none"
       onClickCapture={(event) => {
-        if (!longPressCopiedRef.current) return;
+        if (!suppressClickRef.current) return;
 
         event.preventDefault();
         event.stopPropagation();
-        longPressCopiedRef.current = false;
+        suppressClickRef.current = false;
       }}
       onPointerDown={startLongPress}
       onPointerMove={cancelLongPressOnMove}
@@ -1798,9 +1893,10 @@ function SharingReflectionCard({
       onPointerLeave={cancelLongPress}
       onContextMenu={(event) => {
         event.preventDefault();
-        if (!longPressCopiedRef.current) void copyReflection();
+        openActions();
       }}
     >
+      {reactionBurst ? <ReactionEmojiBurst key={reactionBurst.key} emoji={reactionBurst.emoji} /> : null}
       <div className="mb-3 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className={`truncate font-bold ${reflection.isMine ? "text-teal-700 dark:text-teal-300" : "text-slate-900 dark:text-slate-100"}`}>
@@ -1828,17 +1924,147 @@ function SharingReflectionCard({
         </button>
       ) : null}
       <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700 dark:text-slate-300">{reflection.content}</p>
-      {reflection.isMine ? (
-        <div className="mt-3 flex justify-end gap-2">
-          <button type="button" onClick={() => onEdit(reflection)} className="grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200" aria-label="묵상 수정" title="묵상 수정">
-            <Edit3 size={16} />
-          </button>
-          <button type="button" onClick={() => onDelete(reflection)} className="grid h-9 w-9 place-items-center rounded-full bg-rose-50 text-rose-700" aria-label="묵상 삭제" title="묵상 삭제">
-            <Trash2 size={16} />
-          </button>
+      <div className="mt-3 flex items-center justify-end gap-1.5 text-xs font-black">
+        <ReactionButton
+          emoji="👍"
+          count={reflection.likeCount}
+          active={reflection.isLikedByMe}
+          tone="like"
+          loading={reactionLoading === "LIKE"}
+          onClick={() => void toggleReaction("LIKE")}
+        />
+        <ReactionButton
+          emoji="❤️"
+          count={reflection.heartCount}
+          active={reflection.isHeartedByMe}
+          tone="heart"
+          loading={reactionLoading === "HEART"}
+          onClick={() => void toggleReaction("HEART")}
+        />
+      </div>
+      {actionOpen ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/10 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-[1px]" onClick={() => setActionOpen(false)}>
+          <div className={`grid w-full max-w-xs gap-2 rounded-2xl border border-slate-200 bg-white/95 p-2 shadow-[0_18px_55px_rgba(15,23,42,0.24)] backdrop-blur dark:border-slate-700 dark:bg-slate-900/95 ${reflection.isMine ? "grid-cols-3" : "grid-cols-1"}`} onClick={(event) => event.stopPropagation()}>
+            <button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={() => void copyReflection()} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl bg-slate-100 text-xs font-black text-slate-700 dark:bg-slate-800 dark:text-slate-100">
+              <span className="text-lg" aria-hidden="true">📋</span>
+              복사
+            </button>
+            {reflection.isMine ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setActionOpen(false);
+                  onEdit(reflection);
+                }}
+                className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl bg-slate-100 text-xs font-black text-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              >
+                <Edit3 size={18} />
+                수정
+              </button>
+            ) : null}
+            {reflection.isMine ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setActionOpen(false);
+                  onDelete(reflection);
+                }}
+                className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl bg-rose-50 text-xs font-black text-rose-700 dark:bg-rose-950/50 dark:text-rose-200"
+              >
+                <Trash2 size={18} />
+                삭제
+              </button>
+            ) : null}
+          </div>
         </div>
       ) : null}
     </article>
+  );
+}
+
+function ReactionButton({
+  emoji,
+  count,
+  active,
+  tone,
+  loading,
+  onClick
+}: {
+  emoji: string;
+  count: number;
+  active: boolean;
+  tone: "like" | "heart";
+  loading: boolean;
+  onClick: () => void;
+}) {
+  const activeClasses = tone === "like"
+    ? "border-sky-200 bg-sky-50 text-sky-700 shadow-[0_6px_16px_rgba(14,165,233,0.16)] dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-200"
+    : "border-rose-200 bg-rose-50 text-rose-700 shadow-[0_6px_16px_rgba(244,63,94,0.16)] dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200";
+
+  return (
+    <button
+      type="button"
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick();
+      }}
+      disabled={loading}
+      aria-pressed={active}
+      aria-label={`${emoji} 반응 ${active ? "취소" : "추가"}`}
+      className={`inline-flex h-8 items-center gap-1 rounded-full border px-2.5 transition disabled:opacity-60 ${
+        active ? activeClasses : "border-slate-200 bg-slate-100 text-slate-500 hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+      }`}
+    >
+      <span className="text-sm leading-none" aria-hidden="true">{emoji}</span>
+      <span>{count}</span>
+    </button>
+  );
+}
+
+function ReactionEmojiBurst({ emoji }: { emoji: string }) {
+  const particles = [
+    { x: -72, delay: 0, scale: 1.1 },
+    { x: -42, delay: 70, scale: 0.9 },
+    { x: -12, delay: 20, scale: 1.2 },
+    { x: 18, delay: 110, scale: 0.95 },
+    { x: 48, delay: 40, scale: 1.15 },
+    { x: 78, delay: 150, scale: 0.9 }
+  ];
+
+  return (
+    <>
+      <div className="pointer-events-none fixed inset-x-0 bottom-12 z-[60] flex justify-center">
+        <div className="relative h-32 w-52">
+          {particles.map((particle, index) => (
+            <span
+              key={`${particle.x}-${index}`}
+              className="reaction-burst-particle absolute left-1/2 bottom-0 text-2xl drop-shadow-[0_8px_14px_rgba(15,23,42,0.22)]"
+              style={{
+                "--burst-x": `${particle.x}px`,
+                "--burst-scale": particle.scale,
+                animationDelay: `${particle.delay}ms`
+              } as CSSProperties}
+              aria-hidden="true"
+            >
+              {emoji}
+            </span>
+          ))}
+        </div>
+      </div>
+      <style>{`
+        @keyframes reactionBurstRise {
+          0% { opacity: 0; transform: translate3d(-50%, 28px, 0) scale(0.72); }
+          16% { opacity: 1; transform: translate3d(calc(-50% + var(--burst-x) * 0.22), 0, 0) scale(calc(var(--burst-scale) * 1.08)); }
+          72% { opacity: 1; transform: translate3d(calc(-50% + var(--burst-x)), -76px, 0) scale(var(--burst-scale)); }
+          100% { opacity: 0; transform: translate3d(calc(-50% + var(--burst-x) * 1.18), -120px, 0) scale(0.82); }
+        }
+
+        .reaction-burst-particle {
+          animation: reactionBurstRise 1050ms cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+        }
+      `}</style>
+    </>
   );
 }
 

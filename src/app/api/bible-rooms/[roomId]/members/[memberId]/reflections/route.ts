@@ -9,6 +9,34 @@ type Params = {
   }>;
 };
 
+function createReactionSummary(
+  reflectionIds: string[],
+  reactionCounts: Array<{ reflectionId: string; type: "LIKE" | "HEART"; _count: { _all: number } }>,
+  myReactions: Array<{ reflectionId: string; type: "LIKE" | "HEART" }>
+) {
+  const summary = new Map<string, { likeCount: number; heartCount: number; isLikedByMe: boolean; isHeartedByMe: boolean }>();
+
+  for (const reflectionId of reflectionIds) {
+    summary.set(reflectionId, { likeCount: 0, heartCount: 0, isLikedByMe: false, isHeartedByMe: false });
+  }
+
+  for (const item of reactionCounts) {
+    const target = summary.get(item.reflectionId);
+    if (!target) continue;
+    if (item.type === "LIKE") target.likeCount = item._count._all;
+    if (item.type === "HEART") target.heartCount = item._count._all;
+  }
+
+  for (const item of myReactions) {
+    const target = summary.get(item.reflectionId);
+    if (!target) continue;
+    if (item.type === "LIKE") target.isLikedByMe = true;
+    if (item.type === "HEART") target.isHeartedByMe = true;
+  }
+
+  return summary;
+}
+
 export async function GET(_req: Request, { params }: Params) {
   const user = await requireNickname();
   const { roomId, memberId } = await params;
@@ -59,6 +87,23 @@ export async function GET(_req: Request, { params }: Params) {
       })
     : [];
   const verseMap = new Map(verses.map((verse) => [`${verse.bookCode}:${verse.chapter}:${verse.verse}`, verse]));
+  const reflectionIds = reflections.map((reflection) => reflection.id);
+  const [reactionCounts, myReactions] = await Promise.all([
+    reflectionIds.length
+      ? prisma.bibleReflectionReaction.groupBy({
+          by: ["reflectionId", "type"],
+          where: { reflectionId: { in: reflectionIds } },
+          _count: { _all: true }
+        })
+      : Promise.resolve([]),
+    reflectionIds.length
+      ? prisma.bibleReflectionReaction.findMany({
+          where: { reflectionId: { in: reflectionIds }, userId: user.id },
+          select: { reflectionId: true, type: true }
+        })
+      : Promise.resolve([])
+  ]);
+  const reactionSummary = createReactionSummary(reflectionIds, reactionCounts, myReactions);
 
   return NextResponse.json({
     reflections: reflections.map((reflection) => {
@@ -75,7 +120,8 @@ export async function GET(_req: Request, { params }: Params) {
         createdAt: reflection.createdAt,
         userId: reflection.userId,
         authorNickname: target.user.nickname,
-        isMine: reflection.userId === user.id
+        isMine: reflection.userId === user.id,
+        ...(reactionSummary.get(reflection.id) ?? { likeCount: 0, heartCount: 0, isLikedByMe: false, isHeartedByMe: false })
       };
     })
   });

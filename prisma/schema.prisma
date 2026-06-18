@@ -35,6 +35,11 @@ enum BiblePlanType {
   PARALLEL      @map("병행")
 }
 
+enum BibleReflectionReactionType {
+  LIKE
+  HEART
+}
+
 model User {
   id             String       @id @default(cuid())
   provider       AuthProvider
@@ -50,10 +55,11 @@ model User {
   prayerPosts       PrayerPost[]
   prayerPostPrayers PrayerPostPrayer[]
 
-  createdBibleRooms BibleRoom[]       @relation("BibleRoomCreator")
-  bibleMemberships  BibleRoomMember[]
-  bibleReflections  BibleReflection[]
-  bibleProgress     BibleProgress[]
+  createdBibleRooms        BibleRoom[]               @relation("BibleRoomCreator")
+  bibleMemberships         BibleRoomMember[]
+  bibleReflections         BibleReflection[]
+  bibleReflectionReactions BibleReflectionReaction[]
+  bibleProgress            BibleProgress[]
 
   @@unique([provider, providerUserId])
   @@index([deletedAt])
@@ -221,13 +227,30 @@ model BibleReflection {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  room BibleRoom @relation(fields: [roomId], references: [id])
-  user User      @relation(fields: [userId], references: [id])
+  room      BibleRoom                 @relation(fields: [roomId], references: [id])
+  user      User                      @relation(fields: [userId], references: [id])
+  reactions BibleReflectionReaction[]
 
   @@index([roomId, createdAt])
   @@index([roomId, bookCode, chapter, verse])
   @@index([userId])
   @@index([deletedAt])
+}
+
+model BibleReflectionReaction {
+  id           String                      @id @default(cuid())
+  reflectionId String
+  userId       String
+  type         BibleReflectionReactionType
+  createdAt    DateTime                    @default(now())
+
+  reflection BibleReflection @relation(fields: [reflectionId], references: [id], onDelete: Cascade)
+  user       User            @relation(fields: [userId], references: [id])
+
+  @@unique([reflectionId, userId, type])
+  @@index([reflectionId])
+  @@index([userId])
+  @@index([type])
 }
 
 model BibleProgress {

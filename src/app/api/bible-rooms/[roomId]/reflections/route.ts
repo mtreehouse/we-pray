@@ -21,6 +21,36 @@ function findPlanDate(
   return plan ? toDateKey(plan.readingDate) : null;
 }
 
+function createReactionSummary(
+  reflectionIds: string[],
+  reactionCounts: Array<{ reflectionId: string; type: "LIKE" | "HEART"; _count: { _all: number } }>,
+  myReactions: Array<{ reflectionId: string; type: "LIKE" | "HEART" }>
+) {
+  const summary = new Map<string, { likeCount: number; heartCount: number; isLikedByMe: boolean; isHeartedByMe: boolean }>();
+
+  for (const reflectionId of reflectionIds) {
+    summary.set(reflectionId, { likeCount: 0, heartCount: 0, isLikedByMe: false, isHeartedByMe: false });
+  }
+
+  for (const item of reactionCounts) {
+    const target = summary.get(item.reflectionId);
+    if (!target) continue;
+
+    if (item.type === "LIKE") target.likeCount = item._count._all;
+    if (item.type === "HEART") target.heartCount = item._count._all;
+  }
+
+  for (const item of myReactions) {
+    const target = summary.get(item.reflectionId);
+    if (!target) continue;
+
+    if (item.type === "LIKE") target.isLikedByMe = true;
+    if (item.type === "HEART") target.isHeartedByMe = true;
+  }
+
+  return summary;
+}
+
 export async function GET(req: Request, { params }: Params) {
   const user = await requireNickname();
   const { roomId } = await params;
@@ -59,7 +89,8 @@ export async function GET(req: Request, { params }: Params) {
     chapter: reflection.chapter,
     verse: reflection.verse
   }));
-  const [verses, plans] = await Promise.all([
+  const reflectionIds = items.map((reflection) => reflection.id);
+  const [verses, plans, reactionCounts, myReactions] = await Promise.all([
     passageFilters.length
       ? prisma.bibleVerse.findMany({
           where: { OR: passageFilters },
@@ -76,11 +107,25 @@ export async function GET(req: Request, { params }: Params) {
       where: { roomId },
       select: { readingDate: true, bookCode: true, startChapter: true, endChapter: true },
       orderBy: { readingDate: "asc" }
-    })
+    }),
+    reflectionIds.length
+      ? prisma.bibleReflectionReaction.groupBy({
+          by: ["reflectionId", "type"],
+          where: { reflectionId: { in: reflectionIds } },
+          _count: { _all: true }
+        })
+      : Promise.resolve([]),
+    reflectionIds.length
+      ? prisma.bibleReflectionReaction.findMany({
+          where: { reflectionId: { in: reflectionIds }, userId: user.id },
+          select: { reflectionId: true, type: true }
+        })
+      : Promise.resolve([])
   ]);
   const verseMap = new Map(
     verses.map((verse) => [`${verse.bookCode}:${verse.chapter}:${verse.verse}`, verse])
   );
+  const reactionSummary = createReactionSummary(reflectionIds, reactionCounts, myReactions);
 
   const responseItems = items
     .map((reflection) => ({
@@ -108,7 +153,8 @@ export async function GET(req: Request, { params }: Params) {
         createdAt: reflection.createdAt,
         userId: reflection.userId,
         authorNickname: reflection.user.nickname,
-        isMine: reflection.userId === user.id
+        isMine: reflection.userId === user.id,
+        ...(reactionSummary.get(reflection.id) ?? { likeCount: 0, heartCount: 0, isLikedByMe: false, isHeartedByMe: false })
       };
     }),
     nextCursor: hasMore ? items[items.length - 1]?.id ?? null : null
@@ -197,7 +243,11 @@ export async function POST(req: Request, { params }: Params) {
       createdAt: new Date().toISOString(),
       userId: user.id,
       authorNickname: user.nickname,
-      isMine: true
+      isMine: true,
+      likeCount: 0,
+      heartCount: 0,
+      isLikedByMe: false,
+      isHeartedByMe: false
     }
   });
 }
