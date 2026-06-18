@@ -1332,7 +1332,7 @@ function BibleTab({
 
   return (
     <section className={`flex-1 bg-white pt-0 dark:bg-slate-950 ${selectedVerse ? "pb-28" : "pb-8"}`}>
-      <div className="relative z-20 bg-white px-4 pb-1 pt-1 dark:bg-slate-950">
+      <div className="relative bg-white px-4 pb-1 pt-1 dark:bg-slate-950">
         <button
           type="button"
           onClick={() => setDatePickerOpen((open) => !open)}
@@ -1346,12 +1346,12 @@ function BibleTab({
           <>
             <button
               type="button"
-              className="fixed inset-0 z-20 cursor-default bg-transparent"
+              className="fixed inset-0 z-40 cursor-default bg-transparent"
               onClick={() => setDatePickerOpen(false)}
               aria-label="달력 닫기"
               tabIndex={-1}
             />
-            <div className="absolute left-4 right-4 top-full z-30 mt-2 rounded-lg border border-slate-200 bg-white p-3 shadow-[0_18px_45px_rgba(15,23,42,0.18)] dark:border-slate-800 dark:bg-slate-900">
+            <div className="absolute left-4 right-4 top-full z-50 mt-2 rounded-lg border border-slate-200 bg-white p-3 shadow-[0_18px_45px_rgba(15,23,42,0.18)] dark:border-slate-800 dark:bg-slate-900">
               <PlanCalendar
                 days={days}
                 selectedDate={selectedDate}
@@ -1616,7 +1616,7 @@ function VerseRow({
       >
         <span className="mr-2 align-baseline text-xs font-black text-teal-700 dark:text-teal-300">{verseLabel(verse.content, verse.verse)}</span>
         {text}
-        {verse.reflectionCount > 0 ? <span className="ml-1 align-baseline">❤️</span> : null}
+        {verse.myReflectionId ? <span className="ml-1 align-baseline">❤️</span> : null}
       </button>
     </div>
   );
