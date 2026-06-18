@@ -6,6 +6,7 @@ import { signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { ChevronRight, Info, LogIn, LogOut, Moon, Pencil, Save, Sun, UserRound } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
+import { Toast } from "@/components/ui/Toast";
 import { WithdrawLink } from "@/components/WithdrawLink";
 import { APP_DARK_MODE_CHANGE_EVENT, APP_DARK_MODE_STORAGE_KEY } from "@/lib/ui-settings";
 
@@ -30,6 +31,7 @@ export function SettingsMenu({ isLoggedIn, currentNickname, appVersion }: Settin
   const [nicknameSaving, setNicknameSaving] = useState(false);
   const [nicknameMessage, setNicknameMessage] = useState("");
   const [nicknameMessageType, setNicknameMessageType] = useState<"success" | "error">("success");
+  const [toast, setToast] = useState("");
   const [releaseOpen, setReleaseOpen] = useState(false);
 
   useEffect(() => {
@@ -88,13 +90,15 @@ export function SettingsMenu({ isLoggedIn, currentNickname, appVersion }: Settin
 
     setNickname(nextNickname);
     setNicknameInput(nextNickname);
-    setNicknameMessageType("success");
-    setNicknameMessage("닉네임이 저장되었습니다.");
+    setNicknameMessage("");
+    setNicknameOpen(false);
+    setToast("닉네임이 저장되었습니다.");
     router.refresh();
   }
 
   return (
     <>
+      <Toast message={toast} onClose={() => setToast("")} />
       <div className="grid gap-4">
         <section className="rounded-lg bg-white/90 p-4 shadow-soft dark:border dark:border-slate-800 dark:bg-slate-900/85">
           <div className="flex items-center justify-between gap-4">

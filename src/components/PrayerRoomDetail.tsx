@@ -231,6 +231,7 @@ export function PrayerRoomDetail({ room, currentUserId, members, posts, nextCurs
                     key={post.id}
                     post={post}
                     selected={selectedPost?.id === post.id}
+                    isMine={post.userId === currentUserId}
                     onSelect={() => setSelectedPost((current) => (current?.id === post.id ? null : post))}
                   />
                 ))}
@@ -337,10 +338,12 @@ export function PrayerRoomDetail({ room, currentUserId, members, posts, nextCurs
 function PrayerPostCard({
   post,
   selected,
+  isMine,
   onSelect
 }: {
   post: PrayerPost;
   selected: boolean;
+  isMine: boolean;
   onSelect: () => void;
 }) {
   return (
@@ -352,7 +355,7 @@ function PrayerPostCard({
       }`}
     >
       <div className="mb-3 flex items-center justify-between gap-3">
-        <p className={`font-bold ${selected ? "text-teal-700 dark:text-teal-300" : "text-slate-900 dark:text-slate-100"}`}>
+        <p className={`font-bold ${selected || isMine ? "text-teal-700 dark:text-teal-300" : "text-slate-900 dark:text-slate-100"}`}>
           {post.authorNickname ?? "알 수 없음"}
         </p>
         <time className="text-xs font-semibold text-slate-400 dark:text-slate-500">

@@ -11,6 +11,8 @@
 - Added dedicated member prayer-post history loading so member counts and histories stay accurate with paginated room lists. (`750e1d0`)
 
 ### Changed
+- Matched Pray Room author nickname styling for the current user with Bible Room sharing cards.
+- Updated nickname settings so successful saves close the modal and show a toast while validation errors stay inline.
 - Fixed Pray Room validation toasts so prayer-post input errors dismiss automatically and clear while editing. (`0db0044`)
 - Improved dark mode styling across main menu cards, Pray Room lists, Bible Room lists, Pray News, login, nickname setup, and settings screens. (`b9bdd85`)
 - Updated Bible Room dark mode behavior so a room without its own saved preference uses the current app-wide dark mode value as its initial default. (`b9bdd85`)
