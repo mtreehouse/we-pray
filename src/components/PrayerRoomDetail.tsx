@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Crown, History, Settings, Trash2, X } from "lucide-react";
+import { ChevronLeft, Clipboard, Crown, Edit3, History, Settings, Trash2, X } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Toast } from "@/components/ui/Toast";
 
@@ -48,6 +48,8 @@ export function PrayerRoomDetail({ room, currentUserId, members, posts }: Props)
   const [infoOpen, setInfoOpen] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
   const [historyMember, setHistoryMember] = useState<RoomMember | null>(null);
+  const [selectedPost, setSelectedPost] = useState<PrayerPost | null>(null);
+  const [editingPost, setEditingPost] = useState<PrayerPost | null>(null);
 
   const groupedPosts = useMemo(() => {
     return posts.reduce<Record<string, PrayerPost[]>>((acc, post) => {
@@ -57,6 +59,22 @@ export function PrayerRoomDetail({ room, currentUserId, members, posts }: Props)
       return acc;
     }, {});
   }, [posts]);
+
+  async function copySelectedPost() {
+    if (!selectedPost) return;
+
+    await navigator.clipboard.writeText(selectedPost.content);
+    setToast("기도제목을 복사했습니다.");
+    window.setTimeout(() => setToast(""), 2400);
+    setSelectedPost(null);
+  }
+
+  function editSelectedPost() {
+    if (!selectedPost || selectedPost.userId !== currentUserId) return;
+
+    setEditingPost(selectedPost);
+    setSelectedPost(null);
+  }
 
   async function leaveRoom() {
     if (!confirm("방에서 나가시겠습니까?")) return;
@@ -107,9 +125,8 @@ export function PrayerRoomDetail({ room, currentUserId, members, posts }: Props)
                   <PrayerPostCard
                     key={post.id}
                     post={post}
-                    canManage={post.userId === currentUserId}
-                    roomId={room.id}
-                    onToast={setToast}
+                    selected={selectedPost?.id === post.id}
+                    onSelect={() => setSelectedPost((current) => (current?.id === post.id ? null : post))}
                   />
                 ))}
               </div>
@@ -122,18 +139,20 @@ export function PrayerRoomDetail({ room, currentUserId, members, posts }: Props)
         )}
       </section>
 
-      <div className="fixed inset-x-0 bottom-0 z-20 safe-bottom">
-        <div className="mx-auto flex w-full max-w-xl justify-end px-4 pb-4">
-          <button
-            type="button"
-            onClick={() => setWriteOpen(true)}
-            className="grid h-14 w-14 place-items-center rounded-full bg-teal-700 text-2xl text-white shadow-soft"
-            aria-label="기도제목 작성"
-          >
-            ✏️
-          </button>
+      {!selectedPost ? (
+        <div className="fixed inset-x-0 bottom-0 z-20 safe-bottom">
+          <div className="mx-auto flex w-full max-w-xl justify-end px-4 pb-4">
+            <button
+              type="button"
+              onClick={() => setWriteOpen(true)}
+              className="grid h-14 w-14 place-items-center rounded-full bg-teal-700 text-2xl text-white shadow-soft"
+              aria-label="기도제목 작성"
+            >
+              ✏️
+            </button>
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <PrayerPostModal
         roomId={room.id}
@@ -141,6 +160,44 @@ export function PrayerRoomDetail({ room, currentUserId, members, posts }: Props)
         onClose={() => setWriteOpen(false)}
         onToast={setToast}
       />
+      <PrayerPostModal
+        roomId={room.id}
+        post={editingPost ?? undefined}
+        open={Boolean(editingPost)}
+        onClose={() => setEditingPost(null)}
+        onToast={setToast}
+      />
+      {selectedPost ? (
+        <div
+          className="fixed left-1/2 z-30 w-[13rem] max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-2xl border border-slate-200/80 bg-white/95 p-2 shadow-[0_14px_40px_rgba(15,23,42,0.20)] backdrop-blur dark:border-slate-700 dark:bg-slate-900/95"
+          style={{ bottom: "max(1rem, env(safe-area-inset-bottom))" }}
+        >
+          <p className="mb-1 truncate text-center text-[11px] font-black text-slate-500 dark:text-slate-400">
+            {selectedPost.authorNickname ?? "알 수 없음"}
+          </p>
+          <div className={`grid gap-1 ${selectedPost.userId === currentUserId ? "grid-cols-2" : "grid-cols-1"}`}>
+            <button
+              type="button"
+              onClick={copySelectedPost}
+              className="flex min-h-10 items-center justify-center gap-1 rounded-xl bg-slate-100 px-2.5 text-xs font-black text-slate-800 dark:bg-slate-800 dark:text-slate-100"
+            >
+              <Clipboard size={14} />
+              복사
+            </button>
+            {selectedPost.userId === currentUserId ? (
+              <button
+                type="button"
+                onClick={editSelectedPost}
+                className="flex min-h-10 items-center justify-center gap-1 rounded-xl bg-teal-700 px-2.5 text-xs font-black text-white"
+              >
+                <Edit3 size={14} />
+                편집
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
       <RoomSettingsDrawer
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
@@ -171,48 +228,23 @@ export function PrayerRoomDetail({ room, currentUserId, members, posts }: Props)
 
 function PrayerPostCard({
   post,
-  canManage,
-  roomId,
-  onToast
+  selected,
+  onSelect
 }: {
   post: PrayerPost;
-  canManage: boolean;
-  roomId: string;
-  onToast: (message: string) => void;
+  selected: boolean;
+  onSelect: () => void;
 }) {
-  const timerRef = useRef<number | null>(null);
-  const [editOpen, setEditOpen] = useState(false);
-
-  function clearPressTimer() {
-    if (timerRef.current) {
-      window.clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-  }
-
-  function openEdit() {
-    if (!canManage) return;
-    setEditOpen(true);
-  }
-
   return (
-    <article
-      onContextMenu={(event) => {
-        event.preventDefault();
-        openEdit();
-      }}
-      onPointerDown={() => {
-        if (!canManage) return;
-        clearPressTimer();
-        timerRef.current = window.setTimeout(openEdit, 650);
-      }}
-      onPointerUp={clearPressTimer}
-      onPointerCancel={clearPressTimer}
-      onPointerLeave={clearPressTimer}
-      className="rounded-lg bg-white p-4 shadow-soft dark:border dark:border-slate-800 dark:bg-slate-900 dark:shadow-none"
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`w-full rounded-lg bg-white p-4 text-left shadow-soft transition dark:border dark:border-slate-800 dark:bg-slate-900 dark:shadow-none ${
+        selected ? "ring-2 ring-teal-500 dark:ring-teal-400" : ""
+      }`}
     >
       <div className="mb-3 flex items-center justify-between gap-3">
-        <p className={`font-bold ${canManage ? "text-teal-700 dark:text-teal-300" : "text-slate-900 dark:text-slate-100"}`}>
+        <p className={`font-bold ${selected ? "text-teal-700 dark:text-teal-300" : "text-slate-900 dark:text-slate-100"}`}>
           {post.authorNickname ?? "알 수 없음"}
         </p>
         <time className="text-xs font-semibold text-slate-400 dark:text-slate-500">
@@ -220,14 +252,7 @@ function PrayerPostCard({
         </time>
       </div>
       <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700 dark:text-slate-300">{post.content}</p>
-      <PrayerPostModal
-        roomId={roomId}
-        post={post}
-        open={editOpen}
-        onClose={() => setEditOpen(false)}
-        onToast={onToast}
-      />
-    </article>
+    </button>
   );
 }
 
