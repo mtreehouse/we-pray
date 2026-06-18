@@ -798,6 +798,7 @@ export function BibleRoomDetail({
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
         room={room}
+        currentUserId={currentUserId}
         members={members}
         reflections={reflections}
         translationLabel={bibleTranslationLabels[translation]}
@@ -869,6 +870,7 @@ function BibleRoomSettingsDrawer({
   open,
   onClose,
   room,
+  currentUserId,
   members,
   reflections,
   translationLabel,
@@ -885,6 +887,7 @@ function BibleRoomSettingsDrawer({
 }: {
   open: boolean;
   onClose: () => void;
+  currentUserId: string;
   room: RoomDetail;
   members: RoomMember[];
   reflections: Reflection[];
@@ -999,35 +1002,44 @@ function BibleRoomSettingsDrawer({
 
         <h3 className="mb-3 text-sm font-black text-slate-500 dark:text-slate-400">멤버 {members.length}</h3>
         <div className="grid gap-2">
-          {members.map((member) => (
-            <div key={member.id} className="flex items-center gap-2 rounded-lg border border-slate-200 p-3 dark:border-slate-800 dark:bg-slate-900/60">
-              <div className="min-w-0 flex-1">
-                <p className="flex items-center gap-1 truncate font-bold text-slate-900 dark:text-slate-100">
-                  {member.nickname ?? "닉네임 없음"}
-                  {member.role === "creator" ? <Crown className="shrink-0 text-amber-500" size={16} /> : null}
-                </p>
-                <p className="text-xs text-slate-400">묵상 {reflections.filter((reflection) => reflection.userId === member.userId).length}개</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => onHistory(member)}
-                className="grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
-                aria-label="묵상 history"
-              >
-                <History size={17} />
-              </button>
-              {room.isCreator && member.role !== "creator" ? (
+          {members.map((member) => {
+            const isMe = member.userId === currentUserId;
+
+            return (
+              <div key={member.id} className="flex items-center gap-2 rounded-lg border border-slate-200 p-3 dark:border-slate-800 dark:bg-slate-900/60">
+                <div className="min-w-0 flex-1">
+                  <p className="flex min-w-0 items-center gap-1.5 font-bold text-slate-900 dark:text-slate-100">
+                    <span className="truncate">{member.nickname ?? "닉네임 없음"}</span>
+                    {member.role === "creator" ? <Crown className="shrink-0 text-amber-500" size={16} /> : null}
+                    {isMe ? (
+                      <span className="shrink-0 rounded-full bg-teal-50 px-1.5 py-0.5 text-[10px] font-black leading-none text-teal-700 ring-1 ring-teal-100 dark:bg-teal-950/50 dark:text-teal-200 dark:ring-teal-900">
+                        ME
+                      </span>
+                    ) : null}
+                  </p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500">묵상 {reflections.filter((reflection) => reflection.userId === member.userId).length}개</p>
+                </div>
                 <button
                   type="button"
-                  onClick={() => kick(member)}
-                  className="grid h-9 w-9 place-items-center rounded-full bg-rose-50 text-rose-700"
-                  aria-label="멤버 내보내기"
+                  onClick={() => onHistory(member)}
+                  className="grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                  aria-label="묵상 history"
                 >
-                  <Trash2 size={17} />
+                  <History size={17} />
                 </button>
-              ) : null}
-            </div>
-          ))}
+                {room.isCreator && member.role !== "creator" ? (
+                  <button
+                    type="button"
+                    onClick={() => kick(member)}
+                    className="grid h-9 w-9 place-items-center rounded-full bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300"
+                    aria-label="멤버 내보내기"
+                  >
+                    <Trash2 size={17} />
+                  </button>
+                ) : null}
+              </div>
+            );
+          })}
         </div>
       </aside>
     </div>
