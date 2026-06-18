@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Crown } from "lucide-react";
+import { Crown, Plus, Search } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Toast } from "@/components/ui/Toast";
 
@@ -53,23 +53,27 @@ export function PrayRoomList({ rooms }: { rooms: RoomSummary[] }) {
       </div>
 
       <div className="fixed inset-x-0 bottom-0 z-20 safe-bottom">
-        <div className="mx-auto flex w-full max-w-xl justify-end gap-3 px-4 pb-4">
-          <button
-            type="button"
-            onClick={() => setFindOpen(true)}
-            className="grid h-14 w-14 place-items-center rounded-full bg-white text-2xl text-slate-900 shadow-soft dark:border dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
-            aria-label="방 찾기"
-          >
-            🔍
-          </button>
-          <button
-            type="button"
-            onClick={() => setCreateOpen(true)}
-            className="grid h-14 w-14 place-items-center rounded-full bg-teal-700 text-3xl text-white shadow-soft"
-            aria-label="방 생성"
-          >
-            +
-          </button>
+        <div className="mx-auto flex w-full max-w-xl justify-end px-4 pb-4">
+          <div className="flex items-center gap-2 rounded-full border border-white/80 bg-white/90 p-1.5 shadow-[0_16px_42px_rgba(15,23,42,0.18)] backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
+            <button
+              type="button"
+              onClick={() => setFindOpen(true)}
+              className="grid h-12 w-12 place-items-center rounded-full bg-slate-100 text-slate-700 transition hover:bg-slate-200 active:scale-95 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
+              aria-label="방 찾기"
+              title="방 찾기"
+            >
+              <Search size={21} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setCreateOpen(true)}
+              className="grid h-12 w-12 place-items-center rounded-full bg-emerald-600 text-white shadow-[0_10px_24px_rgba(5,150,105,0.28)] transition hover:bg-emerald-700 active:scale-95"
+              aria-label="방 생성"
+              title="방 생성"
+            >
+              <Plus size={26} />
+            </button>
+          </div>
         </div>
       </div>
 
