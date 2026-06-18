@@ -557,6 +557,7 @@ export function BibleRoomDetail({
         setPlanDays((days) => days.map((day) => day.date === data.reflection!.planDate ? { ...day, hasReflection: true } : day));
       }
     }
+    void loadProgress();
     window.requestAnimationFrame(() => window.scrollTo({ top: scrollY }));
     return true;
   }
@@ -592,7 +593,7 @@ export function BibleRoomDetail({
       return;
     }
 
-    await Promise.all([loadPlans(), loadReading(), loadReflections(true)]);
+    await Promise.all([loadPlans(), loadReading(), loadReflections(true), loadProgress()]);
   }
 
   async function openMemberHistory(member: RoomMember) {
