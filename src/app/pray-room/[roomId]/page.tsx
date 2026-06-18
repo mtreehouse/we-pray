@@ -59,7 +59,13 @@ export default async function PrayerRoomDetailPage({ params }: PageProps) {
         content: true,
         createdAt: true,
         updatedAt: true,
-        user: { select: { nickname: true } }
+        user: { select: { nickname: true } },
+        prayers: {
+          where: { userId: user.id },
+          select: { id: true },
+          take: 1
+        },
+        _count: { select: { prayers: true } }
       },
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       take: 51
@@ -98,7 +104,9 @@ export default async function PrayerRoomDetailPage({ params }: PageProps) {
         authorNickname: post.user.nickname,
         content: post.content,
         createdAt: post.createdAt.toISOString(),
-        updatedAt: post.updatedAt.toISOString()
+        updatedAt: post.updatedAt.toISOString(),
+        prayerCount: post._count.prayers,
+        isPrayedByMe: post.prayers.length > 0
       }))}
       nextCursor={initialPostsWithExtra.length > 50 ? initialPosts[initialPosts.length - 1]?.id ?? null : null}
     />

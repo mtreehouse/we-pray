@@ -36,20 +36,21 @@ enum BiblePlanType {
 }
 
 model User {
-  id             String        @id @default(cuid())
+  id             String       @id @default(cuid())
   provider       AuthProvider
   providerUserId String
-  nickname       String?       @unique
-  role           UserRole      @default(user)
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  nickname       String?      @unique
+  role           UserRole     @default(user)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
   deletedAt      DateTime?
 
-  createdRooms PrayerRoom[] @relation("RoomCreator")
-  memberships  RoomMember[]
-  prayerPosts  PrayerPost[]
+  createdRooms      PrayerRoom[]       @relation("RoomCreator")
+  memberships       RoomMember[]
+  prayerPosts       PrayerPost[]
+  prayerPostPrayers PrayerPostPrayer[]
 
-  createdBibleRooms BibleRoom[]        @relation("BibleRoomCreator")
+  createdBibleRooms BibleRoom[]       @relation("BibleRoomCreator")
   bibleMemberships  BibleRoomMember[]
   bibleReflections  BibleReflection[]
   bibleProgress     BibleProgress[]
@@ -102,12 +103,27 @@ model PrayerPost {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  room PrayerRoom @relation(fields: [roomId], references: [id])
-  user User       @relation(fields: [userId], references: [id])
+  room    PrayerRoom         @relation(fields: [roomId], references: [id])
+  user    User               @relation(fields: [userId], references: [id])
+  prayers PrayerPostPrayer[]
 
   @@index([roomId, createdAt])
   @@index([userId])
   @@index([deletedAt])
+}
+
+model PrayerPostPrayer {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  post PrayerPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User       @relation(fields: [userId], references: [id])
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
 }
 
 model PrayNews {
@@ -150,7 +166,7 @@ model BibleRoom {
   updatedAt      DateTime      @updatedAt
   deletedAt      DateTime?
 
-  creator     User               @relation("BibleRoomCreator", fields: [creatorUserId], references: [id])
+  creator     User              @relation("BibleRoomCreator", fields: [creatorUserId], references: [id])
   members     BibleRoomMember[]
   plans       BiblePlan[]
   reflections BibleReflection[]

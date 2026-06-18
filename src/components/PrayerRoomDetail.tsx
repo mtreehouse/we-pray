@@ -23,6 +23,8 @@ type PrayerPost = {
   content: string;
   createdAt: string;
   updatedAt: string;
+  prayerCount: number;
+  isPrayedByMe: boolean;
 };
 
 type RoomDetail = {
@@ -99,7 +101,56 @@ export function PrayerRoomDetail({ room, currentUserId, members, posts, nextCurs
   const [postsLoading, setPostsLoading] = useState(false);
   const [historyPosts, setHistoryPosts] = useState<PrayerPost[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [pendingPrayerIds, setPendingPrayerIds] = useState<string[]>([]);
+  const [prayerEffectVisible, setPrayerEffectVisible] = useState(false);
+  const [prayerEffectKey, setPrayerEffectKey] = useState(0);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const prayerEffectTimeoutRef = useRef<number | null>(null);
+
+  const showPrayerEffect = useCallback(() => {
+    setPrayerEffectKey((key) => key + 1);
+    setPrayerEffectVisible(true);
+
+    if (prayerEffectTimeoutRef.current) {
+      window.clearTimeout(prayerEffectTimeoutRef.current);
+    }
+
+    prayerEffectTimeoutRef.current = window.setTimeout(() => {
+      setPrayerEffectVisible(false);
+      prayerEffectTimeoutRef.current = null;
+    }, 1450);
+  }, []);
+
+  function updatePostPrayerState(postId: string, prayed: boolean, prayerCount: number) {
+    const update = (post: PrayerPost) => post.id === postId ? { ...post, isPrayedByMe: prayed, prayerCount } : post;
+
+    setLoadedPosts((items) => items.map(update));
+    setHistoryPosts((items) => items.map(update));
+    setSelectedPost((post) => post ? update(post) : post);
+  }
+
+  async function togglePostPrayer(post: PrayerPost) {
+    if (pendingPrayerIds.includes(post.id)) return;
+
+    setPendingPrayerIds((ids) => [...ids, post.id]);
+
+    try {
+      const res = await fetch(`/api/rooms/${room.id}/posts/${post.id}/prayers`, { method: "POST" });
+      const data = (await res.json()) as { prayed?: boolean; prayerCount?: number; error?: string };
+
+      if (!res.ok || typeof data.prayed !== "boolean" || typeof data.prayerCount !== "number") {
+        setToast(data.error ?? "함께 기도하기에 실패했습니다.");
+        return;
+      }
+
+      updatePostPrayerState(post.id, data.prayed, data.prayerCount);
+      if (data.prayed) showPrayerEffect();
+    } catch {
+      setToast("함께 기도하기에 실패했습니다.");
+    } finally {
+      setPendingPrayerIds((ids) => ids.filter((id) => id !== post.id));
+    }
+  }
 
   const groupedPosts = useMemo(() => {
     return loadedPosts.reduce<Record<string, PrayerPost[]>>((acc, post) => {
@@ -145,6 +196,14 @@ export function PrayerRoomDetail({ room, currentUserId, members, posts, nextCurs
     observer.observe(sentinelRef.current);
     return () => observer.disconnect();
   }, [loadPosts, nextCursor, postsLoading]);
+
+  useEffect(() => {
+    return () => {
+      if (prayerEffectTimeoutRef.current) {
+        window.clearTimeout(prayerEffectTimeoutRef.current);
+      }
+    };
+  }, []);
 
   async function copySelectedPost() {
     if (!selectedPost) return;
@@ -199,6 +258,7 @@ export function PrayerRoomDetail({ room, currentUserId, members, posts, nextCurs
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-xl flex-col bg-white/55 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <Toast message={toast} onClose={() => setToast("")} />
+      {prayerEffectVisible ? <PrayerCelebration key={prayerEffectKey} /> : null}
       <header className="sticky top-0 z-20 grid h-14 grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] items-center gap-2 border-b border-white/70 bg-white/90 px-4 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
         <Link
           href="/pray-room"
@@ -232,7 +292,9 @@ export function PrayerRoomDetail({ room, currentUserId, members, posts, nextCurs
                     post={post}
                     selected={selectedPost?.id === post.id}
                     isMine={post.userId === currentUserId}
+                    prayerPending={pendingPrayerIds.includes(post.id)}
                     onSelect={() => setSelectedPost((current) => (current?.id === post.id ? null : post))}
+                    onTogglePrayer={() => togglePostPrayer(post)}
                   />
                 ))}
               </div>
@@ -339,31 +401,117 @@ function PrayerPostCard({
   post,
   selected,
   isMine,
-  onSelect
+  prayerPending,
+  onSelect,
+  onTogglePrayer
 }: {
   post: PrayerPost;
   selected: boolean;
   isMine: boolean;
+  prayerPending: boolean;
   onSelect: () => void;
+  onTogglePrayer: () => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onSelect}
+    <article
       className={`w-full rounded-lg bg-white p-4 text-left shadow-soft transition dark:border dark:border-slate-800 dark:bg-slate-900 dark:shadow-none ${
         selected ? "ring-2 ring-teal-500 dark:ring-teal-400" : ""
       }`}
     >
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <p className={`font-bold ${selected || isMine ? "text-teal-700 dark:text-teal-300" : "text-slate-900 dark:text-slate-100"}`}>
-          {post.authorNickname ?? "알 수 없음"}
-        </p>
-        <time className="text-xs font-semibold text-slate-400 dark:text-slate-500">
-          {formatKoreanTime(post.createdAt)}
-        </time>
+      <button type="button" onClick={onSelect} className="block w-full text-left">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <p className={`font-bold ${selected || isMine ? "text-teal-700 dark:text-teal-300" : "text-slate-900 dark:text-slate-100"}`}>
+            {post.authorNickname ?? "알 수 없음"}
+          </p>
+          <time className="text-xs font-semibold text-slate-400 dark:text-slate-500">
+            {formatKoreanTime(post.createdAt)}
+          </time>
+        </div>
+        <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700 dark:text-slate-300">{post.content}</p>
+      </button>
+      <div className="mt-3 flex items-center justify-end">
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onTogglePrayer();
+          }}
+          disabled={prayerPending}
+          aria-label={post.isPrayedByMe ? "함께 기도 취소" : "함께 기도"}
+          aria-pressed={post.isPrayedByMe}
+          className={`inline-flex h-8 items-center justify-center gap-1.5 rounded-full border px-2.5 text-xs font-black transition disabled:opacity-60 ${
+            post.isPrayedByMe
+              ? "border-teal-200 bg-teal-50 text-teal-700 shadow-[0_6px_16px_rgba(13,148,136,0.18)] dark:border-teal-900 dark:bg-teal-950/50 dark:text-teal-200"
+              : "border-slate-200 bg-slate-50 text-slate-500 hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-teal-900 dark:hover:bg-teal-950/50 dark:hover:text-teal-200"
+          }`}
+        >
+          <span className="text-sm leading-none" aria-hidden="true">🙏</span>
+          <span>{post.prayerCount}</span>
+        </button>
       </div>
-      <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700 dark:text-slate-300">{post.content}</p>
-    </button>
+    </article>
+  );
+}
+
+function PrayerCelebration() {
+  return (
+    <>
+      <div className="pointer-events-none fixed inset-x-0 bottom-20 z-[60] flex justify-center px-4">
+        <div className="prayer-celebration relative inline-flex items-center gap-2 overflow-visible rounded-full bg-gradient-to-r from-teal-600 via-emerald-500 to-sky-500 px-5 py-3 text-sm font-black text-white shadow-[0_18px_45px_rgba(13,148,136,0.35)]">
+          <span className="text-lg leading-none" aria-hidden="true">🙏</span>
+          <span>함께 기도해요!</span>
+          <span className="prayer-sparkle prayer-sparkle-a" aria-hidden="true">✦</span>
+          <span className="prayer-sparkle prayer-sparkle-b" aria-hidden="true">✧</span>
+          <span className="prayer-sparkle prayer-sparkle-c" aria-hidden="true">✦</span>
+        </div>
+      </div>
+      <style>{`
+        @keyframes prayerCelebrationRise {
+          0% { opacity: 0; transform: translateY(34px) scale(0.9); }
+          16% { opacity: 1; transform: translateY(0) scale(1.04); }
+          58% { opacity: 1; transform: translateY(-42px) scale(1); }
+          100% { opacity: 0; transform: translateY(-92px) scale(0.96); }
+        }
+
+        @keyframes prayerSparkleFloat {
+          0% { opacity: 0; transform: translate3d(0, 8px, 0) scale(0.6) rotate(0deg); }
+          24% { opacity: 1; }
+          100% { opacity: 0; transform: translate3d(var(--sparkle-x), -38px, 0) scale(1.18) rotate(26deg); }
+        }
+
+        .prayer-celebration {
+          animation: prayerCelebrationRise 1450ms cubic-bezier(0.19, 1, 0.22, 1) forwards;
+        }
+
+        .prayer-sparkle {
+          position: absolute;
+          font-size: 1rem;
+          color: #fef3c7;
+          text-shadow: 0 0 14px rgba(254, 243, 199, 0.95);
+          animation: prayerSparkleFloat 950ms ease-out forwards;
+        }
+
+        .prayer-sparkle-a {
+          --sparkle-x: -34px;
+          left: 12px;
+          top: -10px;
+        }
+
+        .prayer-sparkle-b {
+          --sparkle-x: 28px;
+          right: 18px;
+          top: -12px;
+          animation-delay: 110ms;
+        }
+
+        .prayer-sparkle-c {
+          --sparkle-x: 18px;
+          right: 36px;
+          bottom: -4px;
+          animation-delay: 210ms;
+        }
+      `}</style>
+    </>
   );
 }
 

@@ -45,7 +45,13 @@ export async function GET(_req: Request, { params }: Params) {
       content: true,
       createdAt: true,
       updatedAt: true,
-      user: { select: { nickname: true } }
+      user: { select: { nickname: true } },
+      prayers: {
+        where: { userId: user.id },
+        select: { id: true },
+        take: 1
+      },
+      _count: { select: { prayers: true } }
     },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }]
   });
@@ -57,7 +63,9 @@ export async function GET(_req: Request, { params }: Params) {
       authorNickname: post.user.nickname,
       content: post.content,
       createdAt: post.createdAt,
-      updatedAt: post.updatedAt
+      updatedAt: post.updatedAt,
+      prayerCount: post._count.prayers,
+      isPrayedByMe: post.prayers.length > 0
     }))
   });
 }
