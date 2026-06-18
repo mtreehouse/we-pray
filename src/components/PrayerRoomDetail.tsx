@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Clipboard, Crown, Edit3, History, Settings, Trash2, X } from "lucide-react";
@@ -13,6 +13,7 @@ type RoomMember = {
   nickname: string | null;
   role: "creator" | "member";
   joinedAt: string;
+  postCount: number;
 };
 
 type PrayerPost = {
@@ -38,9 +39,10 @@ type Props = {
   currentUserId: string;
   members: RoomMember[];
   posts: PrayerPost[];
+  nextCursor: string | null;
 };
 
-export function PrayerRoomDetail({ room, currentUserId, members, posts }: Props) {
+export function PrayerRoomDetail({ room, currentUserId, members, posts, nextCursor: initialNextCursor }: Props) {
   const router = useRouter();
   const [toast, setToast] = useState("");
   const [writeOpen, setWriteOpen] = useState(false);
@@ -50,15 +52,57 @@ export function PrayerRoomDetail({ room, currentUserId, members, posts }: Props)
   const [historyMember, setHistoryMember] = useState<RoomMember | null>(null);
   const [selectedPost, setSelectedPost] = useState<PrayerPost | null>(null);
   const [editingPost, setEditingPost] = useState<PrayerPost | null>(null);
+  const [loadedPosts, setLoadedPosts] = useState(posts);
+  const [nextCursor, setNextCursor] = useState(initialNextCursor);
+  const [postsLoading, setPostsLoading] = useState(false);
+  const [historyPosts, setHistoryPosts] = useState<PrayerPost[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   const groupedPosts = useMemo(() => {
-    return posts.reduce<Record<string, PrayerPost[]>>((acc, post) => {
+    return loadedPosts.reduce<Record<string, PrayerPost[]>>((acc, post) => {
       const key = new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium" }).format(new Date(post.createdAt));
       acc[key] = acc[key] ?? [];
       acc[key].push(post);
       return acc;
     }, {});
-  }, [posts]);
+  }, [loadedPosts]);
+
+  const loadPosts = useCallback(async (reset = false) => {
+    if (postsLoading) return;
+
+    setPostsLoading(true);
+    const cursor = reset ? "" : nextCursor ?? "";
+    const res = await fetch(`/api/rooms/${room.id}/posts?take=50${cursor ? `&cursor=${cursor}` : ""}`);
+    const data = (await res.json()) as { posts?: PrayerPost[]; nextCursor?: string | null; error?: string };
+    setPostsLoading(false);
+
+    if (!res.ok) {
+      setToast(data.error ?? "기도제목을 불러오지 못했습니다.");
+      return;
+    }
+
+    setLoadedPosts((items) => (reset ? data.posts ?? [] : [...items, ...(data.posts ?? [])]));
+    setNextCursor(data.nextCursor ?? null);
+  }, [nextCursor, postsLoading, room.id]);
+
+  useEffect(() => {
+    setLoadedPosts(posts);
+    setNextCursor(initialNextCursor);
+    setSelectedPost(null);
+  }, [initialNextCursor, posts]);
+
+  useEffect(() => {
+    if (!sentinelRef.current) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting && nextCursor && !postsLoading) {
+        void loadPosts(false);
+      }
+    });
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [loadPosts, nextCursor, postsLoading]);
 
   async function copySelectedPost() {
     if (!selectedPost) return;
@@ -74,6 +118,23 @@ export function PrayerRoomDetail({ room, currentUserId, members, posts }: Props)
 
     setEditingPost(selectedPost);
     setSelectedPost(null);
+  }
+
+  async function openMemberHistory(member: RoomMember) {
+    setHistoryMember(member);
+    setHistoryPosts([]);
+    setHistoryLoading(true);
+
+    const res = await fetch(`/api/rooms/${room.id}/members/${member.id}`);
+    const data = (await res.json()) as { posts?: PrayerPost[]; error?: string };
+    setHistoryLoading(false);
+
+    if (!res.ok) {
+      setToast(data.error ?? "작성 내역을 불러오지 못했습니다.");
+      return;
+    }
+
+    setHistoryPosts(data.posts ?? []);
   }
 
   async function leaveRoom() {
@@ -137,6 +198,9 @@ export function PrayerRoomDetail({ room, currentUserId, members, posts }: Props)
             아직 작성된 기도제목이 없습니다.
           </div>
         )}
+        <div ref={sentinelRef} className="h-8" />
+        {postsLoading ? <p className="text-center text-xs font-bold text-slate-400 dark:text-slate-500">기도제목을 불러오는 중입니다.</p> : null}
+        {!nextCursor && loadedPosts.length ? <p className="text-center text-xs font-bold text-slate-300 dark:text-slate-600">마지막 기도제목입니다.</p> : null}
       </section>
 
       {!selectedPost ? (
@@ -203,11 +267,10 @@ export function PrayerRoomDetail({ room, currentUserId, members, posts }: Props)
         onClose={() => setSettingsOpen(false)}
         room={room}
         members={members}
-        posts={posts}
         onInfo={() => setInfoOpen(true)}
         onManage={() => setManageOpen(true)}
         onLeave={leaveRoom}
-        onHistory={setHistoryMember}
+        onHistory={openMemberHistory}
         onToast={setToast}
       />
       <RoomInfoModal room={room} open={infoOpen} onClose={() => setInfoOpen(false)} />
@@ -219,7 +282,8 @@ export function PrayerRoomDetail({ room, currentUserId, members, posts }: Props)
       />
       <MemberHistoryModal
         member={historyMember}
-        posts={posts.filter((post) => post.userId === historyMember?.userId)}
+        posts={historyPosts}
+        loading={historyLoading}
         onClose={() => setHistoryMember(null)}
       />
     </main>
@@ -352,7 +416,6 @@ function RoomSettingsDrawer({
   onClose,
   room,
   members,
-  posts,
   onInfo,
   onManage,
   onLeave,
@@ -363,7 +426,6 @@ function RoomSettingsDrawer({
   onClose: () => void;
   room: RoomDetail;
   members: RoomMember[];
-  posts: PrayerPost[];
   onInfo: () => void;
   onManage: () => void;
   onLeave: () => void;
@@ -429,7 +491,7 @@ function RoomSettingsDrawer({
                   {member.nickname ?? "닉네임 없음"}
                   {member.role === "creator" ? <Crown className="shrink-0 text-amber-500" size={16} /> : null}
                 </p>
-                <p className="text-xs text-slate-400 dark:text-slate-500">작성 {posts.filter((post) => post.userId === member.userId).length}개</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500">작성 {member.postCount}개</p>
               </div>
               <button
                 type="button"
@@ -577,16 +639,20 @@ function RoomManageModal({
 function MemberHistoryModal({
   member,
   posts,
+  loading,
   onClose
 }: {
   member: RoomMember | null;
   posts: PrayerPost[];
+  loading: boolean;
   onClose: () => void;
 }) {
   return (
     <Modal title={`${member?.nickname ?? "멤버"} history`} open={Boolean(member)} onClose={onClose}>
       <div className="max-h-96 overflow-y-auto">
-        {posts.length ? (
+        {loading ? (
+          <p className="rounded-lg bg-slate-50 p-4 text-center text-sm text-slate-500 dark:bg-slate-900 dark:text-slate-400">작성 내역을 불러오는 중입니다.</p>
+        ) : posts.length ? (
           <div className="grid gap-3">
             {posts.map((post) => (
               <article key={post.id} className="rounded-lg bg-slate-50 p-3 dark:bg-slate-900">

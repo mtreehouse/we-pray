@@ -20,34 +20,58 @@ export default async function PrayerRoomDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const room = await prisma.prayerRoom.findFirst({
-    where: { id: roomId, deletedAt: null },
-    include: {
-      creator: { select: { nickname: true } },
-      members: {
-        where: {
-          leftAt: null,
-          kickedAt: null,
-          user: { deletedAt: null }
-        },
-        include: {
-          user: { select: { id: true, nickname: true } }
-        },
-        orderBy: [{ role: "asc" }, { joinedAt: "asc" }]
-      },
-      posts: {
-        where: { deletedAt: null },
-        include: {
-          user: { select: { nickname: true } }
-        },
-        orderBy: { createdAt: "asc" }
+  const [room, postCounts, initialPostsWithExtra] = await Promise.all([
+    prisma.prayerRoom.findFirst({
+      where: { id: roomId, deletedAt: null },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        createdAt: true,
+        creator: { select: { nickname: true } },
+        members: {
+          where: {
+            leftAt: null,
+            kickedAt: null,
+            user: { deletedAt: null }
+          },
+          select: {
+            id: true,
+            userId: true,
+            role: true,
+            joinedAt: true,
+            user: { select: { id: true, nickname: true } }
+          },
+          orderBy: [{ role: "asc" }, { joinedAt: "asc" }]
+        }
       }
-    }
-  });
+    }),
+    prisma.prayerPost.groupBy({
+      by: ["userId"],
+      where: { roomId, deletedAt: null },
+      _count: { _all: true }
+    }),
+    prisma.prayerPost.findMany({
+      where: { roomId, deletedAt: null },
+      select: {
+        id: true,
+        userId: true,
+        content: true,
+        createdAt: true,
+        updatedAt: true,
+        user: { select: { nickname: true } }
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: 51
+    })
+  ]);
 
   if (!room) {
     notFound();
   }
+
+  const initialPosts = initialPostsWithExtra.slice(0, 50);
+  const postCountByUserId = new Map(postCounts.map((item) => [item.userId, item._count._all]));
 
   return (
     <PrayerRoomDetail
@@ -65,9 +89,10 @@ export default async function PrayerRoomDetailPage({ params }: PageProps) {
         userId: member.userId,
         nickname: member.user.nickname,
         role: member.role,
-        joinedAt: member.joinedAt.toISOString()
+        joinedAt: member.joinedAt.toISOString(),
+        postCount: postCountByUserId.get(member.userId) ?? 0
       }))}
-      posts={room.posts.map((post) => ({
+      posts={initialPosts.map((post) => ({
         id: post.id,
         userId: post.userId,
         authorNickname: post.user.nickname,
@@ -75,6 +100,7 @@ export default async function PrayerRoomDetailPage({ params }: PageProps) {
         createdAt: post.createdAt.toISOString(),
         updatedAt: post.updatedAt.toISOString()
       }))}
+      nextCursor={initialPostsWithExtra.length > 50 ? initialPosts[initialPosts.length - 1]?.id ?? null : null}
     />
   );
 }

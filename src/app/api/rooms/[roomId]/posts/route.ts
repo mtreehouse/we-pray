@@ -9,6 +9,51 @@ type Params = {
   }>;
 };
 
+export async function GET(req: Request, { params }: Params) {
+  const user = await requireNickname();
+  const { roomId } = await params;
+  const member = await requireRoomMember(roomId, user.id);
+
+  if (!member) {
+    return NextResponse.json({ error: "방 멤버만 조회할 수 있습니다." }, { status: 403 });
+  }
+
+  const { searchParams } = new URL(req.url);
+  const cursor = searchParams.get("cursor") || undefined;
+  const requestedTake = Number(searchParams.get("take") ?? 50);
+  const take = Number.isFinite(requestedTake) ? Math.min(Math.max(requestedTake, 1), 50) : 50;
+
+  const posts = await prisma.prayerPost.findMany({
+    where: { roomId, deletedAt: null },
+    select: {
+      id: true,
+      userId: true,
+      content: true,
+      createdAt: true,
+      updatedAt: true,
+      user: { select: { nickname: true } }
+    },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: take + 1,
+    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {})
+  });
+
+  const hasMore = posts.length > take;
+  const items = hasMore ? posts.slice(0, take) : posts;
+
+  return NextResponse.json({
+    posts: items.map((post) => ({
+      id: post.id,
+      userId: post.userId,
+      authorNickname: post.user.nickname,
+      content: post.content,
+      createdAt: post.createdAt,
+      updatedAt: post.updatedAt
+    })),
+    nextCursor: hasMore ? items[items.length - 1]?.id ?? null : null
+  });
+}
+
 export async function POST(req: Request, { params }: Params) {
   const user = await requireNickname();
   const { roomId } = await params;
