@@ -31,22 +31,22 @@ export function PrayRoomList({ rooms }: { rooms: RoomSummary[] }) {
             <Link
               key={room.id}
               href={`/pray-room/${room.id}`}
-              className="block rounded-lg border border-white/80 bg-white p-4 shadow-soft transition hover:-translate-y-0.5 hover:border-teal-300 hover:bg-teal-50/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 active:translate-y-0"
+              className="block rounded-lg border border-white/80 bg-white p-4 shadow-soft transition hover:-translate-y-0.5 hover:border-teal-300 hover:bg-teal-50/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 active:translate-y-0 dark:border-slate-800 dark:bg-slate-900/85 dark:hover:border-teal-700 dark:hover:bg-slate-900"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h2 className="font-black text-slate-950">{room.title}</h2>
-                  <p className="mt-1 line-clamp-2 text-sm leading-6 text-slate-600">{room.description}</p>
+                  <h2 className="font-black text-slate-950 dark:text-slate-50">{room.title}</h2>
+                  <p className="mt-1 line-clamp-2 text-sm leading-6 text-slate-600 dark:text-slate-300">{room.description}</p>
                 </div>
                 {room.role === "creator" ? <Crown className="shrink-0 text-amber-500" size={20} /> : null}
               </div>
-              <p className="mt-3 text-xs font-semibold text-slate-500">
+              <p className="mt-3 text-xs font-semibold text-slate-500 dark:text-slate-400">
                 생성자 {room.creatorNickname ?? "알 수 없음"}
               </p>
             </Link>
           ))
         ) : (
-          <div className="rounded-lg border border-dashed border-slate-300 bg-white/80 p-6 text-center text-sm leading-6 text-slate-500">
+          <div className="rounded-lg border border-dashed border-slate-300 bg-white/80 p-6 text-center text-sm leading-6 text-slate-500 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-400">
             아직 입장한 방이 없습니다.
           </div>
         )}
@@ -57,7 +57,7 @@ export function PrayRoomList({ rooms }: { rooms: RoomSummary[] }) {
           <button
             type="button"
             onClick={() => setFindOpen(true)}
-            className="grid h-14 w-14 place-items-center rounded-full bg-white text-2xl text-slate-900 shadow-soft"
+            className="grid h-14 w-14 place-items-center rounded-full bg-white text-2xl text-slate-900 shadow-soft dark:border dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
             aria-label="방 찾기"
           >
             🔍
@@ -131,21 +131,21 @@ function CreateRoomModal({
         <input
           value={title}
           onChange={(event) => setTitle(event.target.value)}
-          className="rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-teal-500"
+          className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
           placeholder="방 제목"
           maxLength={40}
         />
         <textarea
           value={description}
           onChange={(event) => setDescription(event.target.value)}
-          className="min-h-24 rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-teal-500"
+          className="min-h-24 rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
           placeholder="방 설명"
           maxLength={300}
         />
         <input
           value={password}
           onChange={(event) => setPassword(event.target.value)}
-          className="rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-teal-500"
+          className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
           placeholder="입장 비밀번호"
           type="password"
           maxLength={40}
@@ -230,7 +230,7 @@ function FindRoomModal({
           <input
             value={q}
             onChange={(event) => setQ(event.target.value)}
-            className="min-w-0 flex-1 rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-teal-500"
+            className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
             placeholder="방 제목 또는 생성자"
           />
           <button
@@ -252,25 +252,25 @@ function FindRoomModal({
                 setSelectedRoom(room);
                 setPassword("");
               }}
-              className="mb-2 w-full rounded-lg border border-slate-200 bg-white p-3 text-left"
+              className="mb-2 w-full rounded-lg border border-slate-200 bg-white p-3 text-left dark:border-slate-800 dark:bg-slate-900"
             >
-              <span className="block font-bold text-slate-900">{room.title}</span>
-              <span className="text-xs text-slate-500">생성자 {room.creatorNickname ?? "알 수 없음"}</span>
+              <span className="block font-bold text-slate-900 dark:text-slate-100">{room.title}</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">생성자 {room.creatorNickname ?? "알 수 없음"}</span>
             </button>
           ))}
         </div>
 
         {selectedRoom ? (
-          <div className="rounded-lg bg-slate-50 p-3">
+          <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-900">
             {selectedRoom.isJoined ? (
-              <p className="text-sm font-bold text-slate-700">이미 참여중인 방입니다.</p>
+              <p className="text-sm font-bold text-slate-700 dark:text-slate-300">이미 참여중인 방입니다.</p>
             ) : (
               <>
-                <p className="mb-2 text-sm font-bold text-slate-800">{selectedRoom.title} 입장</p>
+                <p className="mb-2 text-sm font-bold text-slate-800 dark:text-slate-200">{selectedRoom.title} 입장</p>
                 <input
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  className="w-full rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-teal-500"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                   placeholder="입장 비밀번호"
                   type="password"
                 />

@@ -26,13 +26,13 @@ export function LoginButtonGroup() {
   }
 
   if (status === "loading") {
-    return <p className="text-sm text-slate-500">로그인 상태를 확인 중입니다.</p>;
+    return <p className="text-sm text-slate-500 dark:text-slate-400">로그인 상태를 확인 중입니다.</p>;
   }
 
   if (session?.user) {
     return (
       <div className="grid gap-3">
-        <p className="rounded-lg bg-white p-4 text-sm text-slate-600 shadow-soft">
+        <p className="rounded-lg bg-white p-4 text-sm text-slate-600 shadow-soft dark:border dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">
           현재 {session.user.nickname ?? "닉네임 미설정"} 계정으로 로그인되어 있습니다.
         </p>
         <button

@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Toast } from "@/components/ui/Toast";
+import { APP_DARK_MODE_STORAGE_KEY } from "@/lib/ui-settings";
 
 type RoomMember = {
   id: string;
@@ -184,7 +185,7 @@ const DEFAULT_BIBLE_TRANSLATION: BibleTranslationCode = "ko_krv";
 const DEFAULT_BIBLE_FONT_SIZE: BibleFontSize = "normal";
 const BIBLE_TRANSLATION_STORAGE_KEY = "wepray:bible-translation";
 const BIBLE_FONT_SIZE_STORAGE_KEY = "wepray:bible-font-size";
-const BIBLE_DARK_MODE_STORAGE_KEY = "wepray:bible-room-dark-mode";
+const BIBLE_DARK_MODE_STORAGE_PREFIX = "wepray:bible-room-dark-mode";
 
 function isBibleTranslationCode(value: unknown): value is BibleTranslationCode {
   return value === "ko_krv" || value === "ko_nkrv";
@@ -240,6 +241,7 @@ export function BibleRoomDetail({
   const restoredLocationRef = useRef<ReadingLocation | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const readingLocationStorageKey = useMemo(() => `wepray:bible-room:${room.id}:reading-location`, [room.id]);
+  const bibleDarkModeStorageKey = useMemo(() => `${BIBLE_DARK_MODE_STORAGE_PREFIX}:${room.id}`, [room.id]);
 
   const selectedPlanDay = useMemo(
     () => planDays.find((day) => day.date === selectedDate) ?? null,
@@ -280,11 +282,11 @@ export function BibleRoomDetail({
   const selectDarkMode = useCallback((enabled: boolean) => {
     setDarkMode(enabled);
     try {
-      window.localStorage.setItem(BIBLE_DARK_MODE_STORAGE_KEY, enabled ? "true" : "false");
+      window.localStorage.setItem(bibleDarkModeStorageKey, enabled ? "true" : "false");
     } catch {
       // localStorage may be unavailable in private browsing or restricted webviews.
     }
-  }, []);
+  }, [bibleDarkModeStorageKey]);
 
   const loadPlans = useCallback(async () => {
     const res = await fetch(`/api/bible-rooms/${room.id}/plans`);
@@ -374,14 +376,29 @@ export function BibleRoomDetail({
     try {
       const savedTranslation = window.localStorage.getItem(BIBLE_TRANSLATION_STORAGE_KEY);
       const savedFontSize = window.localStorage.getItem(BIBLE_FONT_SIZE_STORAGE_KEY);
-      const savedDarkMode = window.localStorage.getItem(BIBLE_DARK_MODE_STORAGE_KEY);
+      const savedDarkMode = window.localStorage.getItem(bibleDarkModeStorageKey);
+      const savedAppDarkMode = window.localStorage.getItem(APP_DARK_MODE_STORAGE_KEY);
       if (isBibleTranslationCode(savedTranslation)) setTranslation(savedTranslation);
       if (isBibleFontSize(savedFontSize)) setBibleFontSize(savedFontSize);
       if (savedDarkMode === "true" || savedDarkMode === "false") setDarkMode(savedDarkMode === "true");
+      else if (savedAppDarkMode === "true" || savedAppDarkMode === "false") setDarkMode(savedAppDarkMode === "true");
     } catch {
       // Keep the default display settings when localStorage cannot be read.
     }
-  }, []);
+  }, [bibleDarkModeStorageKey]);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", darkMode);
+
+    return () => {
+      try {
+        const enabled = window.localStorage.getItem(APP_DARK_MODE_STORAGE_KEY) === "true";
+        document.documentElement.classList.toggle("dark", enabled);
+      } catch {
+        document.documentElement.classList.remove("dark");
+      }
+    };
+  }, [darkMode]);
 
   useEffect(() => {
     void loadPlans();
@@ -906,7 +923,7 @@ function BibleRoomSettingsDrawer({
           <div className="flex items-center justify-between gap-3 rounded-lg bg-slate-100 px-4 py-3 dark:bg-slate-900">
             <div>
               <p className="font-bold text-slate-800 dark:text-slate-100">다크모드</p>
-              <p className="mt-0.5 text-xs font-semibold text-slate-500 dark:text-slate-400">성경방 안에서만 유지됩니다.</p>
+              <p className="mt-0.5 text-xs font-semibold text-slate-500 dark:text-slate-400">이 성경방에서만 유지됩니다.</p>
             </div>
             <button
               type="button"

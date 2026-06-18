@@ -54,27 +54,27 @@ export function BibleRoomList({ rooms }: { rooms: BibleRoomSummary[] }) {
             <Link
               key={room.id}
               href={`/bible-room/${room.id}`}
-              className="block rounded-lg border border-white/80 bg-white p-4 shadow-soft transition hover:-translate-y-0.5 hover:border-teal-300 hover:bg-teal-50/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 active:translate-y-0"
+              className="block rounded-lg border border-white/80 bg-white p-4 shadow-soft transition hover:-translate-y-0.5 hover:border-teal-300 hover:bg-teal-50/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 active:translate-y-0 dark:border-slate-800 dark:bg-slate-900/85 dark:hover:border-teal-700 dark:hover:bg-slate-900"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <h2 className="truncate font-black text-slate-950">{room.title}</h2>
-                  <p className="mt-1 line-clamp-2 text-sm leading-6 text-slate-600">{room.description}</p>
+                  <h2 className="truncate font-black text-slate-950 dark:text-slate-50">{room.title}</h2>
+                  <p className="mt-1 line-clamp-2 text-sm leading-6 text-slate-600 dark:text-slate-300">{room.description}</p>
                 </div>
                 {room.role === "creator" ? <Crown className="shrink-0 text-amber-500" size={20} /> : null}
               </div>
-              <div className="mt-3 flex flex-wrap gap-2 text-xs font-bold text-slate-600">
-                <span className="rounded-full bg-teal-50 px-2.5 py-1 text-teal-800">{scopeLabels[room.scope] ?? room.scope}</span>
-                <span className="rounded-full bg-slate-100 px-2.5 py-1">{room.durationMonths}개월</span>
-                <span className="rounded-full bg-slate-100 px-2.5 py-1">{planTypeLabels[room.planType] ?? room.planType}</span>
+              <div className="mt-3 flex flex-wrap gap-2 text-xs font-bold text-slate-600 dark:text-slate-300">
+                <span className="rounded-full bg-teal-50 px-2.5 py-1 text-teal-800 dark:bg-teal-950/50 dark:text-teal-200">{scopeLabels[room.scope] ?? room.scope}</span>
+                <span className="rounded-full bg-slate-100 px-2.5 py-1 dark:bg-slate-800 dark:text-slate-200">{room.durationMonths}개월</span>
+                <span className="rounded-full bg-slate-100 px-2.5 py-1 dark:bg-slate-800 dark:text-slate-200">{planTypeLabels[room.planType] ?? room.planType}</span>
               </div>
-              <p className="mt-3 text-xs font-semibold text-slate-500">
+              <p className="mt-3 text-xs font-semibold text-slate-500 dark:text-slate-400">
                 생성자 {room.creatorNickname ?? "알 수 없음"} · 멤버 {room.memberCount}명
               </p>
             </Link>
           ))
         ) : (
-          <div className="rounded-lg border border-dashed border-slate-300 bg-white/80 p-6 text-center text-sm leading-6 text-slate-500">
+          <div className="rounded-lg border border-dashed border-slate-300 bg-white/80 p-6 text-center text-sm leading-6 text-slate-500 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-400">
             아직 입장한 성경방이 없습니다.
           </div>
         )}
@@ -85,7 +85,7 @@ export function BibleRoomList({ rooms }: { rooms: BibleRoomSummary[] }) {
           <button
             type="button"
             onClick={() => setFindOpen(true)}
-            className="grid h-14 w-14 place-items-center rounded-full bg-white text-slate-900 shadow-soft"
+            className="grid h-14 w-14 place-items-center rounded-full bg-white text-slate-900 shadow-soft dark:border dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
             aria-label="성경방 찾기"
             title="성경방 찾기"
           >
@@ -195,14 +195,14 @@ function FindBibleRoomModal({
             onKeyDown={(event) => {
               if (event.key === "Enter") void search();
             }}
-            className="min-w-0 flex-1 rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-teal-500"
+            className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
             placeholder="방 제목 또는 생성자"
           />
           <button
             type="button"
             onClick={search}
             disabled={loading}
-            className="rounded-lg bg-slate-900 px-4 py-3 font-bold text-white disabled:opacity-60"
+            className="rounded-lg bg-slate-900 px-4 py-3 font-bold text-white disabled:opacity-60 dark:bg-slate-700"
           >
             검색
           </button>
@@ -218,29 +218,29 @@ function FindBibleRoomModal({
                 setPassword("");
               }}
               className={`mb-2 w-full rounded-lg border p-3 text-left ${
-                selectedRoom?.id === room.id ? "border-teal-500 bg-teal-50" : "border-slate-200 bg-white"
+                selectedRoom?.id === room.id ? "border-teal-500 bg-teal-50 dark:bg-teal-950/40" : "border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
               }`}
             >
-              <span className="block font-bold text-slate-900">{room.title}</span>
-              <span className="mt-1 line-clamp-2 block text-xs leading-5 text-slate-500">{room.description}</span>
-              <span className="mt-2 flex flex-wrap gap-1.5 text-[11px] font-bold text-slate-600">
-                <span className="rounded-full bg-teal-50 px-2 py-0.5 text-teal-800">{scopeLabels[room.scope] ?? room.scope}</span>
-                <span className="rounded-full bg-slate-100 px-2 py-0.5">{room.durationMonths}개월</span>
-                <span className="rounded-full bg-slate-100 px-2 py-0.5">멤버 {room.memberCount}명</span>
+              <span className="block font-bold text-slate-900 dark:text-slate-100">{room.title}</span>
+              <span className="mt-1 line-clamp-2 block text-xs leading-5 text-slate-500 dark:text-slate-400">{room.description}</span>
+              <span className="mt-2 flex flex-wrap gap-1.5 text-[11px] font-bold text-slate-600 dark:text-slate-300">
+                <span className="rounded-full bg-teal-50 px-2 py-0.5 text-teal-800 dark:bg-teal-950/50 dark:text-teal-200">{scopeLabels[room.scope] ?? room.scope}</span>
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 dark:bg-slate-800 dark:text-slate-200">{room.durationMonths}개월</span>
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 dark:bg-slate-800 dark:text-slate-200">멤버 {room.memberCount}명</span>
               </span>
-              <span className="mt-2 block text-xs text-slate-500">생성자 {room.creatorNickname ?? "알 수 없음"}</span>
+              <span className="mt-2 block text-xs text-slate-500 dark:text-slate-400">생성자 {room.creatorNickname ?? "알 수 없음"}</span>
             </button>
           ))}
           {!loading && q && results.length === 0 ? (
-            <p className="py-6 text-center text-sm font-bold text-slate-400">검색 결과가 없습니다.</p>
+            <p className="py-6 text-center text-sm font-bold text-slate-400 dark:text-slate-500">검색 결과가 없습니다.</p>
           ) : null}
         </div>
 
         {selectedRoom ? (
-          <div className="rounded-lg bg-slate-50 p-3">
+          <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-900">
             {selectedRoom.isJoined ? (
               <>
-                <p className="text-sm font-bold text-slate-700">이미 참여중인 성경방입니다.</p>
+                <p className="text-sm font-bold text-slate-700 dark:text-slate-300">이미 참여중인 성경방입니다.</p>
                 <button
                   type="button"
                   onClick={openJoinedRoom}
@@ -251,11 +251,11 @@ function FindBibleRoomModal({
               </>
             ) : (
               <>
-                <p className="mb-2 text-sm font-bold text-slate-800">{selectedRoom.title} 입장</p>
+                <p className="mb-2 text-sm font-bold text-slate-800 dark:text-slate-200">{selectedRoom.title} 입장</p>
                 <input
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  className="w-full rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-teal-500"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                   placeholder="입장 비밀번호"
                   type="password"
                 />
@@ -327,21 +327,21 @@ function CreateBibleRoomModal({
         <input
           value={title}
           onChange={(event) => setTitle(event.target.value)}
-          className="rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-teal-500"
+          className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
           placeholder="방 제목"
           maxLength={40}
         />
         <textarea
           value={description}
           onChange={(event) => setDescription(event.target.value)}
-          className="min-h-24 rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-teal-500"
+          className="min-h-24 rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
           placeholder="방 설명"
           maxLength={300}
         />
         <input
           value={password}
           onChange={(event) => setPassword(event.target.value)}
-          className="rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-teal-500"
+          className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
           placeholder="입장 비밀번호"
           type="password"
           maxLength={40}
@@ -360,14 +360,14 @@ function CreateBibleRoomModal({
         />
 
         <div>
-          <label className="mb-2 flex items-center gap-1.5 text-sm font-black text-slate-700">
+          <label className="mb-2 flex items-center gap-1.5 text-sm font-black text-slate-700 dark:text-slate-300">
             <CalendarDays size={16} />
             통독 기간
           </label>
           <select
             value={durationMonths}
             onChange={(event) => setDurationMonths(Number(event.target.value))}
-            className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 font-bold text-slate-900 outline-none focus:border-teal-500"
+            className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 font-bold text-slate-900 outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
           >
             {[1, 2, 3, 6, 12].map((month) => (
               <option key={month} value={month}>{month}개월</option>
@@ -375,10 +375,10 @@ function CreateBibleRoomModal({
           </select>
         </div>
 
-        <label className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 p-3">
+        <label className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 p-3 dark:border-slate-700 dark:bg-slate-900">
           <span>
-            <span className="block text-sm font-black text-slate-800">주일 제외</span>
-            <span className="text-xs text-slate-500">체크하면 주일에는 플랜을 배정하지 않습니다.</span>
+            <span className="block text-sm font-black text-slate-800 dark:text-slate-100">주일 제외</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">체크하면 주일에는 플랜을 배정하지 않습니다.</span>
           </span>
           <input
             type="checkbox"
@@ -399,7 +399,7 @@ function CreateBibleRoomModal({
           onChange={setPlanType}
         />
 
-        <p className="rounded-lg bg-teal-50 px-3 py-2 text-xs font-bold text-teal-800">
+        <p className="rounded-lg bg-teal-50 px-3 py-2 text-xs font-bold text-teal-800 dark:bg-teal-950/40 dark:text-teal-200">
           생성한 날 기준으로 플랜이 시작됩니다!
         </p>
 
@@ -431,7 +431,7 @@ function OptionGroup({
 }) {
   return (
     <div>
-      <p className="mb-2 flex items-center gap-1.5 text-sm font-black text-slate-700">
+      <p className="mb-2 flex items-center gap-1.5 text-sm font-black text-slate-700 dark:text-slate-300">
         {icon}
         {label}
       </p>
@@ -444,7 +444,7 @@ function OptionGroup({
             className={`min-h-11 rounded-lg border px-2 text-sm font-black ${
               value === optionValue
                 ? "border-teal-700 bg-teal-700 text-white"
-                : "border-slate-200 bg-white text-slate-700"
+                : "border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
             }`}
           >
             {text}

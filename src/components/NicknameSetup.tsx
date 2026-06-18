@@ -34,12 +34,12 @@ export function NicknameSetup({ currentNickname }: { currentNickname?: string | 
   return (
     <div className="grid gap-4">
       <Toast message={toast} />
-      <label className="grid gap-2 text-sm font-semibold text-slate-700">
+      <label className="grid gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
         닉네임
         <input
           value={nickname}
           onChange={(event) => setNickname(event.target.value)}
-          className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-base outline-none focus:border-teal-500"
+          className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-base text-slate-900 outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
           placeholder="공백 없이 2~16글자"
           maxLength={16}
         />

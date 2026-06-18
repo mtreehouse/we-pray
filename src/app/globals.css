@@ -6,6 +6,10 @@
   color-scheme: light;
 }
 
+.dark {
+  color-scheme: dark;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -21,6 +25,13 @@ body {
     radial-gradient(circle at top left, rgba(134, 239, 172, 0.2), transparent 28rem),
     linear-gradient(135deg, #fff7ed 0%, #f8fafc 48%, #ecfeff 100%);
   color: #172033;
+}
+
+.dark body {
+  background:
+    radial-gradient(circle at top left, rgba(20, 184, 166, 0.16), transparent 28rem),
+    linear-gradient(135deg, #020617 0%, #111827 52%, #0f172a 100%);
+  color: #e2e8f0;
 }
 
 button,

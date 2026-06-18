@@ -48,14 +48,14 @@ export default async function BibleRoomPage() {
   }));
 
   return (
-    <main className="mx-auto min-h-dvh w-full max-w-xl px-4 py-6">
-      <Link href="/" className="mb-5 inline-flex items-center gap-1 text-sm font-semibold text-slate-600">
+    <main className="mx-auto min-h-dvh w-full max-w-xl px-4 py-6 dark:text-slate-100">
+      <Link href="/" className="mb-5 inline-flex items-center gap-1 text-sm font-semibold text-slate-600 dark:text-slate-300">
         <ChevronLeft size={18} />
         홈으로
       </Link>
       <header className="mb-5">
-        <h1 className="text-2xl font-black text-slate-950">Bible Room</h1>
-        <p className="mt-2 text-sm text-slate-600">함께 성경을 읽고 묵상을 나누는 통독 방입니다.</p>
+        <h1 className="text-2xl font-black text-slate-950 dark:text-slate-50">Bible Room</h1>
+        <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">함께 성경을 읽고 묵상을 나누는 통독 방입니다.</p>
       </header>
       <BibleRoomList rooms={rooms} />
     </main>
