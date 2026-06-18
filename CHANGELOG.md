@@ -3,6 +3,7 @@
 ## 2026-06-18
 
 ### Added
+- Added long-press copy support for Bible Room sharing cards with passage text and reflection content. (`0db0044`)
 - Added an app-wide settings page and settings menu entry. (`b9bdd85`)
 - Added app-wide dark mode preference storage and application through the shared provider. (`b9bdd85`)
 - Added settings controls for nickname change, logout, account withdrawal, version display, and release information. (`b9bdd85`)
@@ -10,6 +11,7 @@
 - Added dedicated member prayer-post history loading so member counts and histories stay accurate with paginated room lists. (`750e1d0`)
 
 ### Changed
+- Fixed Pray Room validation toasts so prayer-post input errors dismiss automatically and clear while editing. (`0db0044`)
 - Improved dark mode styling across main menu cards, Pray Room lists, Bible Room lists, Pray News, login, nickname setup, and settings screens. (`b9bdd85`)
 - Updated Bible Room dark mode behavior so a room without its own saved preference uses the current app-wide dark mode value as its initial default. (`b9bdd85`)
 - Improved Pray Room detail dark mode styles and updated related button text. (`8c0fc63`)
