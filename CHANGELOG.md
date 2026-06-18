@@ -18,6 +18,7 @@
 - Changed Pray Room prayer-post actions from long-press editing to click selection with a floating copy/edit action bar. (`9966ced`)
 - Limited edit actions to the current user's own prayer posts while keeping copy available for selected posts. (`9966ced`)
 - Updated prayer-post copy output to `[작성자] [YYYY-MM-DD] 내용`. (`420669f`)
+- Replaced locale-dependent Pray Room date/time rendering with deterministic Korean formatting to prevent hydration mismatches. (`3cc9376`)
 
 ## 2026-06-17
 
