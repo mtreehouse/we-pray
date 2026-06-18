@@ -6,8 +6,8 @@
 - Added an app-wide settings page and settings menu entry. (`b9bdd85`)
 - Added app-wide dark mode preference storage and application through the shared provider. (`b9bdd85`)
 - Added settings controls for nickname change, logout, account withdrawal, version display, and release information. (`b9bdd85`)
-- Added 50-item cursor pagination and infinite-scroll loading for Pray Room prayer-post lists.
-- Added dedicated member prayer-post history loading so member counts and histories stay accurate with paginated room lists.
+- Added 50-item cursor pagination and infinite-scroll loading for Pray Room prayer-post lists.(`750e1d0`)
+- Added dedicated member prayer-post history loading so member counts and histories stay accurate with paginated room lists. (`750e1d0`)
 
 ### Changed
 - Improved dark mode styling across main menu cards, Pray Room lists, Bible Room lists, Pray News, login, nickname setup, and settings screens. (`b9bdd85`)
@@ -15,9 +15,9 @@
 - Improved Pray Room detail dark mode styles and updated related button text. (`8c0fc63`)
 - Updated Bible Room calendar layering and reflection display so calendar overlays and verse reflection indicators behave correctly. (`d308e23`)
 - Reloaded Bible Room progress data after relevant detail loading changes. (`f233d98`)
-- Changed Pray Room prayer-post actions from long-press editing to click selection with a floating copy/edit action bar.
-- Limited edit actions to the current user's own prayer posts while keeping copy available for selected posts.
-- Updated prayer-post copy output to `[작성자] [YYYY-MM-DD] 내용`.
+- Changed Pray Room prayer-post actions from long-press editing to click selection with a floating copy/edit action bar. (`9966ced`)
+- Limited edit actions to the current user's own prayer posts while keeping copy available for selected posts. (`9966ced`)
+- Updated prayer-post copy output to `[작성자] [YYYY-MM-DD] 내용`. (`420669f`)
 
 ## 2026-06-17
 
