@@ -42,6 +42,48 @@ type Props = {
   nextCursor: string | null;
 };
 
+const KOREA_TIME_OFFSET_MS = 9 * 60 * 60 * 1000;
+
+function getKoreaDateParts(value: string) {
+  const date = new Date(new Date(value).getTime() + KOREA_TIME_OFFSET_MS);
+
+  return {
+    year: date.getUTCFullYear(),
+    month: date.getUTCMonth() + 1,
+    day: date.getUTCDate(),
+    hour: date.getUTCHours(),
+    minute: date.getUTCMinutes()
+  };
+}
+
+function formatKoreanDate(value: string, style: "medium" | "long" = "medium") {
+  const { year, month, day } = getKoreaDateParts(value);
+
+  if (style === "long") {
+    return `${year}년 ${month}월 ${day}일`;
+  }
+
+  return `${year}. ${month}. ${day}.`;
+}
+
+function formatKoreanTime(value: string) {
+  const { hour, minute } = getKoreaDateParts(value);
+  const period = hour < 12 ? "오전" : "오후";
+  const hour12 = hour % 12 || 12;
+
+  return `${period} ${hour12}:${String(minute).padStart(2, "0")}`;
+}
+
+function formatKoreanDateTime(value: string) {
+  return `${formatKoreanDate(value)} ${formatKoreanTime(value)}`;
+}
+
+function formatKoreanIsoDate(value: string) {
+  const { year, month, day } = getKoreaDateParts(value);
+
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
 export function PrayerRoomDetail({ room, currentUserId, members, posts, nextCursor: initialNextCursor }: Props) {
   const router = useRouter();
   const [toast, setToast] = useState("");
@@ -61,7 +103,7 @@ export function PrayerRoomDetail({ room, currentUserId, members, posts, nextCurs
 
   const groupedPosts = useMemo(() => {
     return loadedPosts.reduce<Record<string, PrayerPost[]>>((acc, post) => {
-      const key = new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium" }).format(new Date(post.createdAt));
+      const key = formatKoreanDate(post.createdAt);
       acc[key] = acc[key] ?? [];
       acc[key].push(post);
       return acc;
@@ -108,7 +150,7 @@ export function PrayerRoomDetail({ room, currentUserId, members, posts, nextCurs
     if (!selectedPost) return;
 
     const author = selectedPost.authorNickname ?? "알 수 없음";
-    const date = selectedPost.createdAt.slice(0, 10);
+    const date = formatKoreanIsoDate(selectedPost.createdAt);
     await navigator.clipboard.writeText(`[${author}] [${date}] ${selectedPost.content}`);
     setToast("기도제목을 복사했습니다.");
     window.setTimeout(() => setToast(""), 2400);
@@ -314,7 +356,7 @@ function PrayerPostCard({
           {post.authorNickname ?? "알 수 없음"}
         </p>
         <time className="text-xs font-semibold text-slate-400 dark:text-slate-500">
-          {new Intl.DateTimeFormat("ko-KR", { timeStyle: "short" }).format(new Date(post.createdAt))}
+          {formatKoreanTime(post.createdAt)}
         </time>
       </div>
       <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700 dark:text-slate-300">{post.content}</p>
@@ -528,7 +570,7 @@ function RoomInfoModal({ room, open, onClose }: { room: RoomDetail; open: boolea
         <InfoRow label="방 제목" value={room.title} />
         <InfoRow label="방 설명" value={room.description} />
         <InfoRow label="생성자" value={room.creatorNickname ?? "알 수 없음"} />
-        <InfoRow label="생성일자" value={new Intl.DateTimeFormat("ko-KR", { dateStyle: "long" }).format(new Date(room.createdAt))} />
+        <InfoRow label="생성일자" value={formatKoreanDate(room.createdAt, "long")} />
       </dl>
     </Modal>
   );
@@ -659,7 +701,7 @@ function MemberHistoryModal({
             {posts.map((post) => (
               <article key={post.id} className="rounded-lg bg-slate-50 p-3 dark:bg-slate-900">
                 <time className="text-xs font-bold text-slate-400 dark:text-slate-500">
-                  {new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(post.createdAt))}
+                  {formatKoreanDateTime(post.createdAt)}
                 </time>
                 <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-700 dark:text-slate-300">{post.content}</p>
               </article>
