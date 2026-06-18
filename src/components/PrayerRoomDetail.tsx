@@ -107,7 +107,9 @@ export function PrayerRoomDetail({ room, currentUserId, members, posts, nextCurs
   async function copySelectedPost() {
     if (!selectedPost) return;
 
-    await navigator.clipboard.writeText(selectedPost.content);
+    const author = selectedPost.authorNickname ?? "알 수 없음";
+    const date = selectedPost.createdAt.slice(0, 10);
+    await navigator.clipboard.writeText(`[${author}] [${date}] ${selectedPost.content}`);
     setToast("기도제목을 복사했습니다.");
     window.setTimeout(() => setToast(""), 2400);
     setSelectedPost(null);
