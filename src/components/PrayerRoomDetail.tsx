@@ -74,21 +74,21 @@ export function PrayerRoomDetail({ room, currentUserId, members, posts }: Props)
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-xl flex-col bg-white/55">
+    <main className="mx-auto flex min-h-dvh w-full max-w-xl flex-col bg-white/55 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <Toast message={toast} />
-      <header className="sticky top-0 z-20 grid h-14 grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] items-center gap-2 border-b border-white/70 bg-white/90 px-4 backdrop-blur">
+      <header className="sticky top-0 z-20 grid h-14 grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] items-center gap-2 border-b border-white/70 bg-white/90 px-4 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
         <Link
           href="/pray-room"
-          className="grid h-10 w-10 place-items-center rounded-full border border-slate-200 bg-white text-slate-700"
+          className="grid h-10 w-10 place-items-center rounded-full border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
           aria-label="방 목록으로"
         >
           <ChevronLeft size={20} />
         </Link>
-        <h1 className="min-w-0 truncate text-center text-lg font-black text-slate-950">{room.title}</h1>
+        <h1 className="min-w-0 truncate text-center text-lg font-black text-slate-950 dark:text-slate-50">{room.title}</h1>
         <button
           type="button"
           onClick={() => setSettingsOpen(true)}
-          className="grid h-10 w-10 place-items-center rounded-full border border-slate-200 bg-white text-slate-700"
+          className="grid h-10 w-10 place-items-center rounded-full border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
           aria-label="방 설정"
         >
           <Settings size={19} />
@@ -100,7 +100,7 @@ export function PrayerRoomDetail({ room, currentUserId, members, posts }: Props)
           Object.entries(groupedPosts).map(([date, datePosts]) => (
             <div key={date} className="mb-6">
               <div className="mb-3 flex justify-center">
-                <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-bold text-slate-600">{date}</span>
+                <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{date}</span>
               </div>
               <div className="grid gap-3">
                 {datePosts.map((post) => (
@@ -116,7 +116,7 @@ export function PrayerRoomDetail({ room, currentUserId, members, posts }: Props)
             </div>
           ))
         ) : (
-          <div className="rounded-lg border border-dashed border-slate-300 bg-white p-6 text-center text-sm leading-6 text-slate-500">
+          <div className="rounded-lg border border-dashed border-slate-300 bg-white p-6 text-center text-sm leading-6 text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
             아직 작성된 기도제목이 없습니다.
           </div>
         )}
@@ -209,17 +209,17 @@ function PrayerPostCard({
       onPointerUp={clearPressTimer}
       onPointerCancel={clearPressTimer}
       onPointerLeave={clearPressTimer}
-      className="rounded-lg bg-white p-4 shadow-soft"
+      className="rounded-lg bg-white p-4 shadow-soft dark:border dark:border-slate-800 dark:bg-slate-900 dark:shadow-none"
     >
       <div className="mb-3 flex items-center justify-between gap-3">
-        <p className={`font-bold ${canManage ? "text-teal-700" : "text-slate-900"}`}>
+        <p className={`font-bold ${canManage ? "text-teal-700 dark:text-teal-300" : "text-slate-900 dark:text-slate-100"}`}>
           {post.authorNickname ?? "알 수 없음"}
         </p>
-        <time className="text-xs font-semibold text-slate-400">
+        <time className="text-xs font-semibold text-slate-400 dark:text-slate-500">
           {new Intl.DateTimeFormat("ko-KR", { timeStyle: "short" }).format(new Date(post.createdAt))}
         </time>
       </div>
-      <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">{post.content}</p>
+      <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700 dark:text-slate-300">{post.content}</p>
       <PrayerPostModal
         roomId={roomId}
         post={post}
@@ -294,7 +294,7 @@ function PrayerPostModal({
         <textarea
           value={content}
           onChange={(event) => setContent(event.target.value)}
-          className="min-h-40 rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-teal-500"
+          className="min-h-40 rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
           placeholder="함께 기도할 내용을 적어주세요."
           maxLength={1000}
         />
@@ -311,7 +311,7 @@ function PrayerPostModal({
             type="button"
             onClick={deletePost}
             disabled={loading || deleting}
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-rose-200 px-4 py-3 font-bold text-rose-700 disabled:opacity-60"
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-rose-200 px-4 py-3 font-bold text-rose-700 disabled:opacity-60 dark:border-rose-900 dark:text-rose-300"
           >
             <Trash2 size={17} />
             삭제
@@ -366,50 +366,50 @@ function RoomSettingsDrawer({
       <button
         type="button"
         onClick={onClose}
-        className={`absolute inset-0 bg-slate-950/30 transition-opacity ${open ? "opacity-100" : "opacity-0"}`}
+        className={`absolute inset-0 bg-slate-950/30 transition-opacity dark:bg-slate-950/70 ${open ? "opacity-100" : "opacity-0"}`}
         aria-label="설정 닫기"
       />
       <aside
-        className={`absolute right-0 top-0 h-full w-[86%] max-w-sm bg-white p-5 shadow-soft transition-transform ${
+        className={`absolute right-0 top-0 h-full w-[86%] max-w-sm bg-white p-5 shadow-soft transition-transform dark:bg-slate-950 dark:shadow-[0_18px_48px_rgba(0,0,0,0.45)] ${
           open ? "translate-x-0" : "translate-x-full"
         }`}
       >
         <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-lg font-black text-slate-950">방 설정</h2>
-          <button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-full border border-slate-200">
+          <h2 className="text-lg font-black text-slate-950 dark:text-slate-50">방 설정</h2>
+          <button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-full border border-slate-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
             <X size={18} />
           </button>
         </div>
 
         <div className="mb-6 grid gap-2">
-          <button type="button" onClick={onInfo} className="rounded-lg bg-slate-100 px-4 py-3 text-left font-bold text-slate-800">
+          <button type="button" onClick={onInfo} className="rounded-lg bg-slate-100 px-4 py-3 text-left font-bold text-slate-800 dark:bg-slate-900 dark:text-slate-100">
             방 정보
           </button>
           {room.isCreator ? (
-            <button type="button" onClick={onManage} className="rounded-lg bg-slate-100 px-4 py-3 text-left font-bold text-slate-800">
+            <button type="button" onClick={onManage} className="rounded-lg bg-slate-100 px-4 py-3 text-left font-bold text-slate-800 dark:bg-slate-900 dark:text-slate-100">
               방 관리
             </button>
           ) : null}
-          <button type="button" onClick={onLeave} className="rounded-lg bg-rose-50 px-4 py-3 text-left font-bold text-rose-700">
+          <button type="button" onClick={onLeave} className="rounded-lg bg-rose-50 px-4 py-3 text-left font-bold text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
             방 나가기
           </button>
         </div>
 
-        <h3 className="mb-3 text-sm font-black text-slate-500">멤버 {members.length}</h3>
+        <h3 className="mb-3 text-sm font-black text-slate-500 dark:text-slate-400">멤버 {members.length}</h3>
         <div className="grid gap-2">
           {members.map((member) => (
-            <div key={member.id} className="flex items-center gap-2 rounded-lg border border-slate-200 p-3">
+            <div key={member.id} className="flex items-center gap-2 rounded-lg border border-slate-200 p-3 dark:border-slate-800 dark:bg-slate-900/60">
               <div className="min-w-0 flex-1">
-                <p className="flex items-center gap-1 truncate font-bold text-slate-900">
+                <p className="flex items-center gap-1 truncate font-bold text-slate-900 dark:text-slate-100">
                   {member.nickname ?? "닉네임 없음"}
                   {member.role === "creator" ? <Crown className="shrink-0 text-amber-500" size={16} /> : null}
                 </p>
-                <p className="text-xs text-slate-400">작성 {posts.filter((post) => post.userId === member.userId).length}개</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500">작성 {posts.filter((post) => post.userId === member.userId).length}개</p>
               </div>
               <button
                 type="button"
                 onClick={() => onHistory(member)}
-                className="grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-slate-700"
+                className="grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
                 aria-label="기도제목 history"
               >
                 <History size={17} />
@@ -418,7 +418,7 @@ function RoomSettingsDrawer({
                 <button
                   type="button"
                   onClick={() => kick(member)}
-                  className="grid h-9 w-9 place-items-center rounded-full bg-rose-50 text-rose-700"
+                  className="grid h-9 w-9 place-items-center rounded-full bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300"
                   aria-label="멤버 내보내기"
                 >
                   <Trash2 size={17} />
@@ -448,8 +448,8 @@ function RoomInfoModal({ room, open, onClose }: { room: RoomDetail; open: boolea
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="mb-1 font-bold text-slate-500">{label}</dt>
-      <dd className="whitespace-pre-wrap break-words text-slate-900">{value}</dd>
+      <dt className="mb-1 font-bold text-slate-500 dark:text-slate-400">{label}</dt>
+      <dd className="whitespace-pre-wrap break-words text-slate-900 dark:text-slate-100">{value}</dd>
     </div>
   );
 }
@@ -511,21 +511,21 @@ function RoomManageModal({
         <input
           value={title}
           onChange={(event) => setTitle(event.target.value)}
-          className="rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-teal-500"
+          className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
           placeholder="방 제목"
           maxLength={40}
         />
         <textarea
           value={description}
           onChange={(event) => setDescription(event.target.value)}
-          className="min-h-24 rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-teal-500"
+          className="min-h-24 rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
           placeholder="방 설명"
           maxLength={300}
         />
         <input
           value={password}
           onChange={(event) => setPassword(event.target.value)}
-          className="rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-teal-500"
+          className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
           placeholder="새 비밀번호, 변경하지 않으면 비워두세요"
           type="password"
         />
@@ -540,7 +540,7 @@ function RoomManageModal({
         <button
           type="button"
           onClick={deleteRoom}
-          className="rounded-lg border border-rose-200 px-4 py-3 font-bold text-rose-700"
+          className="rounded-lg border border-rose-200 px-4 py-3 font-bold text-rose-700 dark:border-rose-900 dark:text-rose-300"
         >
           방 삭제
         </button>
@@ -564,16 +564,16 @@ function MemberHistoryModal({
         {posts.length ? (
           <div className="grid gap-3">
             {posts.map((post) => (
-              <article key={post.id} className="rounded-lg bg-slate-50 p-3">
-                <time className="text-xs font-bold text-slate-400">
+              <article key={post.id} className="rounded-lg bg-slate-50 p-3 dark:bg-slate-900">
+                <time className="text-xs font-bold text-slate-400 dark:text-slate-500">
                   {new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(post.createdAt))}
                 </time>
-                <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-700">{post.content}</p>
+                <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-700 dark:text-slate-300">{post.content}</p>
               </article>
             ))}
           </div>
         ) : (
-          <p className="rounded-lg bg-slate-50 p-4 text-center text-sm text-slate-500">작성 내역이 없습니다.</p>
+          <p className="rounded-lg bg-slate-50 p-4 text-center text-sm text-slate-500 dark:bg-slate-900 dark:text-slate-400">작성 내역이 없습니다.</p>
         )}
       </div>
     </Modal>

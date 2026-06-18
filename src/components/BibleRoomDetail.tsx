@@ -1510,7 +1510,7 @@ function BibleTab({
                   onClick={goFirst}
                   className="min-h-12 w-12 rounded-lg border border-slate-200 bg-white px-2 text-xs font-black text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
                 >
-                  처음
+                  시작
                 </button>
               ) : null}
               <button
