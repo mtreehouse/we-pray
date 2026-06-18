@@ -730,6 +730,7 @@ export function BibleRoomDetail({
           onOpenPassage={openPassage}
           onEdit={setEditingReflection}
           onDelete={deleteReflection}
+          onToast={showToast}
         />
       ) : null}
 
@@ -1648,7 +1649,8 @@ function SharingTab({
   translation,
   onOpenPassage,
   onEdit,
-  onDelete
+  onDelete,
+  onToast
 }: {
   reflections: Reflection[];
   loading: boolean;
@@ -1658,6 +1660,7 @@ function SharingTab({
   onOpenPassage: (reflection: Reflection) => void;
   onEdit: (reflection: Reflection) => void;
   onDelete: (reflection: Reflection) => void;
+  onToast: (message: string) => void;
 }) {
   const grouped = useMemo(() => {
     return reflections.reduce<Record<string, Reflection[]>>((acc, reflection) => {
@@ -1686,45 +1689,15 @@ function SharingTab({
             </div>
             <div className="grid gap-3">
               {items.map((reflection) => (
-                <article key={reflection.id} className="rounded-lg bg-white p-4 shadow-soft dark:bg-slate-900 dark:shadow-none">
-                  <div className="mb-3 flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className={`truncate font-bold ${reflection.isMine ? "text-teal-700 dark:text-teal-300" : "text-slate-900 dark:text-slate-100"}`}>
-                        {reflection.authorNickname ?? "알 수 없음"}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => onOpenPassage(reflection)}
-                        className="mt-1 text-left text-xs font-black text-slate-500 underline decoration-slate-300 underline-offset-2 dark:text-slate-400 dark:decoration-slate-600"
-                      >
-                        {reflection.bookName ?? reflection.bookCode} {reflection.chapter}:{verseLabel(reflection.verseContent, reflection.verse)}
-                      </button>
-                    </div>
-                    <time className="shrink-0 text-xs font-semibold text-slate-400">
-                      {new Intl.DateTimeFormat("ko-KR", { dateStyle: "short", timeStyle: "short" }).format(new Date(reflection.createdAt))}
-                    </time>
-                  </div>
-                  {reflection.verseContent ? (
-                    <button
-                      type="button"
-                      onClick={() => onOpenPassage(reflection)}
-                      className="mb-3 block w-full rounded-lg bg-teal-50 px-3 py-2 text-left text-sm leading-6 text-teal-950 dark:bg-teal-950/50 dark:text-teal-100"
-                    >
-                      {verseText(reflection.verseContent, translation)}
-                    </button>
-                  ) : null}
-                  <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700 dark:text-slate-300">{reflection.content}</p>
-                  {reflection.isMine ? (
-                    <div className="mt-3 flex justify-end gap-2">
-                      <button type="button" onClick={() => onEdit(reflection)} className="grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200" aria-label="묵상 수정" title="묵상 수정">
-                        <Edit3 size={16} />
-                      </button>
-                      <button type="button" onClick={() => onDelete(reflection)} className="grid h-9 w-9 place-items-center rounded-full bg-rose-50 text-rose-700" aria-label="묵상 삭제" title="묵상 삭제">
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  ) : null}
-                </article>
+                <SharingReflectionCard
+                  key={reflection.id}
+                  reflection={reflection}
+                  translation={translation}
+                  onOpenPassage={onOpenPassage}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                  onToast={onToast}
+                />
               ))}
             </div>
           </div>
@@ -1738,6 +1711,134 @@ function SharingTab({
       {loading ? <p className="text-center text-sm font-bold text-slate-400">불러오는 중입니다.</p> : null}
       {!nextCursor && reflections.length ? <p className="text-center text-xs font-bold text-slate-300">마지막 나눔입니다.</p> : null}
     </section>
+  );
+}
+
+function SharingReflectionCard({
+  reflection,
+  translation,
+  onOpenPassage,
+  onEdit,
+  onDelete,
+  onToast
+}: {
+  reflection: Reflection;
+  translation: BibleTranslationCode;
+  onOpenPassage: (reflection: Reflection) => void;
+  onEdit: (reflection: Reflection) => void;
+  onDelete: (reflection: Reflection) => void;
+  onToast: (message: string) => void;
+}) {
+  const longPressTimerRef = useRef<number | null>(null);
+  const longPressCopiedRef = useRef(false);
+  const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
+
+  const clearLongPress = useCallback(() => {
+    if (longPressTimerRef.current) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  const copyReflection = useCallback(async () => {
+    clearLongPress();
+    longPressCopiedRef.current = true;
+
+    const bookName = reflection.bookName ?? reflection.bookCode;
+    const verseNumber = verseLabel(reflection.verseContent, reflection.verse);
+    const passageText = verseText(reflection.verseContent, translation);
+    const copyText = `[${bookName} ${reflection.chapter}:${verseNumber}]\n${passageText}\n\n${reflection.content}`;
+
+    try {
+      await navigator.clipboard.writeText(copyText);
+      onToast("나눔을 복사했습니다.");
+    } catch {
+      onToast("복사에 실패했습니다.");
+    }
+  }, [clearLongPress, onToast, reflection, translation]);
+
+  function startLongPress(event: React.PointerEvent<HTMLElement>) {
+    clearLongPress();
+    longPressCopiedRef.current = false;
+    pointerStartRef.current = { x: event.clientX, y: event.clientY };
+    longPressTimerRef.current = window.setTimeout(() => {
+      void copyReflection();
+    }, 650);
+  }
+
+  function cancelLongPress() {
+    clearLongPress();
+    pointerStartRef.current = null;
+  }
+
+  function cancelLongPressOnMove(event: React.PointerEvent<HTMLElement>) {
+    if (!pointerStartRef.current) return;
+
+    const dx = Math.abs(event.clientX - pointerStartRef.current.x);
+    const dy = Math.abs(event.clientY - pointerStartRef.current.y);
+    if (dx > 10 || dy > 10) cancelLongPress();
+  }
+
+  useEffect(() => clearLongPress, [clearLongPress]);
+
+  return (
+    <article
+      className="rounded-lg bg-white p-4 shadow-soft dark:bg-slate-900 dark:shadow-none"
+      onClickCapture={(event) => {
+        if (!longPressCopiedRef.current) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        longPressCopiedRef.current = false;
+      }}
+      onPointerDown={startLongPress}
+      onPointerMove={cancelLongPressOnMove}
+      onPointerUp={cancelLongPress}
+      onPointerCancel={cancelLongPress}
+      onPointerLeave={cancelLongPress}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        if (!longPressCopiedRef.current) void copyReflection();
+      }}
+    >
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className={`truncate font-bold ${reflection.isMine ? "text-teal-700 dark:text-teal-300" : "text-slate-900 dark:text-slate-100"}`}>
+            {reflection.authorNickname ?? "알 수 없음"}
+          </p>
+          <button
+            type="button"
+            onClick={() => onOpenPassage(reflection)}
+            className="mt-1 text-left text-xs font-black text-slate-500 underline decoration-slate-300 underline-offset-2 dark:text-slate-400 dark:decoration-slate-600"
+          >
+            {reflection.bookName ?? reflection.bookCode} {reflection.chapter}:{verseLabel(reflection.verseContent, reflection.verse)}
+          </button>
+        </div>
+        <time className="shrink-0 text-xs font-semibold text-slate-400">
+          {new Intl.DateTimeFormat("ko-KR", { dateStyle: "short", timeStyle: "short" }).format(new Date(reflection.createdAt))}
+        </time>
+      </div>
+      {reflection.verseContent ? (
+        <button
+          type="button"
+          onClick={() => onOpenPassage(reflection)}
+          className="mb-3 block w-full rounded-lg bg-teal-50 px-3 py-2 text-left text-sm leading-6 text-teal-950 dark:bg-teal-950/50 dark:text-teal-100"
+        >
+          {verseText(reflection.verseContent, translation)}
+        </button>
+      ) : null}
+      <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700 dark:text-slate-300">{reflection.content}</p>
+      {reflection.isMine ? (
+        <div className="mt-3 flex justify-end gap-2">
+          <button type="button" onClick={() => onEdit(reflection)} className="grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200" aria-label="묵상 수정" title="묵상 수정">
+            <Edit3 size={16} />
+          </button>
+          <button type="button" onClick={() => onDelete(reflection)} className="grid h-9 w-9 place-items-center rounded-full bg-rose-50 text-rose-700" aria-label="묵상 삭제" title="묵상 삭제">
+            <Trash2 size={16} />
+          </button>
+        </div>
+      ) : null}
+    </article>
   );
 }
 

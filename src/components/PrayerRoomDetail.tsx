@@ -198,7 +198,7 @@ export function PrayerRoomDetail({ room, currentUserId, members, posts, nextCurs
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-xl flex-col bg-white/55 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <Toast message={toast} />
+      <Toast message={toast} onClose={() => setToast("")} />
       <header className="sticky top-0 z-20 grid h-14 grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] items-center gap-2 border-b border-white/70 bg-white/90 px-4 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
         <Link
           href="/pray-room"
@@ -426,7 +426,10 @@ function PrayerPostModal({
       <div className="grid gap-3">
         <textarea
           value={content}
-          onChange={(event) => setContent(event.target.value)}
+          onChange={(event) => {
+            setContent(event.target.value);
+            onToast("");
+          }}
           className="min-h-40 rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
           placeholder="함께 기도할 내용을 적어주세요."
           maxLength={1000}
