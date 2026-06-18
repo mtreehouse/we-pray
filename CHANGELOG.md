@@ -4,6 +4,8 @@
 
 ### Added
 - Added long-press copy support for Bible Room sharing cards with passage text and reflection content. (`0db0044`)
+- Added Pray Room prayer reactions with per-post prayer counts and a celebration effect. (`a722394`)
+- Added Bible Room reflection reactions for likes and hearts with per-user reaction state and animated feedback. (`8110754`)
 - Added an app-wide settings page and settings menu entry. (`b9bdd85`)
 - Added app-wide dark mode preference storage and application through the shared provider. (`b9bdd85`)
 - Added settings controls for nickname change, logout, account withdrawal, version display, and release information. (`b9bdd85`)
@@ -11,8 +13,10 @@
 - Added dedicated member prayer-post history loading so member counts and histories stay accurate with paginated room lists. (`750e1d0`)
 
 ### Changed
-- Matched Pray Room author nickname styling for the current user with Bible Room sharing cards.
-- Updated nickname settings so successful saves close the modal and show a toast while validation errors stay inline.
+- Matched Pray Room author nickname styling for the current user with Bible Room sharing cards. (`57f07f2`)
+- Updated nickname settings so successful saves close the modal and show a toast while validation errors stay inline. (`57f07f2`)
+- Updated Bible Room sharing card actions so reactions are available directly on cards, while copy/edit/delete actions live in the long-press action sheet. (`8110754`)
+- Unified the Pray Room and Bible Room floating search/create buttons with cleaner icon styling and updated create-button color. (`195f369`)
 - Fixed Pray Room validation toasts so prayer-post input errors dismiss automatically and clear while editing. (`0db0044`)
 - Improved dark mode styling across main menu cards, Pray Room lists, Bible Room lists, Pray News, login, nickname setup, and settings screens. (`b9bdd85`)
 - Updated Bible Room dark mode behavior so a room without its own saved preference uses the current app-wide dark mode value as its initial default. (`b9bdd85`)
