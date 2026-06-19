@@ -373,7 +373,7 @@ export function PrayerRoomDetail({ room, currentUserId, members, posts, nextCurs
                 className="flex min-h-10 items-center justify-center gap-1 rounded-xl bg-teal-700 px-2.5 text-xs font-black text-white"
               >
                 <Edit3 size={14} />
-                편집
+                수정
               </button>
             ) : null}
           </div>
@@ -426,11 +426,20 @@ function PrayerPostCard({
 }) {
   return (
     <article
-      className={`w-full rounded-lg bg-white p-4 text-left shadow-soft transition dark:border dark:border-slate-800 dark:bg-slate-900 dark:shadow-none ${
+      role="button"
+      tabIndex={0}
+      onClick={onSelect}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onSelect();
+        }
+      }}
+      className={`w-full cursor-pointer rounded-lg bg-white p-4 text-left shadow-soft transition dark:border dark:border-slate-800 dark:bg-slate-900 dark:shadow-none ${
         selected ? "ring-2 ring-teal-500 dark:ring-teal-400" : ""
       }`}
     >
-      <button type="button" onClick={onSelect} className="block w-full text-left">
+      <div className="block w-full text-left">
         <div className="mb-3 flex items-center justify-between gap-3">
           <p className={`font-bold ${selected || isMine ? "text-teal-700 dark:text-teal-300" : "text-slate-900 dark:text-slate-100"}`}>
             {post.authorNickname ?? "알 수 없음"}
@@ -440,7 +449,7 @@ function PrayerPostCard({
           </time>
         </div>
         <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700 dark:text-slate-300">{post.content}</p>
-      </button>
+      </div>
       <div className="mt-3 flex items-center justify-end">
         <button
           type="button"
@@ -544,14 +553,30 @@ function PrayerPostModal({
   const [content, setContent] = useState(post?.content ?? "");
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    setContent(post?.content ?? "");
+  }, [open, post?.id, post?.content]);
 
   async function submit() {
+    const nextContent = content.trim();
+
+    if (!nextContent) {
+      onToast("기도제목 내용을 입력해주세요.");
+      return;
+    }
+
+    if (post && nextContent === post.content.trim()) {
+      onToast("변경된 내용이 없습니다.");
+      return;
+    }
+
     setLoading(true);
     const endpoint = post ? `/api/rooms/${roomId}/posts/${post.id}` : `/api/rooms/${roomId}/posts`;
     const res = await fetch(endpoint, {
       method: post ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content })
+      body: JSON.stringify({ content: nextContent })
     });
     const data = (await res.json()) as { error?: string };
     setLoading(false);
