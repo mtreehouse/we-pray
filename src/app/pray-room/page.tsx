@@ -41,7 +41,7 @@ export default async function PrayRoomPage() {
       </Link>
       <header className="mb-5">
         <h1 className="text-2xl font-black text-slate-950 dark:text-slate-50">Pray Room</h1>
-        <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">내가 입장한 방 목록입니다.</p>
+        <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">함께 기도 제목을 올리고 기도하는 방입니다.</p>
       </header>
       <PrayRoomList rooms={rooms} />
     </main>
