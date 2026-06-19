@@ -152,6 +152,7 @@ type DateRange = {
 
 type BibleTranslationCode = "ko_krv" | "ko_nkrv";
 type BibleFontSize = "small" | "normal" | "large" | "xlarge";
+type BibleLineHeight = "compact" | "normal" | "relaxed" | "spacious";
 
 const scopeLabels: Record<string, string> = {
   OLD_TESTAMENT: "구약",
@@ -184,16 +185,32 @@ const bibleFontSizeLabels: Record<BibleFontSize, string> = {
 };
 
 const bibleFontSizeClasses: Record<BibleFontSize, string> = {
-  small: "text-[14px] leading-7",
-  normal: "text-[15px] leading-7",
-  large: "text-[17px] leading-8",
-  xlarge: "text-[19px] leading-9"
+  small: "text-[14px]",
+  normal: "text-[15px]",
+  large: "text-[17px]",
+  xlarge: "text-[19px]"
+};
+
+const bibleLineHeightLabels: Record<BibleLineHeight, string> = {
+  compact: "좁게",
+  normal: "기본",
+  relaxed: "넓게",
+  spacious: "아주 넓게"
+};
+
+const bibleLineHeightClasses: Record<BibleLineHeight, string> = {
+  compact: "leading-6",
+  normal: "leading-7",
+  relaxed: "leading-8",
+  spacious: "leading-9"
 };
 
 const DEFAULT_BIBLE_TRANSLATION: BibleTranslationCode = "ko_krv";
 const DEFAULT_BIBLE_FONT_SIZE: BibleFontSize = "normal";
+const DEFAULT_BIBLE_LINE_HEIGHT: BibleLineHeight = "normal";
 const BIBLE_TRANSLATION_STORAGE_KEY = "wepray:bible-translation";
 const BIBLE_FONT_SIZE_STORAGE_KEY = "wepray:bible-font-size";
+const BIBLE_LINE_HEIGHT_STORAGE_KEY = "wepray:bible-line-height";
 const BIBLE_DARK_MODE_STORAGE_PREFIX = "wepray:bible-room-dark-mode";
 
 function isBibleTranslationCode(value: unknown): value is BibleTranslationCode {
@@ -203,6 +220,11 @@ function isBibleTranslationCode(value: unknown): value is BibleTranslationCode {
 function isBibleFontSize(value: unknown): value is BibleFontSize {
   return value === "small" || value === "normal" || value === "large" || value === "xlarge";
 }
+
+function isBibleLineHeight(value: unknown): value is BibleLineHeight {
+  return value === "compact" || value === "normal" || value === "relaxed" || value === "spacious";
+}
+
 
 export function BibleRoomDetail({
   room,
@@ -237,6 +259,7 @@ export function BibleRoomDetail({
   const [translationOpen, setTranslationOpen] = useState(false);
   const [translation, setTranslation] = useState<BibleTranslationCode>(DEFAULT_BIBLE_TRANSLATION);
   const [bibleFontSize, setBibleFontSize] = useState<BibleFontSize>(DEFAULT_BIBLE_FONT_SIZE);
+  const [bibleLineHeight, setBibleLineHeight] = useState<BibleLineHeight>(DEFAULT_BIBLE_LINE_HEIGHT);
   const [darkMode, setDarkMode] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
@@ -297,6 +320,15 @@ export function BibleRoomDetail({
     setBibleFontSize(nextFontSize);
     try {
       window.localStorage.setItem(BIBLE_FONT_SIZE_STORAGE_KEY, nextFontSize);
+    } catch {
+      // localStorage may be unavailable in private browsing or restricted webviews.
+    }
+  }, []);
+
+  const selectBibleLineHeight = useCallback((nextLineHeight: BibleLineHeight) => {
+    setBibleLineHeight(nextLineHeight);
+    try {
+      window.localStorage.setItem(BIBLE_LINE_HEIGHT_STORAGE_KEY, nextLineHeight);
     } catch {
       // localStorage may be unavailable in private browsing or restricted webviews.
     }
@@ -399,10 +431,12 @@ export function BibleRoomDetail({
     try {
       const savedTranslation = window.localStorage.getItem(BIBLE_TRANSLATION_STORAGE_KEY);
       const savedFontSize = window.localStorage.getItem(BIBLE_FONT_SIZE_STORAGE_KEY);
+      const savedLineHeight = window.localStorage.getItem(BIBLE_LINE_HEIGHT_STORAGE_KEY);
       const savedDarkMode = window.localStorage.getItem(bibleDarkModeStorageKey);
       const savedAppDarkMode = window.localStorage.getItem(APP_DARK_MODE_STORAGE_KEY);
       if (isBibleTranslationCode(savedTranslation)) setTranslation(savedTranslation);
       if (isBibleFontSize(savedFontSize)) setBibleFontSize(savedFontSize);
+      if (isBibleLineHeight(savedLineHeight)) setBibleLineHeight(savedLineHeight);
       if (savedDarkMode === "true" || savedDarkMode === "false") setDarkMode(savedDarkMode === "true");
       else if (savedAppDarkMode === "true" || savedAppDarkMode === "false") setDarkMode(savedAppDarkMode === "true");
     } catch {
@@ -793,6 +827,7 @@ export function BibleRoomDetail({
           onChapterJump={holdCompactReadingHeader}
           translation={translation}
           fontSize={bibleFontSize}
+          lineHeight={bibleLineHeight}
           onReflect={setReflectionTarget}
           onToast={showToast}
         />
@@ -833,8 +868,10 @@ export function BibleRoomDetail({
         reflections={reflections}
         translationLabel={bibleTranslationLabels[translation]}
         fontSize={bibleFontSize}
+          lineHeight={bibleLineHeight}
         darkMode={darkMode}
         onFontSizeChange={selectBibleFontSize}
+        onLineHeightChange={selectBibleLineHeight}
         onDarkModeChange={selectDarkMode}
         onInfo={() => setInfoOpen(true)}
         onTranslation={() => setTranslationOpen(true)}
@@ -905,8 +942,10 @@ function BibleRoomSettingsDrawer({
   reflections,
   translationLabel,
   fontSize,
+  lineHeight,
   darkMode,
   onFontSizeChange,
+  onLineHeightChange,
   onDarkModeChange,
   onInfo,
   onTranslation,
@@ -923,8 +962,10 @@ function BibleRoomSettingsDrawer({
   reflections: Reflection[];
   translationLabel: string;
   fontSize: BibleFontSize;
+  lineHeight: BibleLineHeight;
   darkMode: boolean;
   onFontSizeChange: (fontSize: BibleFontSize) => void;
+  onLineHeightChange: (lineHeight: BibleLineHeight) => void;
   onDarkModeChange: (enabled: boolean) => void;
   onInfo: () => void;
   onTranslation: () => void;
@@ -999,6 +1040,28 @@ function BibleRoomSettingsDrawer({
                   }`}
                 >
                   {size === "small" ? "A-" : size === "normal" ? "A" : size === "large" ? "A+" : "A++"}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-lg bg-slate-100 px-4 py-3 dark:bg-slate-900">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <p className="font-bold text-slate-800 dark:text-slate-100">성경본문 줄 간격</p>
+              <span className="shrink-0 text-xs font-black text-teal-700 dark:text-teal-300">{bibleLineHeightLabels[lineHeight]}</span>
+            </div>
+            <div className="grid grid-cols-4 gap-1.5">
+              {(Object.keys(bibleLineHeightLabels) as BibleLineHeight[]).map((height) => (
+                <button
+                  key={height}
+                  type="button"
+                  onClick={() => onLineHeightChange(height)}
+                  className={`min-h-9 rounded-lg text-xs font-black transition ${
+                    lineHeight === height
+                      ? "bg-teal-700 text-white"
+                      : "bg-white text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                  }`}
+                >
+                  {height === "compact" ? "좁게" : height === "normal" ? "기본" : height === "relaxed" ? "넓게" : "아주 넓게"}
                 </button>
               ))}
             </div>
@@ -1321,6 +1384,7 @@ function BibleTab({
   onChapterJump,
   translation,
   fontSize,
+  lineHeight,
   onReflect,
   onToast
 }: {
@@ -1342,6 +1406,7 @@ function BibleTab({
   onChapterJump: () => void;
   translation: BibleTranslationCode;
   fontSize: BibleFontSize;
+  lineHeight: BibleLineHeight;
   onReflect: (target: VerseTarget) => void;
   onToast: (message: string) => void;
 }) {
@@ -1577,7 +1642,7 @@ function BibleTab({
                 <ChevronRight size={19} />
               </button>
             </div>
-            <div ref={firstVerseRef} className="grid scroll-mt-12 gap-1.5">
+            <div ref={firstVerseRef} className={`grid scroll-mt-12 ${lineHeight === "compact" ? "gap-0" : "gap-1.5"}`}>
               {currentChapter.verses.map((verse) => (
                 <VerseRow
                   key={verse.verse}
@@ -1585,6 +1650,7 @@ function BibleTab({
                   verse={verse}
                   translation={translation}
                   fontSize={fontSize}
+                  lineHeight={lineHeight}
                   selected={Boolean(
                     selectedVerse
                       && selectedVerse.bookCode === currentChapter.bookCode
@@ -1697,6 +1763,7 @@ function VerseRow({
   verse,
   translation,
   fontSize,
+  lineHeight,
   selected,
   onToggle
 }: {
@@ -1704,13 +1771,14 @@ function VerseRow({
   verse: ReadingVerse;
   translation: BibleTranslationCode;
   fontSize: BibleFontSize;
+  lineHeight: BibleLineHeight;
   selected: boolean;
   onToggle: (target: VerseTarget) => void;
 }) {
   const text = verseText(verse.content, translation);
 
   return (
-    <div className={`rounded-md px-1 py-1.5 transition ${selected ? "bg-teal-50 dark:bg-teal-950/50" : "hover:bg-slate-50 dark:hover:bg-slate-900/70"}`}>
+    <div className={`rounded-md px-1 transition ${lineHeight === "compact" ? "py-0.5" : "py-1.5"} ${selected ? "bg-teal-50 dark:bg-teal-950/50" : "hover:bg-slate-50 dark:hover:bg-slate-900/70"}`}>
       <button
         type="button"
         onClick={() => {
@@ -1722,7 +1790,7 @@ function VerseRow({
             text
           });
         }}
-        className={`w-full rounded-md px-1 text-left transition ${bibleFontSizeClasses[fontSize]} ${selected ? "text-teal-950 dark:text-teal-100" : "text-slate-800 dark:text-slate-100"}`}
+        className={`w-full rounded-md px-1 text-left transition ${bibleFontSizeClasses[fontSize]} ${bibleLineHeightClasses[lineHeight]} ${selected ? "text-teal-950 dark:text-teal-100" : "text-slate-800 dark:text-slate-100"}`}
       >
         <span className="mr-2 align-baseline text-xs font-black text-teal-700 dark:text-teal-300">{verseLabel(verse.content, verse.verse)}</span>
         {text}
