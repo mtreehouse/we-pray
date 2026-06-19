@@ -219,7 +219,8 @@ export function BibleRoomDetail({
   const [activeTab, setActiveTab] = useState<"bible" | "sharing" | "plan">("bible");
   const [toast, setToast] = useState("");
   const [planDays, setPlanDays] = useState<PlanDay[]>([]);
-  const [selectedDate, setSelectedDate] = useState(initialDate);
+  const [readingDate, setReadingDate] = useState(initialDate);
+  const [planSelectedDate, setPlanSelectedDate] = useState(initialDate);
   const [chapters, setChapters] = useState<ReadingChapter[]>([]);
   const [chapterIndex, setChapterIndex] = useState(0);
   const [readingLoading, setReadingLoading] = useState(false);
@@ -249,21 +250,34 @@ export function BibleRoomDetail({
   const forceCompactHeaderUntilRef = useRef(0);
   const restoredLocationRef = useRef<ReadingLocation | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const bibleScrollYRef = useRef(0);
+  const previousActiveTabRef = useRef<"bible" | "sharing" | "plan">(activeTab);
   const readingLocationStorageKey = useMemo(() => `wepray:bible-room:${room.id}:reading-location`, [room.id]);
   const bibleDarkModeStorageKey = useMemo(() => `${BIBLE_DARK_MODE_STORAGE_PREFIX}:${room.id}`, [room.id]);
 
   const selectedPlanDay = useMemo(
-    () => planDays.find((day) => day.date === selectedDate) ?? null,
-    [planDays, selectedDate]
+    () => planDays.find((day) => day.date === readingDate) ?? null,
+    [planDays, readingDate]
   );
   const planDateRange = useMemo(() => getPlanDateRange(room, planDays), [planDays, room]);
-  const planDateRangeKey = planDateRange ? `${planDateRange.startDate}:${planDateRange.endDate}` : "";
   const currentChapter = chapters[chapterIndex] ?? null;
 
   const showToast = useCallback((message: string) => {
     setToast(message);
     window.setTimeout(() => setToast(""), 2400);
   }, []);
+
+  const selectTab = useCallback((nextTab: "bible" | "sharing" | "plan") => {
+    if (activeTab === "bible" && nextTab !== "bible") {
+      bibleScrollYRef.current = window.scrollY;
+    }
+
+    if (nextTab === "plan") {
+      setPlanSelectedDate(initialDate);
+    }
+
+    setActiveTab(nextTab);
+  }, [activeTab, initialDate]);
 
   const holdCompactReadingHeader = useCallback(() => {
     forceCompactHeaderUntilRef.current = Date.now() + 900;
@@ -312,7 +326,7 @@ export function BibleRoomDetail({
   const loadReading = useCallback(async () => {
     setReadingLoading(true);
     setLoadedReadingDate(null);
-    const res = await fetch(`/api/bible-rooms/${room.id}/reading?date=${selectedDate}`);
+    const res = await fetch(`/api/bible-rooms/${room.id}/reading?date=${readingDate}`);
     const data = (await res.json()) as { chapters?: ReadingChapter[]; error?: string };
     setReadingLoading(false);
 
@@ -323,14 +337,14 @@ export function BibleRoomDetail({
 
     const nextChapters = data.chapters ?? [];
     const restoredLocation = restoredLocationRef.current;
-    const restoredIndex = restoredLocation?.date === selectedDate
+    const restoredIndex = restoredLocation?.date === readingDate
       ? nextChapters.findIndex((chapter) => chapter.bookCode === restoredLocation.bookCode && chapter.chapter === restoredLocation.chapter)
       : -1;
 
     setChapters(nextChapters);
     setChapterIndex(restoredIndex >= 0 ? restoredIndex : 0);
-    setLoadedReadingDate(selectedDate);
-  }, [room.id, selectedDate, showToast]);
+    setLoadedReadingDate(readingDate);
+  }, [room.id, readingDate, showToast]);
 
   const loadProgress = useCallback(async () => {
     const res = await fetch(`/api/bible-rooms/${room.id}/progress`);
@@ -372,7 +386,7 @@ export function BibleRoomDetail({
           chapter: location.chapter
         };
         restoredLocationRef.current = restoredLocation;
-        setSelectedDate(restoredLocation.date);
+        setReadingDate(restoredLocation.date);
       }
     } catch {
       restoredLocationRef.current = null;
@@ -416,24 +430,40 @@ export function BibleRoomDetail({
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!planDateRange || isDateInRange(selectedDate, planDateRange)) return;
-    setSelectedDate(planDateRange.startDate);
-  }, [planDateRangeKey, selectedDate]); // eslint-disable-line react-hooks/exhaustive-deps
+    const previousTab = previousActiveTabRef.current;
+
+    if (activeTab === "bible" && previousTab !== "bible") {
+      window.requestAnimationFrame(() => window.scrollTo({ top: bibleScrollYRef.current }));
+    }
+
+    previousActiveTabRef.current = activeTab;
+  }, [activeTab]);
 
   useEffect(() => {
-    if (!storedLocationLoaded || !selectedDate) return;
-    if (planDateRange && !isDateInRange(selectedDate, planDateRange)) return;
+    if (!settingsOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [settingsOpen]);
+
+
+  useEffect(() => {
+    if (!storedLocationLoaded || !readingDate) return;
     void loadReading();
-  }, [loadReading, planDateRangeKey, selectedDate, storedLocationLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [loadReading, readingDate, storedLocationLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!storedLocationLoaded || loadedReadingDate !== selectedDate || !currentChapter) return;
+    if (!storedLocationLoaded || loadedReadingDate !== readingDate || !currentChapter) return;
 
     try {
       window.localStorage.setItem(
         readingLocationStorageKey,
         JSON.stringify({
-          date: selectedDate,
+          date: readingDate,
           bookCode: currentChapter.bookCode,
           chapter: currentChapter.chapter
         })
@@ -441,7 +471,7 @@ export function BibleRoomDetail({
     } catch {
       // localStorage may be unavailable in private browsing or restricted webviews.
     }
-  }, [currentChapter, loadedReadingDate, readingLocationStorageKey, selectedDate, storedLocationLoaded]);
+  }, [currentChapter, loadedReadingDate, readingLocationStorageKey, readingDate, storedLocationLoaded]);
 
   useEffect(() => {
     if (activeTab !== "sharing" || !sentinelRef.current) return;
@@ -515,23 +545,23 @@ export function BibleRoomDetail({
     const scrollY = window.scrollY;
     const nextCompleted = !selectedPlanDay.isCompleted;
     setCompleting(true);
-    setPlanDays((days) => days.map((day) => day.date === selectedDate ? { ...day, isCompleted: nextCompleted } : day));
+    setPlanDays((days) => days.map((day) => day.date === readingDate ? { ...day, isCompleted: nextCompleted } : day));
 
     try {
       const res = await fetch(`/api/bible-rooms/${room.id}/progress`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date: selectedDate, isCompleted: nextCompleted })
+        body: JSON.stringify({ date: readingDate, isCompleted: nextCompleted })
       });
       const data = (await res.json()) as { isCompleted?: boolean; progress?: ProgressSummary; error?: string };
 
       if (!res.ok) {
-        setPlanDays((days) => days.map((day) => day.date === selectedDate ? { ...day, isCompleted: selectedPlanDay.isCompleted } : day));
+        setPlanDays((days) => days.map((day) => day.date === readingDate ? { ...day, isCompleted: selectedPlanDay.isCompleted } : day));
         showToast(data.error ?? "완료 처리에 실패했습니다.");
         return;
       }
 
-      setPlanDays((days) => days.map((day) => day.date === selectedDate ? { ...day, isCompleted: Boolean(data.isCompleted) } : day));
+      setPlanDays((days) => days.map((day) => day.date === readingDate ? { ...day, isCompleted: Boolean(data.isCompleted) } : day));
       setProgress(data.progress ?? null);
     } finally {
       setCompleting(false);
@@ -724,9 +754,9 @@ export function BibleRoomDetail({
           </button>
         </div>
         <nav className="grid grid-cols-3 gap-2 pb-3">
-          <TabButton active={activeTab === "bible"} onClick={() => setActiveTab("bible")} icon={<BookOpen size={16} />} label="성경" />
-          <TabButton active={activeTab === "sharing"} onClick={() => setActiveTab("sharing")} icon={<MessageCircle size={16} />} label="나눔" />
-          <TabButton active={activeTab === "plan"} onClick={() => setActiveTab("plan")} icon={<CalendarDays size={16} />} label="플랜" />
+          <TabButton active={activeTab === "bible"} onClick={() => selectTab("bible")} icon={<BookOpen size={16} />} label="성경" />
+          <TabButton active={activeTab === "sharing"} onClick={() => selectTab("sharing")} icon={<MessageCircle size={16} />} label="나눔" />
+          <TabButton active={activeTab === "plan"} onClick={() => selectTab("plan")} icon={<CalendarDays size={16} />} label="플랜" />
         </nav>
       </header>
 
@@ -746,9 +776,9 @@ export function BibleRoomDetail({
       {activeTab === "bible" ? (
         <BibleTab
           days={planDays}
-          selectedDate={selectedDate}
+          selectedDate={readingDate}
           planDateRange={planDateRange}
-          onSelectDate={setSelectedDate}
+          onSelectDate={setReadingDate}
           chapters={chapters}
           currentChapter={currentChapter}
           chapterIndex={chapterIndex}
@@ -787,10 +817,10 @@ export function BibleRoomDetail({
         <PlanTab
           members={members}
           days={planDays}
-          selectedDate={selectedDate}
+          selectedDate={planSelectedDate}
           planDateRange={planDateRange}
           progress={progress}
-          onSelectDate={setSelectedDate}
+          onSelectDate={setPlanSelectedDate}
         />
       ) : null}
 
