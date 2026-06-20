@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
-import { ChevronRight, Info, LogIn, LogOut, Moon, Pencil, Save, Sun, UserRound } from "lucide-react";
+import { BookOpen, ChevronRight, HelpCircle, Info, LogIn, LogOut, MessageCircle, Moon, Pencil, Save, Sun, UserRound } from "lucide-react";
+import { AppGuideOverlay, type GuideKind } from "@/components/AppGuideOverlay";
 import { Modal } from "@/components/ui/Modal";
 import { Toast } from "@/components/ui/Toast";
 import { WithdrawLink } from "@/components/WithdrawLink";
@@ -33,6 +34,8 @@ export function SettingsMenu({ isLoggedIn, currentNickname, appVersion }: Settin
   const [nicknameMessageType, setNicknameMessageType] = useState<"success" | "error">("success");
   const [toast, setToast] = useState("");
   const [releaseOpen, setReleaseOpen] = useState(false);
+  const [usageOpen, setUsageOpen] = useState(false);
+  const [guideKind, setGuideKind] = useState<GuideKind | null>(null);
 
   useEffect(() => {
     setNickname(currentNickname ?? "");
@@ -150,6 +153,21 @@ export function SettingsMenu({ isLoggedIn, currentNickname, appVersion }: Settin
 
         <button
           type="button"
+          onClick={() => setUsageOpen(true)}
+          className="flex items-center justify-between gap-3 rounded-lg bg-white/90 px-4 py-4 text-left shadow-soft dark:border dark:border-slate-800 dark:bg-slate-900/85"
+        >
+          <span className="min-w-0">
+            <span className="flex items-center gap-2 font-black text-slate-950 dark:text-slate-50">
+              <HelpCircle size={17} className="text-teal-700 dark:text-teal-300" />
+              사용법
+            </span>
+            <span className="mt-1 block text-xs font-bold text-slate-500 dark:text-slate-400">성경방과 기도방 가이드를 확인합니다.</span>
+          </span>
+          <ChevronRight size={18} className="text-slate-400" />
+        </button>
+
+        <button
+          type="button"
           onClick={() => setReleaseOpen(true)}
           className="flex items-center justify-between gap-3 rounded-lg bg-white/90 px-4 py-4 text-left shadow-soft dark:border dark:border-slate-800 dark:bg-slate-900/85"
         >
@@ -187,6 +205,51 @@ export function SettingsMenu({ isLoggedIn, currentNickname, appVersion }: Settin
           </Link>
         )}
       </div>
+
+      <Modal title="사용법" open={usageOpen} onClose={() => setUsageOpen(false)}>
+        <div className="grid gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setUsageOpen(false);
+              setGuideKind("bible");
+            }}
+            className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-4 py-4 text-left dark:bg-slate-900"
+          >
+            <span className="flex min-w-0 items-center gap-3">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-teal-50 text-teal-700 dark:bg-teal-950/50 dark:text-teal-200">
+                <BookOpen size={18} />
+              </span>
+              <span className="min-w-0">
+                <span className="block font-black text-slate-950 dark:text-slate-50">성경방 사용법</span>
+                <span className="mt-1 block text-xs font-bold text-slate-500 dark:text-slate-400">성경 읽기, 묵상, 나눔, 플랜 안내</span>
+              </span>
+            </span>
+            <ChevronRight size={18} className="shrink-0 text-slate-400" />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setUsageOpen(false);
+              setGuideKind("prayer");
+            }}
+            className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-4 py-4 text-left dark:bg-slate-900"
+          >
+            <span className="flex min-w-0 items-center gap-3">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-200">
+                <MessageCircle size={18} />
+              </span>
+              <span className="min-w-0">
+                <span className="block font-black text-slate-950 dark:text-slate-50">기도방 사용법</span>
+                <span className="mt-1 block text-xs font-bold text-slate-500 dark:text-slate-400">기도제목 작성, 선택, 함께 기도 안내</span>
+              </span>
+            </span>
+            <ChevronRight size={18} className="shrink-0 text-slate-400" />
+          </button>
+        </div>
+      </Modal>
+
+      {guideKind ? <AppGuideOverlay kind={guideKind} open={Boolean(guideKind)} onClose={() => setGuideKind(null)} /> : null}
 
       <Modal title="닉네임 변경" open={nicknameOpen} onClose={() => setNicknameOpen(false)}>
         <div className="grid gap-3">

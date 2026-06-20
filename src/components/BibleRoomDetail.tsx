@@ -23,6 +23,7 @@ import {
   Trash2,
   X
 } from "lucide-react";
+import { AppGuideOverlay } from "@/components/AppGuideOverlay";
 import { Modal } from "@/components/ui/Modal";
 import { Toast } from "@/components/ui/Toast";
 import { APP_DARK_MODE_STORAGE_KEY } from "@/lib/ui-settings";
@@ -905,13 +906,9 @@ export function BibleRoomDetail({
         onManage={() => setManageOpen(true)}
         onLeave={leaveRoom}
         onHistory={openMemberHistory}
-        onGuide={() => {
-          setSettingsOpen(false);
-          setGuideOpen(true);
-        }}
         onToast={showToast}
       />
-      <BibleRoomGuideOverlay open={guideOpen} onClose={closeGuide} onSelectTab={selectTab} />
+      <AppGuideOverlay kind="bible" open={guideOpen} onClose={closeGuide} />
       <BibleTranslationModal
         open={translationOpen}
         selected={translation}
@@ -952,291 +949,6 @@ export function BibleRoomDetail({
 }
 
 
-type BibleGuideStep = {
-  tab: "bible" | "sharing" | "plan";
-  label: string;
-  title: string;
-  description: string;
-  bullets: string[];
-  demo: "date" | "swipe" | "verse" | "sharing" | "plan" | "settings";
-  icon: ReactNode;
-};
-
-function BibleRoomGuideOverlay({
-  open,
-  onClose,
-  onSelectTab
-}: {
-  open: boolean;
-  onClose: () => void;
-  onSelectTab: (tab: "bible" | "sharing" | "plan") => void;
-}) {
-  const steps: BibleGuideStep[] = [
-    {
-      tab: "bible",
-      label: "성경",
-      title: "날짜를 고르고 말씀을 읽어요",
-      description: "상단 날짜를 눌러 읽을 플랜을 고르고, 오늘 읽을 장을 바로 확인할 수 있어요.",
-      bullets: ["날짜 버튼은 성경 탭 안에서만 움직여요.", "성경과 플랜 달력은 서로 독립적으로 선택돼요."],
-      demo: "date",
-      icon: <BookOpen size={16} />
-    },
-    {
-      tab: "bible",
-      label: "이동",
-      title: "좌우 슬라이드로 장을 넘겨요",
-      description: "말씀 영역을 좌우로 밀면 이전 장과 다음 장으로 넘어가고, 아래 버튼으로도 이동할 수 있어요.",
-      bullets: ["이동 후에는 현재 장 제목이 위에 고정돼요.", "처음/끝 버튼으로 첫 장과 마지막 장도 바로 갈 수 있어요."],
-      demo: "swipe",
-      icon: <ChevronRight size={16} />
-    },
-    {
-      tab: "bible",
-      label: "묵상",
-      title: "구절을 눌러 묵상을 작성해요",
-      description: "구절을 한 번 누르면 아래에 복사와 묵상 작성 버튼이 떠요. 내가 쓴 묵상이 있는 절에는 하트가 보여요.",
-      bullets: ["구절 번호도 함께 보여서 위치를 놓치지 않아요.", "묵상 저장 후에도 읽던 창과 스크롤을 유지해요."],
-      demo: "verse",
-      icon: <Pencil size={16} />
-    },
-    {
-      tab: "sharing",
-      label: "나눔",
-      title: "나눔은 플랜 날짜별로 모여요",
-      description: "나중에 작성해도 해당 말씀의 플랜 날짜 구역에 들어가고, 카드를 누르면 복사/수정/삭제를 사용할 수 있어요.",
-      bullets: ["좋아요와 하트 반응은 카드에서 바로 누를 수 있어요.", "구절을 누르면 해당 말씀 팝업이 그 절 위치로 열려요."],
-      demo: "sharing",
-      icon: <MessageCircle size={16} />
-    },
-    {
-      tab: "plan",
-      label: "플랜",
-      title: "달력에서 진행 상황을 확인해요",
-      description: "플랜 탭은 항상 오늘 날짜를 기본으로 보여주고, 완료와 나눔 여부는 점으로 표시돼요.",
-      bullets: ["초록 점은 말씀 읽기 완료, 노란 점은 나눔 작성이에요.", "달성률은 오늘까지 읽기 50%, 나눔 50% 기준이에요."],
-      demo: "plan",
-      icon: <CalendarDays size={16} />
-    },
-    {
-      tab: "bible",
-      label: "설정",
-      title: "읽기 환경은 설정에서 바꿔요",
-      description: "번역본, 글씨 크기, 줄 간격, 성경방 다크모드와 멤버 목록은 설정에서 관리해요.",
-      bullets: ["설정한 번역본과 줄 간격은 다시 들어와도 기억돼요.", "방 정보와 멤버 history도 설정에서 확인할 수 있어요."],
-      demo: "settings",
-      icon: <Settings size={16} />
-    }
-  ];
-  const [stepIndex, setStepIndex] = useState(0);
-  const step = steps[stepIndex];
-  const isLast = stepIndex === steps.length - 1;
-
-  useEffect(() => {
-    if (!open) return;
-    setStepIndex(0);
-    onSelectTab("bible");
-    // Only reset the walkthrough when it is opened. Tab changes recreate the parent callback.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    onSelectTab(step.tab);
-  }, [open, onSelectTab, step.tab]);
-
-  if (!open) return null;
-
-  return (
-    <div className="fixed inset-0 z-[90] flex items-end justify-center bg-slate-950/62 px-4 pb-4 pt-10 backdrop-blur-sm sm:items-center">
-      <div className="w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-[0_24px_70px_rgba(0,0,0,0.32)] dark:bg-slate-950 dark:text-slate-100">
-        <div className="border-b border-slate-100 px-4 py-3 dark:border-slate-800">
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-xs font-black text-teal-700 dark:text-teal-300">Bible Room 처음 사용법</p>
-              <h2 className="mt-0.5 truncate text-lg font-black text-slate-950 dark:text-slate-50">{step.title}</h2>
-            </div>
-            <button type="button" onClick={onClose} className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-slate-100 text-slate-600 dark:bg-slate-900 dark:text-slate-200" aria-label="사용법 닫기">
-              <X size={18} />
-            </button>
-          </div>
-        </div>
-
-        <div className="grid gap-4 p-4">
-          <BibleGuideDemo demo={step.demo} />
-          <div>
-            <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-teal-50 px-2.5 py-1 text-xs font-black text-teal-700 dark:bg-teal-950/50 dark:text-teal-200">
-              {step.icon}
-              {step.label}
-            </div>
-            <p className="text-sm font-semibold leading-6 text-slate-600 dark:text-slate-300">{step.description}</p>
-            <div className="mt-3 grid gap-2">
-              {step.bullets.map((bullet) => (
-                <div key={bullet} className="flex items-start gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs font-bold leading-5 text-slate-600 dark:bg-slate-900 dark:text-slate-300">
-                  <Check className="mt-0.5 shrink-0 text-teal-600 dark:text-teal-300" size={14} />
-                  <span>{bullet}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-t border-slate-100 px-4 py-3 dark:border-slate-800">
-          <button type="button" onClick={onClose} className="justify-self-start text-sm font-black text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300">
-            건너뛰기
-          </button>
-          <div className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-black text-slate-500 dark:bg-slate-900 dark:text-slate-300">
-            {stepIndex + 1}/{steps.length}
-          </div>
-          <div className="flex items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setStepIndex((index) => Math.max(0, index - 1))}
-              disabled={stepIndex === 0}
-              className="grid h-10 w-10 place-items-center rounded-full bg-slate-100 text-slate-600 disabled:opacity-30 dark:bg-slate-900 dark:text-slate-200"
-              aria-label="이전 사용법"
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (isLast) onClose();
-                else setStepIndex((index) => Math.min(steps.length - 1, index + 1));
-              }}
-              className="inline-flex h-10 items-center justify-center rounded-full bg-teal-700 px-4 text-sm font-black text-white"
-            >
-              {isLast ? "시작하기" : "다음"}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function BibleGuideDemo({ demo }: { demo: BibleGuideStep["demo"] }) {
-  return (
-    <div className="relative min-h-[13rem] overflow-hidden rounded-2xl bg-slate-950 p-4 text-white shadow-inner">
-      {demo === "date" ? (
-        <div className="mx-auto max-w-[16rem] rounded-2xl bg-white p-3 text-slate-900 shadow-xl bible-guide-rise">
-          <div className="mb-2 grid grid-cols-3 gap-1 text-[11px] font-black">
-            <span className="rounded-md bg-teal-700 px-2 py-1 text-center text-white">성경</span>
-            <span className="rounded-md bg-slate-100 px-2 py-1 text-center text-slate-400">나눔</span>
-            <span className="rounded-md bg-slate-100 px-2 py-1 text-center text-slate-400">플랜</span>
-          </div>
-          <div className="mx-auto mb-3 flex w-fit items-center gap-1 rounded-full bg-teal-50 px-3 py-2 text-xs font-black text-teal-800 bible-guide-pulse">
-            <CalendarDays size={14} /> 2026.06.20
-          </div>
-          <div className="space-y-1.5 text-xs font-bold text-slate-600">
-            <div className="h-3 rounded-full bg-slate-200" />
-            <div className="h-3 w-10/12 rounded-full bg-slate-200" />
-            <div className="h-3 w-8/12 rounded-full bg-slate-200" />
-          </div>
-        </div>
-      ) : null}
-
-      {demo === "swipe" ? (
-        <div className="relative mx-auto max-w-[16rem] rounded-2xl bg-white p-3 text-slate-900 shadow-xl">
-          <div className="mb-3 flex items-center justify-between">
-            <ChevronLeft className="text-slate-300" size={20} />
-            <p className="text-sm font-black">누가복음 15장</p>
-            <ChevronRight className="text-slate-300" size={20} />
-          </div>
-          <div className="space-y-2 text-xs leading-5 text-slate-600">
-            <p><span className="font-black text-teal-700">1</span> 모든 세리와 죄인들이 말씀을 들으러 가까이 나아오니</p>
-            <p><span className="font-black text-teal-700">2</span> 바리새인들이 수군거려 이르되...</p>
-          </div>
-          <div className="bible-guide-swipe absolute top-1/2 grid h-11 w-11 place-items-center rounded-full bg-teal-700 text-white shadow-lg">
-            <ChevronRight size={24} />
-          </div>
-        </div>
-      ) : null}
-
-      {demo === "verse" ? (
-        <div className="mx-auto max-w-[17rem] rounded-2xl bg-white p-3 text-slate-900 shadow-xl">
-          <p className="mb-3 text-center text-sm font-black">마태복음 7장</p>
-          <div className="rounded-lg bg-teal-50 px-2 py-2 text-sm leading-7 text-teal-950 bible-guide-pulse">
-            <span className="mr-2 text-xs font-black text-teal-700">3</span>어찌하여 형제의 눈 속에 있는 티는 보고...
-          </div>
-          <div className="bible-guide-float mx-auto mt-4 grid w-40 grid-cols-2 gap-1 rounded-2xl bg-white p-1.5 text-xs font-black text-slate-800 shadow-2xl ring-1 ring-slate-100">
-            <span className="rounded-xl bg-slate-100 px-2 py-2 text-center"><Clipboard className="mx-auto mb-1" size={13} />복사</span>
-            <span className="rounded-xl bg-teal-700 px-2 py-2 text-center text-white"><Pencil className="mx-auto mb-1" size={13} />묵상</span>
-          </div>
-        </div>
-      ) : null}
-
-      {demo === "sharing" ? (
-        <div className="mx-auto max-w-[17rem] space-y-2">
-          <div className="text-center text-xs font-black text-slate-300">2026.06.20</div>
-          <div className="rounded-2xl bg-white p-3 text-slate-900 shadow-xl bible-guide-rise">
-            <div className="mb-2 flex items-center justify-between">
-              <p className="text-sm font-black text-teal-700">윤우</p>
-              <p className="text-[11px] font-bold text-slate-400">2026.06.20 오후 9:10</p>
-            </div>
-            <button type="button" className="mb-2 block rounded-lg bg-teal-50 px-2 py-1 text-left text-xs font-black text-teal-900">마태복음 7:3</button>
-            <p className="text-xs leading-5 text-slate-600">나눔 내용이 날짜별로 모여 보여요.</p>
-            <div className="mt-3 flex justify-end gap-1.5 text-xs font-black">
-              <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-slate-500 shadow-sm">
-                <span className="text-sm" aria-hidden="true">👍</span>
-                <span>2</span>
-              </span>
-              <span className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-rose-600 shadow-sm">
-                <span className="text-sm" aria-hidden="true">❤️</span>
-                <span>1</span>
-              </span>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {demo === "plan" ? (
-        <div className="mx-auto max-w-[17rem] rounded-2xl bg-white p-3 text-slate-900 shadow-xl">
-          <div className="mb-2 flex items-center justify-between text-xs font-black">
-            <ChevronLeft size={16} />
-            <span>2026.06</span>
-            <ChevronRight size={16} />
-          </div>
-          <div className="grid grid-cols-7 gap-1 text-center text-xs font-black">
-            {Array.from({ length: 21 }).map((_, index) => (
-              <div key={index} className={`relative grid h-7 place-items-center rounded-md ${index === 12 ? "bg-teal-50 text-teal-800 ring-2 ring-teal-600" : "bg-slate-100 text-slate-500"}`}>
-                {index + 1}
-                {(index === 5 || index === 12 || index === 16) ? <span className="absolute bottom-0.5 h-1.5 w-1.5 rounded-full bg-emerald-500" /> : null}
-                {(index === 8 || index === 12) ? <span className="absolute bottom-0.5 ml-2 h-1.5 w-1.5 rounded-full bg-amber-500" /> : null}
-              </div>
-            ))}
-          </div>
-          <div className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-center text-xs font-black text-emerald-700">전체 64%</div>
-        </div>
-      ) : null}
-
-      {demo === "settings" ? (
-        <div className="mx-auto max-w-[17rem] rounded-2xl bg-white p-3 text-slate-900 shadow-xl bible-guide-rise">
-          <div className="mb-3 flex items-center justify-between">
-            <p className="text-sm font-black">성경방 설정</p>
-            <Settings size={17} className="text-teal-700" />
-          </div>
-          <div className="space-y-2 text-xs font-black">
-            <div className="flex justify-between rounded-lg bg-slate-100 px-3 py-2"><span>번역본</span><span className="text-teal-700">개역개정</span></div>
-            <div className="flex justify-between rounded-lg bg-slate-100 px-3 py-2"><span>글씨 크기</span><span className="text-teal-700">크게</span></div>
-            <div className="flex justify-between rounded-lg bg-slate-100 px-3 py-2"><span>줄 간격</span><span className="text-teal-700">기본</span></div>
-            <div className="flex justify-between rounded-lg bg-slate-100 px-3 py-2"><span>멤버</span><span className="text-teal-700">ME</span></div>
-          </div>
-        </div>
-      ) : null}
-
-      <style>{`
-        @keyframes bibleGuideRise { 0% { opacity: 0; transform: translateY(14px) scale(0.98); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
-        @keyframes bibleGuidePulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(13, 148, 136, 0.18); } 50% { box-shadow: 0 0 0 10px rgba(13, 148, 136, 0); } }
-        @keyframes bibleGuideSwipe { 0% { left: 58%; opacity: 0; } 18% { opacity: 1; } 68% { left: 78%; opacity: 1; } 100% { left: 82%; opacity: 0; } }
-        @keyframes bibleGuideFloat { 0% { opacity: 0; transform: translateY(16px); } 100% { opacity: 1; transform: translateY(0); } }
-        .bible-guide-rise { animation: bibleGuideRise 420ms ease-out both; }
-        .bible-guide-pulse { animation: bibleGuidePulse 1500ms ease-in-out infinite; }
-        .bible-guide-swipe { animation: bibleGuideSwipe 1700ms ease-in-out infinite; }
-        .bible-guide-float { animation: bibleGuideFloat 520ms ease-out both; }
-      `}</style>
-    </div>
-  );
-}
 
 function TabButton({ active, icon, label, onClick }: { active: boolean; icon: ReactNode; label: string; onClick: () => void }) {
   return (
@@ -1272,7 +984,6 @@ function BibleRoomSettingsDrawer({
   onManage,
   onLeave,
   onHistory,
-  onGuide,
   onToast
 }: {
   open: boolean;
@@ -1293,7 +1004,6 @@ function BibleRoomSettingsDrawer({
   onManage: () => void;
   onLeave: () => void;
   onHistory: (member: RoomMember) => void;
-  onGuide: () => void;
   onToast: (message: string) => void;
 }) {
   const router = useRouter();
@@ -1335,9 +1045,6 @@ function BibleRoomSettingsDrawer({
         <div className="mb-6 grid gap-2">
           <button type="button" onClick={onInfo} className="rounded-lg bg-slate-100 px-4 py-3 text-left font-bold text-slate-800 dark:bg-slate-900 dark:text-slate-100">
             방 정보
-          </button>
-          <button type="button" onClick={onGuide} className="rounded-lg bg-slate-100 px-4 py-3 text-left font-bold text-slate-800 dark:bg-slate-900 dark:text-slate-100">
-            사용법 보기
           </button>
           <button
             type="button"
