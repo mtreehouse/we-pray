@@ -1,8 +1,25 @@
 # Changelog
 
+## 2026-06-20
+
+### Added
+- Added an app-wide usage guide entry in Settings with Bible Room and Pray Room guide selection. (`222c20d`)
+- Added the shared AppGuideOverlay component for settings-launched Bible Room and Pray Room guides. (`222c20d`)
+- Added the in-room Bible action guide with step navigation, target pulsing, scroll control, and persisted guide completion. (`686ca91`, `87fbb3f`)
+- Added Bible text line-height controls to Bible Room settings. (`72b0a00`)
+- Added Settings cache clearing for saved WePray browser preferences and reading state. (`0d37a98`)
+
+### Changed
+- Improved Bible Room guide behavior with guided tab movement, contextual action examples, and overlay handling. (`686ca91`)
+- Improved Toast visibility and styling, including higher overlay priority and app-wide color polish. (`cc3ddfa`, `0d37a98`)
+- Updated Pray Room post card and modal Korean text and accessibility details. (`61d4ac6`)
+- Updated Pray Room page header description text. (`67adba3`)
+- Prevented Prayer Room settings modal background scrolling while open. (`b54b975`)
+
 ## 2026-06-18
 
 ### Added
+- Added current-user ME indicators to Bible Room and Prayer Room member lists. (`86eb8b7`)
 - Added long-press copy support for Bible Room sharing cards with passage text and reflection content. (`0db0044`)
 - Added Pray Room prayer reactions with per-post prayer counts and a celebration effect. (`a722394`)
 - Added Bible Room reflection reactions for likes and hearts with per-user reaction state and animated feedback. (`8110754`)
