@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
-import { BookOpen, ChevronRight, HelpCircle, Info, LogIn, LogOut, MessageCircle, Moon, Pencil, Save, Sun, UserRound } from "lucide-react";
+import { BookOpen, ChevronRight, HelpCircle, Info, LogIn, LogOut, MessageCircle, Moon, Pencil, Save, Sun, Trash2, UserRound } from "lucide-react";
 import { AppGuideOverlay, type GuideKind } from "@/components/AppGuideOverlay";
 import { Modal } from "@/components/ui/Modal";
 import { Toast } from "@/components/ui/Toast";
@@ -64,6 +64,27 @@ export function SettingsMenu({ isLoggedIn, currentNickname, appVersion }: Settin
     window.dispatchEvent(new Event(APP_DARK_MODE_CHANGE_EVENT));
   }
 
+  function clearAppCache() {
+    const confirmed = confirm("이 브라우저에 저장된 WePray 기억 내용을 모두 삭제할까요? 다크모드, 성경방 보기 설정, 마지막 읽던 위치, 사용법 확인 기록이 초기화됩니다.");
+    if (confirmed === false) return;
+
+    try {
+      const keysToRemove: string[] = [];
+      for (let index = 0; index < window.localStorage.length; index += 1) {
+        const key = window.localStorage.key(index);
+        if (key?.startsWith("wepray:")) keysToRemove.push(key);
+      }
+      keysToRemove.forEach((key) => window.localStorage.removeItem(key));
+    } catch {
+      // Keep the current session usable even when storage access is restricted.
+    }
+
+    setAppDarkMode(false);
+    document.documentElement.classList.remove("dark");
+    window.dispatchEvent(new Event(APP_DARK_MODE_CHANGE_EVENT));
+    setToast("저장된 기억 내용을 삭제했습니다.");
+  }
+
   function openNicknameModal() {
     setNicknameInput(nickname);
     setNicknameMessage("");
@@ -119,9 +140,8 @@ export function SettingsMenu({ isLoggedIn, currentNickname, appVersion }: Settin
               aria-label="앱 다크모드"
             >
               <span
-                className={`absolute top-1 grid h-6 w-6 place-items-center rounded-full bg-white text-slate-600 shadow transition ${
-                  appDarkMode ? "left-7" : "left-1"
-                }`}
+                className={`absolute top-1 grid h-6 w-6 place-items-center rounded-full bg-white text-slate-600 shadow transition ${appDarkMode ? "left-7" : "left-1"
+                  }`}
               >
                 {appDarkMode ? <Moon size={14} /> : <Sun size={14} />}
               </span>
@@ -179,6 +199,21 @@ export function SettingsMenu({ isLoggedIn, currentNickname, appVersion }: Settin
             <span className="mt-1 block text-xs font-bold text-slate-500 dark:text-slate-400">v{appVersion}</span>
           </span>
           <ChevronRight size={18} className="text-slate-400" />
+        </button>
+
+        <button
+          type="button"
+          onClick={clearAppCache}
+          className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50/95 px-4 py-4 text-left shadow-soft dark:border-amber-900/70 dark:bg-amber-950/30"
+        >
+          <span className="min-w-0">
+            <span className="flex items-center gap-2 font-black text-amber-900 dark:text-amber-100">
+              <Trash2 size={17} className="text-amber-700 dark:text-amber-300" />
+              캐시 삭제
+            </span>
+            <span className="mt-1 block text-xs font-bold leading-5 text-amber-700/80 dark:text-amber-300/80">다크모드, 성경방 보기 설정, 마지막 읽던 위치를 초기화합니다.</span>
+          </span>
+          <ChevronRight size={18} className="shrink-0 text-amber-500 dark:text-amber-300" />
         </button>
 
         {isLoggedIn ? (
@@ -269,11 +304,10 @@ export function SettingsMenu({ isLoggedIn, currentNickname, appVersion }: Settin
           </label>
           {nicknameMessage ? (
             <p
-              className={`rounded-lg px-3 py-2 text-sm font-bold ${
-                nicknameMessageType === "success"
+              className={`rounded-lg px-3 py-2 text-sm font-bold ${nicknameMessageType === "success"
                   ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-200"
                   : "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-200"
-              }`}
+                }`}
             >
               {nicknameMessage}
             </p>

@@ -338,9 +338,7 @@ export function BibleRoomDetail({
     }
   }, []);
 
-  const closeGuide = useCallback(() => {
-    setGuideOpen(false);
-    setGuideStepIndex(0);
+  const markGuideDone = useCallback(() => {
     try {
       window.localStorage.setItem(bibleGuideStorageKey, "done");
     } catch {
@@ -348,16 +346,36 @@ export function BibleRoomDetail({
     }
   }, [bibleGuideStorageKey]);
 
+  const closeGuide = useCallback(() => {
+    setGuideOpen(false);
+    setGuideStepIndex(0);
+    markGuideDone();
+  }, [markGuideDone]);
+
+  const finishGuide = useCallback(() => {
+    setGuideOpen(false);
+    setGuideStepIndex(0);
+    setSettingsOpen(false);
+    bibleScrollYRef.current = 0;
+    setHeaderCollapseProgress(0);
+    selectTab("bible");
+    markGuideDone();
+
+    const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
+    window.requestAnimationFrame(scrollToTop);
+    window.setTimeout(scrollToTop, 180);
+  }, [markGuideDone, selectTab]);
+
   const advanceGuide = useCallback(() => {
     setGuideStepIndex((index) => {
       if (index >= bibleActionGuideSteps.length - 1) {
-        closeGuide();
+        finishGuide();
         return index;
       }
 
       return index + 1;
     });
-  }, [closeGuide]);
+  }, [finishGuide]);
 
   const selectDarkMode = useCallback((enabled: boolean) => {
     setDarkMode(enabled);
@@ -842,6 +860,7 @@ export function BibleRoomDetail({
         <div className="grid h-14 grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] items-center gap-2">
           <Link
             href="/bible-room"
+            data-guide="bible-back-button"
             className="grid h-10 w-10 place-items-center rounded-full border border-slate-200 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
             aria-label="성경방 목록으로"
           >
@@ -1007,6 +1026,7 @@ type BibleActionGuideStepKey = "date" | "reading" | "verse" | "complete" | "shar
 type BibleActionGuideStep = {
   key: BibleActionGuideStepKey;
   selector: string;
+  extraSelector?: string;
   description: string;
 };
 
@@ -1024,6 +1044,7 @@ const bibleActionGuideSteps: BibleActionGuideStep[] = [
   {
     key: "verse",
     selector: '[data-guide="bible-verse"], [data-guide="bible-chapter-header"]',
+    extraSelector: '[data-guide="bible-verse-tools"]',
     description: "구절을 누르면 복사와 묵상 작성 버튼을 사용할 수 있어요."
   },
   {
@@ -1084,6 +1105,8 @@ function BibleRoomActionGuide({
   onNext: () => void;
 }) {
   const [rect, setRect] = useState<SpotlightRect | null>(null);
+  const [extraRect, setExtraRect] = useState<SpotlightRect | null>(null);
+  const [backRect, setBackRect] = useState<SpotlightRect | null>(null);
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
   const step = bibleActionGuideSteps[stepIndex];
   const isLast = stepIndex === bibleActionGuideSteps.length - 1;
@@ -1096,32 +1119,42 @@ function BibleRoomActionGuide({
         ? current
         : { width: window.innerWidth, height: window.innerHeight }
     ));
-    const element = queryGuideElement(step.selector);
-    if (!element) {
-      setRect(null);
-      return;
-    }
 
-    const padding = 10;
-    const box = element.getBoundingClientRect();
-    const width = Math.min(window.innerWidth - 16, box.width + padding * 2);
-    const height = Math.min(window.innerHeight - 16, box.height + padding * 2);
-    const nextRect = {
-      top: clamp(box.top - padding, 8, Math.max(8, window.innerHeight - height - 8)),
-      left: clamp(box.left - padding, 8, Math.max(8, window.innerWidth - width - 8)),
-      width,
-      height
+    const getRect = (element: HTMLElement) => {
+      const padding = 10;
+      const box = element.getBoundingClientRect();
+      const width = Math.min(window.innerWidth - 16, box.width + padding * 2);
+      const height = Math.min(window.innerHeight - 16, box.height + padding * 2);
+
+      return {
+        top: clamp(box.top - padding, 8, Math.max(8, window.innerHeight - height - 8)),
+        left: clamp(box.left - padding, 8, Math.max(8, window.innerWidth - width - 8)),
+        width,
+        height
+      };
     };
 
-    setRect((current) => (
-      current
-      && Math.abs(current.top - nextRect.top) < 1
-      && Math.abs(current.left - nextRect.left) < 1
-      && Math.abs(current.width - nextRect.width) < 1
-      && Math.abs(current.height - nextRect.height) < 1
-        ? current
-        : nextRect
-    ));
+    const setStableRect = (setter: typeof setRect, nextRect: SpotlightRect | null) => {
+      setter((current) => {
+        if (!nextRect) return current === null ? current : null;
+        return current
+          && Math.abs(current.top - nextRect.top) < 1
+          && Math.abs(current.left - nextRect.left) < 1
+          && Math.abs(current.width - nextRect.width) < 1
+          && Math.abs(current.height - nextRect.height) < 1
+            ? current
+            : nextRect;
+      });
+    };
+
+    const element = queryGuideElement(step.selector);
+    setStableRect(setRect, element ? getRect(element) : null);
+
+    const extraElement = step.extraSelector ? queryGuideElement(step.extraSelector) : null;
+    setStableRect(setExtraRect, extraElement ? getRect(extraElement) : null);
+
+    const backElement = queryGuideElement('[data-guide="bible-back-button"]');
+    setStableRect(setBackRect, backElement ? getRect(backElement) : null);
   }, [open, step]);
 
   useEffect(() => {
@@ -1138,23 +1171,37 @@ function BibleRoomActionGuide({
     };
   }, [open, stepIndex, updateSpotlight]);
 
+  useEffect(() => {
+    if (!open) return;
+
+    const previousOverflow = document.body.style.overflow;
+    const previousTouchAction = document.body.style.touchAction;
+    document.body.style.overflow = "hidden";
+    document.body.style.touchAction = "none";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.touchAction = previousTouchAction;
+    };
+  }, [open]);
+
   if (!open || !step) return null;
 
-  const pulseStyle: CSSProperties | null = rect
-    ? {
-        top: rect.top,
-        left: rect.left,
-        width: rect.width,
-        height: rect.height,
-        borderRadius: 16
-      }
-    : null;
+  const pulseStyles = [rect, extraRect]
+    .filter((target): target is SpotlightRect => Boolean(target))
+    .map((target) => ({
+      top: target.top,
+      left: target.left,
+      width: target.width,
+      height: target.height,
+      borderRadius: 16
+    } satisfies CSSProperties));
 
   const tipWidth = Math.min(340, Math.max(0, viewport.width - 32));
   const tipLeft = rect
     ? clamp(rect.left + rect.width / 2 - tipWidth / 2, 16, Math.max(16, viewport.width - tipWidth - 16))
     : 16;
-  const estimatedTipHeight = step.key === "reading" ? 172 : 118;
+  const estimatedTipHeight = step.key === "reading" ? 198 : 118;
   const preferredTipTop = rect
     ? rect.top + rect.height + 10 <= viewport.height - estimatedTipHeight
       ? rect.top + rect.height + 10
@@ -1170,20 +1217,38 @@ function BibleRoomActionGuide({
 
   return (
     <div className="pointer-events-none fixed inset-0 z-[80]">
-      {pulseStyle ? (
-        <div className="absolute" style={pulseStyle}>
+      {(backRect
+        ? [
+            { left: 0, top: 0, width: viewport.width, height: backRect.top },
+            { left: 0, top: backRect.top, width: backRect.left, height: backRect.height },
+            { left: backRect.left + backRect.width, top: backRect.top, width: Math.max(0, viewport.width - backRect.left - backRect.width), height: backRect.height },
+            { left: 0, top: backRect.top + backRect.height, width: viewport.width, height: Math.max(0, viewport.height - backRect.top - backRect.height) }
+          ]
+        : [{ left: 0, top: 0, width: viewport.width, height: viewport.height }]
+      ).map((blocker, index) => (
+        <div
+          key={`guide-blocker-${index}`}
+          className="pointer-events-auto fixed"
+          style={blocker}
+          onClick={(event) => event.stopPropagation()}
+          onTouchMove={(event) => event.preventDefault()}
+          onWheel={(event) => event.preventDefault()}
+        />
+      ))}
+      {pulseStyles.map((pulseStyle, index) => (
+        <div key={`${step.key}-${index}`} className="absolute" style={pulseStyle}>
           <div className="absolute inset-0 rounded-[inherit] border-2 border-teal-400/90 shadow-[0_0_20px_rgba(45,212,191,0.55)] guide-target-pulse" />
           <div className="absolute -inset-2 rounded-[inherit] border-2 border-teal-300/55 guide-target-ripple" />
         </div>
-      ) : null}
+      ))}
       <div className="pointer-events-auto fixed max-w-[calc(100%-2rem)]" style={tipStyle}>
-        <div className="rounded-xl border border-slate-200 bg-white/95 p-3 text-slate-900 shadow-[0_14px_34px_rgba(15,23,42,0.18)] dark:border-slate-700 dark:bg-slate-950/95 dark:text-slate-50">
+        <div className="rounded-xl border border-teal-200 bg-teal-50/95 p-3 text-teal-950 shadow-[0_16px_38px_rgba(13,148,136,0.28)] ring-1 ring-white/70 backdrop-blur dark:border-teal-700/70 dark:bg-teal-950/95 dark:text-teal-50 dark:shadow-[0_16px_40px_rgba(0,0,0,0.45)] dark:ring-teal-400/10">
           <p className="text-sm font-black leading-5">{step.description}</p>
           <div className="mt-2.5 grid grid-cols-[auto_1fr_auto] items-center gap-2">
-            <button type="button" onClick={onClose} className="text-xs font-black text-slate-400 dark:text-slate-500">
-              닫기
+            <button type="button" onClick={onClose} className="text-xs font-black text-teal-700/70 dark:text-teal-200/70">
+              건너뛰기
             </button>
-            <div className="justify-self-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-black text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+            <div className="justify-self-center rounded-full bg-white/75 px-2 py-0.5 text-[11px] font-black text-teal-700 shadow-sm dark:bg-slate-900/70 dark:text-teal-200">
               {stepIndex + 1}/{bibleActionGuideSteps.length}
             </div>
             <div className="flex items-center gap-1.5">
@@ -1191,7 +1256,7 @@ function BibleRoomActionGuide({
                 type="button"
                 onClick={onBack}
                 disabled={stepIndex === 0}
-                className="grid h-8 w-8 place-items-center rounded-full bg-slate-100 text-slate-600 disabled:opacity-30 dark:bg-slate-800 dark:text-slate-200"
+                className="grid h-8 w-8 place-items-center rounded-full bg-white/80 text-teal-800 shadow-sm disabled:opacity-30 dark:bg-slate-900/80 dark:text-teal-100"
                 aria-label="이전 사용법"
               >
                 <ChevronLeft size={16} />
@@ -1199,7 +1264,7 @@ function BibleRoomActionGuide({
               <button
                 type="button"
                 onClick={onNext}
-                className="inline-flex h-8 min-w-[4.2rem] items-center justify-center whitespace-nowrap rounded-full bg-teal-700 px-3 text-xs font-black text-white"
+                className="inline-flex h-8 min-w-[4.2rem] items-center justify-center whitespace-nowrap rounded-full bg-teal-700 px-3 text-xs font-black text-white shadow-sm dark:bg-teal-500 dark:text-slate-950"
               >
                 {isLast ? "시작" : "다음"}
               </button>
@@ -1207,12 +1272,17 @@ function BibleRoomActionGuide({
           </div>
         </div>
         {step.key === "reading" ? (
-          <div className="mx-auto mt-2 flex w-28 items-center justify-between" aria-hidden>
-            <div className="grid h-9 w-9 place-items-center rounded-full border border-slate-200 bg-white text-teal-700 shadow-md guide-swipe-hint-left dark:border-slate-700 dark:bg-slate-900 dark:text-teal-200">
-              <ChevronLeft size={21} strokeWidth={2.8} />
+          <div
+            className="pointer-events-none relative mx-auto mt-3 flex h-16 w-64 max-w-[calc(100vw-3rem)] items-center justify-between rounded-full px-8"
+            aria-hidden
+          >
+            <div className="absolute inset-0 rounded-full border-2 border-teal-400/90 shadow-[0_0_24px_rgba(45,212,191,0.55)] guide-swipe-pulse" />
+            <div className="absolute -inset-2 rounded-full border-2 border-teal-300/55 guide-swipe-ripple" />
+            <div className="relative grid h-12 w-12 place-items-center rounded-full border border-white/80 bg-white/95 text-teal-700 shadow-lg backdrop-blur guide-swipe-hint-left dark:border-slate-700 dark:bg-slate-900/95 dark:text-teal-200">
+              <ChevronLeft size={28} strokeWidth={2.8} />
             </div>
-            <div className="grid h-9 w-9 place-items-center rounded-full border border-slate-200 bg-white text-teal-700 shadow-md guide-swipe-hint-right dark:border-slate-700 dark:bg-slate-900 dark:text-teal-200">
-              <ChevronRight size={21} strokeWidth={2.8} />
+            <div className="relative grid h-12 w-12 place-items-center rounded-full border border-white/80 bg-white/95 text-teal-700 shadow-lg backdrop-blur guide-swipe-hint-right dark:border-slate-700 dark:bg-slate-900/95 dark:text-teal-200">
+              <ChevronRight size={28} strokeWidth={2.8} />
             </div>
           </div>
         ) : null}
@@ -1227,15 +1297,17 @@ function BibleRoomActionGuide({
           100% { transform: scale(1.16); opacity: 0; }
         }
         @keyframes bible-guide-swipe-left {
-          0%, 100% { transform: translateX(0) scale(1); opacity: 0.55; }
+          0%, 100% { transform: translateX(0) scale(1); opacity: 0.62; }
           50% { transform: translateX(-18px) scale(1.08); opacity: 0.98; }
         }
         @keyframes bible-guide-swipe-right {
-          0%, 100% { transform: translateX(0) scale(1); opacity: 0.55; }
+          0%, 100% { transform: translateX(0) scale(1); opacity: 0.62; }
           50% { transform: translateX(18px) scale(1.08); opacity: 0.98; }
         }
         .guide-target-pulse { animation: bible-guide-target-pulse 1.1s ease-in-out infinite; }
         .guide-target-ripple { animation: bible-guide-target-ripple 1.1s ease-out infinite; }
+        .guide-swipe-pulse { animation: bible-guide-target-pulse 1.1s ease-in-out infinite; }
+        .guide-swipe-ripple { animation: bible-guide-target-ripple 1.1s ease-out infinite; }
         .guide-swipe-hint-left { animation: bible-guide-swipe-left 1.2s ease-in-out infinite; }
         .guide-swipe-hint-right { animation: bible-guide-swipe-right 1.2s ease-in-out infinite; }
       `}</style>
@@ -2202,6 +2274,29 @@ function SharingTab({
     () => reflections.find((reflection) => reflection.id === selectedReflectionId) ?? null,
     [reflections, selectedReflectionId]
   );
+  const guideSampleReflection = useMemo<Reflection>(() => ({
+    id: "bible-guide-sample-reflection",
+    bookCode: "MAT",
+    bookName: "마태복음",
+    chapter: 7,
+    verse: 3,
+    verseContent: {
+      ko_krv: "어찌하여 형제의 눈 속에 있는 티는 보고 네 눈 속에 있는 들보는 깨닫지 못하느냐",
+      ko_nkrv: "어찌하여 형제의 눈 속에 있는 티는 보고 네 눈 속에 있는 들보는 깨닫지 못하느냐"
+    },
+    planDate: null,
+    content: "이 말씀을 붙들고 내 마음을 먼저 돌아보려 합니다.",
+    createdAt: "2026-06-20T00:00:00.000Z",
+    userId: "guide-sample-user",
+    authorNickname: "가이드",
+    isMine: true,
+    likeCount: 1,
+    heartCount: 1,
+    isLikedByMe: false,
+    isHeartedByMe: false
+  }), []);
+  const guideHasSample = guideActive && reflections.length === 0;
+  const actionReflection = selectedReflection ?? (guideHasSample ? guideSampleReflection : null);
   const grouped = useMemo(() => {
     return reflections.reduce<Record<string, Reflection[]>>((acc, reflection) => {
       const key = reflection.planDate ?? reflection.createdAt.slice(0, 10);
@@ -2262,7 +2357,7 @@ ${selectedReflection.content}`;
   }, [onDelete, selectedReflection]);
 
   return (
-    <section data-guide="sharing-feed" className={`flex-1 px-4 pt-4 dark:bg-slate-950 ${selectedReflection ? "pb-28" : "pb-8"}`}>
+    <section data-guide="sharing-feed" className={`flex-1 px-4 pt-4 dark:bg-slate-950 ${actionReflection ? "pb-28" : "pb-8"}`}>
       {groupedEntries.length ? (
         groupedEntries.map(([date, items]) => (
           <div key={date} className="mb-6">
@@ -2286,24 +2381,41 @@ ${selectedReflection.content}`;
           </div>
         ))
       ) : (
-        <div className="rounded-lg border border-dashed border-slate-300 bg-white p-6 text-center text-sm leading-6 text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
-          아직 작성된 묵상이 없습니다.
-        </div>
+        guideHasSample ? (
+          <div className="grid gap-3">
+            <div className="mb-1 flex justify-center">
+              <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">가이드 예시</span>
+            </div>
+            <SharingReflectionCard
+              reflection={guideSampleReflection}
+              guideTarget
+              selected
+              translation={translation}
+              onSelect={() => undefined}
+              onOpenPassage={() => undefined}
+              onToggleReaction={async () => false}
+            />
+          </div>
+        ) : (
+          <div data-guide="sharing-card" className="rounded-lg border border-dashed border-slate-300 bg-white p-6 text-center text-sm leading-6 text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
+            아직 작성된 묵상이 없습니다.
+          </div>
+        )
       )}
       <div ref={sentinelRef} className="h-8" />
       {loading ? <p className="text-center text-sm font-bold text-slate-400">불러오는 중입니다.</p> : null}
       {!nextCursor && reflections.length ? <p className="text-center text-xs font-bold text-slate-300">마지막 나눔입니다.</p> : null}
 
-      {selectedReflection ? (
+      {actionReflection ? (
         <div
           data-guide="sharing-actions"
           className="fixed left-1/2 z-30 w-[15rem] max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-2xl border border-slate-200/80 bg-white/95 p-2 shadow-[0_14px_40px_rgba(15,23,42,0.20)] backdrop-blur dark:border-slate-700 dark:bg-slate-900/95"
           style={{ bottom: "max(1rem, env(safe-area-inset-bottom))" }}
         >
           <p className="mb-1 truncate text-center text-[11px] font-black text-slate-500 dark:text-slate-400">
-            {selectedReflection.authorNickname ?? "알 수 없음"}
+            {actionReflection.authorNickname ?? "알 수 없음"}
           </p>
-          <div className={`grid gap-1 ${selectedReflection.isMine || guideActive ? "grid-cols-3" : "grid-cols-1"}`}>
+          <div className={`grid gap-1 ${actionReflection.isMine || guideActive ? "grid-cols-3" : "grid-cols-1"}`}>
             <button
               type="button"
               onClick={() => void copySelectedReflection()}
@@ -2312,22 +2424,22 @@ ${selectedReflection.content}`;
               <Clipboard size={14} />
               복사
             </button>
-            {selectedReflection.isMine || guideActive ? (
+            {actionReflection.isMine || guideActive ? (
               <button
                 type="button"
                 onClick={editSelectedReflection}
-                disabled={!selectedReflection.isMine}
+                disabled={!selectedReflection?.isMine}
                 className="flex min-h-10 items-center justify-center gap-1 rounded-xl bg-teal-700 px-2.5 text-xs font-black text-white disabled:bg-teal-100 disabled:text-teal-700 dark:disabled:bg-teal-950/60 dark:disabled:text-teal-200"
               >
                 <Edit3 size={14} />
                 수정
               </button>
             ) : null}
-            {selectedReflection.isMine || guideActive ? (
+            {actionReflection.isMine || guideActive ? (
               <button
                 type="button"
                 onClick={deleteSelectedReflection}
-                disabled={!selectedReflection.isMine}
+                disabled={!selectedReflection?.isMine}
                 className="flex min-h-10 items-center justify-center gap-1 rounded-xl bg-rose-50 px-2.5 text-xs font-black text-rose-700 disabled:bg-rose-50 disabled:text-rose-400 dark:bg-rose-950/50 dark:text-rose-200 dark:disabled:bg-rose-950/30 dark:disabled:text-rose-300"
               >
                 <Trash2 size={14} />
