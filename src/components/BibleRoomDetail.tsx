@@ -677,6 +677,11 @@ export function BibleRoomDetail({
   async function updateReflection(content: string) {
     if (!editingReflection) return false;
 
+    if (content.trim() === editingReflection.content.trim()) {
+      showToast("수정된 내용이 없습니다.");
+      return false;
+    }
+
     const res = await fetch(`/api/bible-rooms/${room.id}/reflections/${editingReflection.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -935,8 +940,9 @@ export function BibleRoomDetail({
         onClose={() => setReflectionTarget(null)}
         onSubmit={saveReflection}
       />
-      <ReflectionEditModal
+      <ReflectionEditScreen
         reflection={editingReflection}
+        translation={translation}
         onClose={() => setEditingReflection(null)}
         onSubmit={updateReflection}
       />
@@ -2711,8 +2717,6 @@ function ReflectionComposeScreen({
     if (target) setContent("");
   }, [target]);
 
-  if (!target) return null;
-
   async function submit() {
     if (!target) return;
     setLoading(true);
@@ -2722,39 +2726,28 @@ function ReflectionComposeScreen({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-white">
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-slate-200 px-4">
-        <button type="button" onClick={onClose} className="grid h-10 w-10 place-items-center rounded-full border border-slate-200 text-slate-700" aria-label="닫기">
-          <X size={18} />
-        </button>
-        <h2 className="text-base font-black text-slate-950">묵상 작성</h2>
-        <button type="button" onClick={submit} disabled={loading} className="grid h-10 w-10 place-items-center rounded-full bg-teal-700 text-white disabled:opacity-60" aria-label="저장">
-          <Send size={17} />
-        </button>
-      </header>
-      <div className="flex-1 overflow-y-auto px-4 py-4">
-        <div className="mb-4 rounded-lg bg-teal-50 p-4">
-          <p className="mb-2 text-sm font-black text-teal-800">{target.bookName} {target.chapter}:{target.verse}</p>
-          <p className="text-sm leading-6 text-slate-700">{target.text}</p>
-        </div>
-        <textarea
-          value={content}
-          onChange={(event) => setContent(event.target.value)}
-          className="min-h-[45dvh] w-full rounded-lg border border-slate-200 px-4 py-3 leading-7 outline-none focus:border-teal-500"
-          placeholder="묵상을 기록해보세요."
-          maxLength={2000}
-        />
-      </div>
-    </div>
+    <ReflectionEditorScreen
+      open={Boolean(target)}
+      title="묵상 작성"
+      citation={target ? `${target.bookName} ${target.chapter}:${target.verse}` : ""}
+      verseText={target?.text ?? ""}
+      content={content}
+      loading={loading}
+      onContentChange={setContent}
+      onClose={onClose}
+      onSubmit={submit}
+    />
   );
 }
 
-function ReflectionEditModal({
+function ReflectionEditScreen({
   reflection,
+  translation,
   onClose,
   onSubmit
 }: {
   reflection: Reflection | null;
+  translation: BibleTranslationCode;
   onClose: () => void;
   onSubmit: (content: string) => Promise<boolean>;
 }) {
@@ -2766,26 +2759,80 @@ function ReflectionEditModal({
   }, [reflection]);
 
   async function submit() {
+    if (!reflection) return;
     setLoading(true);
     const ok = await onSubmit(content);
     setLoading(false);
     if (ok) setContent("");
   }
 
+  const verseNumber = reflection ? verseLabel(reflection.verseContent, reflection.verse) : "";
+  const citation = reflection ? `${reflection.bookName ?? reflection.bookCode} ${reflection.chapter}:${verseNumber}` : "";
+  const passageText = reflection?.verseContent ? verseText(reflection.verseContent, translation) : "선택한 구절 본문을 불러오지 못했습니다.";
+
   return (
-    <Modal title="묵상 수정" open={Boolean(reflection)} onClose={onClose}>
-      <div className="grid gap-3">
+    <ReflectionEditorScreen
+      open={Boolean(reflection)}
+      title="묵상 수정"
+      citation={citation}
+      verseText={passageText}
+      content={content}
+      loading={loading}
+      onContentChange={setContent}
+      onClose={onClose}
+      onSubmit={submit}
+    />
+  );
+}
+
+function ReflectionEditorScreen({
+  open,
+  title,
+  citation,
+  verseText: passageText,
+  content,
+  loading,
+  onContentChange,
+  onClose,
+  onSubmit
+}: {
+  open: boolean;
+  title: string;
+  citation: string;
+  verseText: string;
+  content: string;
+  loading: boolean;
+  onContentChange: (content: string) => void;
+  onClose: () => void;
+  onSubmit: () => void;
+}) {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-slate-950">
+      <header className="flex h-14 shrink-0 items-center justify-between border-b border-slate-200 px-4 dark:border-slate-800">
+        <button type="button" onClick={onClose} className="grid h-10 w-10 place-items-center rounded-full border border-slate-200 text-slate-700 dark:border-slate-700 dark:text-slate-200" aria-label="닫기">
+          <X size={18} />
+        </button>
+        <h2 className="text-base font-black text-slate-950 dark:text-slate-50">{title}</h2>
+        <button type="button" onClick={onSubmit} disabled={loading} className="grid h-10 w-10 place-items-center rounded-full bg-teal-700 text-white disabled:opacity-60" aria-label="저장">
+          <Send size={17} />
+        </button>
+      </header>
+      <div className="flex-1 overflow-y-auto px-4 py-4">
+        <div className="mb-4 rounded-lg bg-teal-50 p-4 dark:bg-teal-950/50">
+          <p className="mb-2 text-sm font-black text-teal-800 dark:text-teal-200">{citation}</p>
+          <p className="text-sm leading-6 text-slate-700 dark:text-slate-200">{passageText}</p>
+        </div>
         <textarea
           value={content}
-          onChange={(event) => setContent(event.target.value)}
-          className="min-h-40 rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-teal-500"
+          onChange={(event) => onContentChange(event.target.value)}
+          className="min-h-[45dvh] w-full rounded-lg border border-slate-200 bg-white px-4 py-3 leading-7 text-slate-900 outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
+          placeholder="묵상을 기록해보세요."
           maxLength={2000}
         />
-        <button type="button" onClick={submit} disabled={loading} className="rounded-lg bg-teal-700 px-4 py-3 font-bold text-white disabled:opacity-60">
-          저장
-        </button>
       </div>
-    </Modal>
+    </div>
   );
 }
 
