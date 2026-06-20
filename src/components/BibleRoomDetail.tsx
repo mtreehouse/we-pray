@@ -212,6 +212,7 @@ const BIBLE_TRANSLATION_STORAGE_KEY = "wepray:bible-translation";
 const BIBLE_FONT_SIZE_STORAGE_KEY = "wepray:bible-font-size";
 const BIBLE_LINE_HEIGHT_STORAGE_KEY = "wepray:bible-line-height";
 const BIBLE_DARK_MODE_STORAGE_PREFIX = "wepray:bible-room-dark-mode";
+const BIBLE_GUIDE_STORAGE_KEY = "wepray:bible-room-guide:v1";
 
 function isBibleTranslationCode(value: unknown): value is BibleTranslationCode {
   return value === "ko_krv" || value === "ko_nkrv";
@@ -256,6 +257,7 @@ export function BibleRoomDetail({
   const [editingReflection, setEditingReflection] = useState<Reflection | null>(null);
   const [passage, setPassage] = useState<Passage | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
   const [translationOpen, setTranslationOpen] = useState(false);
   const [translation, setTranslation] = useState<BibleTranslationCode>(DEFAULT_BIBLE_TRANSLATION);
   const [bibleFontSize, setBibleFontSize] = useState<BibleFontSize>(DEFAULT_BIBLE_FONT_SIZE);
@@ -277,6 +279,7 @@ export function BibleRoomDetail({
   const previousActiveTabRef = useRef<"bible" | "sharing" | "plan">(activeTab);
   const readingLocationStorageKey = useMemo(() => `wepray:bible-room:${room.id}:reading-location`, [room.id]);
   const bibleDarkModeStorageKey = useMemo(() => `${BIBLE_DARK_MODE_STORAGE_PREFIX}:${room.id}`, [room.id]);
+  const bibleGuideStorageKey = useMemo(() => `${BIBLE_GUIDE_STORAGE_KEY}:${currentUserId}`, [currentUserId]);
 
   const selectedPlanDay = useMemo(
     () => planDays.find((day) => day.date === readingDate) ?? null,
@@ -333,6 +336,15 @@ export function BibleRoomDetail({
       // localStorage may be unavailable in private browsing or restricted webviews.
     }
   }, []);
+
+  const closeGuide = useCallback(() => {
+    setGuideOpen(false);
+    try {
+      window.localStorage.setItem(bibleGuideStorageKey, "done");
+    } catch {
+      // localStorage may be unavailable in private browsing or restricted webviews.
+    }
+  }, [bibleGuideStorageKey]);
 
   const selectDarkMode = useCallback((enabled: boolean) => {
     setDarkMode(enabled);
@@ -464,6 +476,16 @@ export function BibleRoomDetail({
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    try {
+      if (window.localStorage.getItem(bibleGuideStorageKey) !== "done") {
+        setGuideOpen(true);
+      }
+    } catch {
+      // Keep the guide closed when localStorage is unavailable.
+    }
+  }, [bibleGuideStorageKey]);
+
+  useEffect(() => {
     const previousTab = previousActiveTabRef.current;
 
     if (activeTab === "bible" && previousTab !== "bible") {
@@ -474,7 +496,7 @@ export function BibleRoomDetail({
   }, [activeTab]);
 
   useEffect(() => {
-    if (!settingsOpen) return;
+    if (!settingsOpen && !guideOpen) return;
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -482,7 +504,7 @@ export function BibleRoomDetail({
     return () => {
       document.body.style.overflow = previousOverflow;
     };
-  }, [settingsOpen]);
+  }, [settingsOpen, guideOpen]);
 
 
   useEffect(() => {
@@ -868,7 +890,7 @@ export function BibleRoomDetail({
         reflections={reflections}
         translationLabel={bibleTranslationLabels[translation]}
         fontSize={bibleFontSize}
-          lineHeight={bibleLineHeight}
+        lineHeight={bibleLineHeight}
         darkMode={darkMode}
         onFontSizeChange={selectBibleFontSize}
         onLineHeightChange={selectBibleLineHeight}
@@ -878,8 +900,13 @@ export function BibleRoomDetail({
         onManage={() => setManageOpen(true)}
         onLeave={leaveRoom}
         onHistory={openMemberHistory}
+        onGuide={() => {
+          setSettingsOpen(false);
+          setGuideOpen(true);
+        }}
         onToast={showToast}
       />
+      <BibleRoomGuideOverlay open={guideOpen} onClose={closeGuide} onSelectTab={selectTab} />
       <BibleTranslationModal
         open={translationOpen}
         selected={translation}
@@ -918,6 +945,293 @@ export function BibleRoomDetail({
   );
 }
 
+
+type BibleGuideStep = {
+  tab: "bible" | "sharing" | "plan";
+  label: string;
+  title: string;
+  description: string;
+  bullets: string[];
+  demo: "date" | "swipe" | "verse" | "sharing" | "plan" | "settings";
+  icon: ReactNode;
+};
+
+function BibleRoomGuideOverlay({
+  open,
+  onClose,
+  onSelectTab
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSelectTab: (tab: "bible" | "sharing" | "plan") => void;
+}) {
+  const steps: BibleGuideStep[] = [
+    {
+      tab: "bible",
+      label: "성경",
+      title: "날짜를 고르고 말씀을 읽어요",
+      description: "상단 날짜를 눌러 읽을 플랜을 고르고, 오늘 읽을 장을 바로 확인할 수 있어요.",
+      bullets: ["날짜 버튼은 성경 탭 안에서만 움직여요.", "성경과 플랜 달력은 서로 독립적으로 선택돼요."],
+      demo: "date",
+      icon: <BookOpen size={16} />
+    },
+    {
+      tab: "bible",
+      label: "이동",
+      title: "좌우 슬라이드로 장을 넘겨요",
+      description: "말씀 영역을 좌우로 밀면 이전 장과 다음 장으로 넘어가고, 아래 버튼으로도 이동할 수 있어요.",
+      bullets: ["이동 후에는 현재 장 제목이 위에 고정돼요.", "처음/끝 버튼으로 첫 장과 마지막 장도 바로 갈 수 있어요."],
+      demo: "swipe",
+      icon: <ChevronRight size={16} />
+    },
+    {
+      tab: "bible",
+      label: "묵상",
+      title: "구절을 눌러 묵상을 작성해요",
+      description: "구절을 한 번 누르면 아래에 복사와 묵상 작성 버튼이 떠요. 내가 쓴 묵상이 있는 절에는 하트가 보여요.",
+      bullets: ["구절 번호도 함께 보여서 위치를 놓치지 않아요.", "묵상 저장 후에도 읽던 창과 스크롤을 유지해요."],
+      demo: "verse",
+      icon: <Pencil size={16} />
+    },
+    {
+      tab: "sharing",
+      label: "나눔",
+      title: "나눔은 플랜 날짜별로 모여요",
+      description: "나중에 작성해도 해당 말씀의 플랜 날짜 구역에 들어가고, 카드를 누르면 복사/수정/삭제를 사용할 수 있어요.",
+      bullets: ["좋아요와 하트 반응은 카드에서 바로 누를 수 있어요.", "구절을 누르면 해당 말씀 팝업이 그 절 위치로 열려요."],
+      demo: "sharing",
+      icon: <MessageCircle size={16} />
+    },
+    {
+      tab: "plan",
+      label: "플랜",
+      title: "달력에서 진행 상황을 확인해요",
+      description: "플랜 탭은 항상 오늘 날짜를 기본으로 보여주고, 완료와 나눔 여부는 점으로 표시돼요.",
+      bullets: ["초록 점은 말씀 읽기 완료, 노란 점은 나눔 작성이에요.", "달성률은 오늘까지 읽기 50%, 나눔 50% 기준이에요."],
+      demo: "plan",
+      icon: <CalendarDays size={16} />
+    },
+    {
+      tab: "bible",
+      label: "설정",
+      title: "읽기 환경은 설정에서 바꿔요",
+      description: "번역본, 글씨 크기, 줄 간격, 성경방 다크모드와 멤버 목록은 설정에서 관리해요.",
+      bullets: ["설정한 번역본과 줄 간격은 다시 들어와도 기억돼요.", "방 정보와 멤버 history도 설정에서 확인할 수 있어요."],
+      demo: "settings",
+      icon: <Settings size={16} />
+    }
+  ];
+  const [stepIndex, setStepIndex] = useState(0);
+  const step = steps[stepIndex];
+  const isLast = stepIndex === steps.length - 1;
+
+  useEffect(() => {
+    if (!open) return;
+    setStepIndex(0);
+    onSelectTab("bible");
+    // Only reset the walkthrough when it is opened. Tab changes recreate the parent callback.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    onSelectTab(step.tab);
+  }, [open, onSelectTab, step.tab]);
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[90] flex items-end justify-center bg-slate-950/62 px-4 pb-4 pt-10 backdrop-blur-sm sm:items-center">
+      <div className="w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-[0_24px_70px_rgba(0,0,0,0.32)] dark:bg-slate-950 dark:text-slate-100">
+        <div className="border-b border-slate-100 px-4 py-3 dark:border-slate-800">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-black text-teal-700 dark:text-teal-300">Bible Room 처음 사용법</p>
+              <h2 className="mt-0.5 truncate text-lg font-black text-slate-950 dark:text-slate-50">{step.title}</h2>
+            </div>
+            <button type="button" onClick={onClose} className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-slate-100 text-slate-600 dark:bg-slate-900 dark:text-slate-200" aria-label="사용법 닫기">
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+
+        <div className="grid gap-4 p-4">
+          <BibleGuideDemo demo={step.demo} />
+          <div>
+            <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-teal-50 px-2.5 py-1 text-xs font-black text-teal-700 dark:bg-teal-950/50 dark:text-teal-200">
+              {step.icon}
+              {step.label}
+            </div>
+            <p className="text-sm font-semibold leading-6 text-slate-600 dark:text-slate-300">{step.description}</p>
+            <div className="mt-3 grid gap-2">
+              {step.bullets.map((bullet) => (
+                <div key={bullet} className="flex items-start gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs font-bold leading-5 text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+                  <Check className="mt-0.5 shrink-0 text-teal-600 dark:text-teal-300" size={14} />
+                  <span>{bullet}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-t border-slate-100 px-4 py-3 dark:border-slate-800">
+          <button type="button" onClick={onClose} className="justify-self-start text-sm font-black text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300">
+            건너뛰기
+          </button>
+          <div className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-black text-slate-500 dark:bg-slate-900 dark:text-slate-300">
+            {stepIndex + 1}/{steps.length}
+          </div>
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setStepIndex((index) => Math.max(0, index - 1))}
+              disabled={stepIndex === 0}
+              className="grid h-10 w-10 place-items-center rounded-full bg-slate-100 text-slate-600 disabled:opacity-30 dark:bg-slate-900 dark:text-slate-200"
+              aria-label="이전 사용법"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (isLast) onClose();
+                else setStepIndex((index) => Math.min(steps.length - 1, index + 1));
+              }}
+              className="inline-flex h-10 items-center justify-center rounded-full bg-teal-700 px-4 text-sm font-black text-white"
+            >
+              {isLast ? "시작하기" : "다음"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BibleGuideDemo({ demo }: { demo: BibleGuideStep["demo"] }) {
+  return (
+    <div className="relative min-h-[13rem] overflow-hidden rounded-2xl bg-slate-950 p-4 text-white shadow-inner">
+      {demo === "date" ? (
+        <div className="mx-auto max-w-[16rem] rounded-2xl bg-white p-3 text-slate-900 shadow-xl bible-guide-rise">
+          <div className="mb-2 grid grid-cols-3 gap-1 text-[11px] font-black">
+            <span className="rounded-md bg-teal-700 px-2 py-1 text-center text-white">성경</span>
+            <span className="rounded-md bg-slate-100 px-2 py-1 text-center text-slate-400">나눔</span>
+            <span className="rounded-md bg-slate-100 px-2 py-1 text-center text-slate-400">플랜</span>
+          </div>
+          <div className="mx-auto mb-3 flex w-fit items-center gap-1 rounded-full bg-teal-50 px-3 py-2 text-xs font-black text-teal-800 bible-guide-pulse">
+            <CalendarDays size={14} /> 2026.06.20
+          </div>
+          <div className="space-y-1.5 text-xs font-bold text-slate-600">
+            <div className="h-3 rounded-full bg-slate-200" />
+            <div className="h-3 w-10/12 rounded-full bg-slate-200" />
+            <div className="h-3 w-8/12 rounded-full bg-slate-200" />
+          </div>
+        </div>
+      ) : null}
+
+      {demo === "swipe" ? (
+        <div className="relative mx-auto max-w-[16rem] rounded-2xl bg-white p-3 text-slate-900 shadow-xl">
+          <div className="mb-3 flex items-center justify-between">
+            <ChevronLeft className="text-slate-300" size={20} />
+            <p className="text-sm font-black">누가복음 15장</p>
+            <ChevronRight className="text-slate-300" size={20} />
+          </div>
+          <div className="space-y-2 text-xs leading-5 text-slate-600">
+            <p><span className="font-black text-teal-700">1</span> 모든 세리와 죄인들이 말씀을 들으러 가까이 나아오니</p>
+            <p><span className="font-black text-teal-700">2</span> 바리새인들이 수군거려 이르되...</p>
+          </div>
+          <div className="bible-guide-swipe absolute top-1/2 grid h-11 w-11 place-items-center rounded-full bg-teal-700 text-white shadow-lg">
+            <ChevronRight size={24} />
+          </div>
+        </div>
+      ) : null}
+
+      {demo === "verse" ? (
+        <div className="mx-auto max-w-[17rem] rounded-2xl bg-white p-3 text-slate-900 shadow-xl">
+          <p className="mb-3 text-center text-sm font-black">마태복음 7장</p>
+          <div className="rounded-lg bg-teal-50 px-2 py-2 text-sm leading-7 text-teal-950 bible-guide-pulse">
+            <span className="mr-2 text-xs font-black text-teal-700">3</span>어찌하여 형제의 눈 속에 있는 티는 보고...
+          </div>
+          <div className="bible-guide-float mx-auto mt-4 grid w-40 grid-cols-2 gap-1 rounded-2xl bg-white p-1.5 text-xs font-black text-slate-800 shadow-2xl ring-1 ring-slate-100">
+            <span className="rounded-xl bg-slate-100 px-2 py-2 text-center"><Clipboard className="mx-auto mb-1" size={13} />복사</span>
+            <span className="rounded-xl bg-teal-700 px-2 py-2 text-center text-white"><Pencil className="mx-auto mb-1" size={13} />묵상</span>
+          </div>
+        </div>
+      ) : null}
+
+      {demo === "sharing" ? (
+        <div className="mx-auto max-w-[17rem] space-y-2">
+          <div className="text-center text-xs font-black text-slate-300">2026.06.20</div>
+          <div className="rounded-2xl bg-white p-3 text-slate-900 shadow-xl bible-guide-rise">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-sm font-black text-teal-700">윤우</p>
+              <p className="text-[11px] font-bold text-slate-400">2026.06.20 오후 9:10</p>
+            </div>
+            <button type="button" className="mb-2 block rounded-lg bg-teal-50 px-2 py-1 text-left text-xs font-black text-teal-900">마태복음 7:3</button>
+            <p className="text-xs leading-5 text-slate-600">나눔 내용이 날짜별로 모여 보여요.</p>
+            <div className="mt-3 flex justify-end gap-1.5 text-xs font-black">
+              <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-slate-500 shadow-sm">
+                <span className="text-sm" aria-hidden="true">👍</span>
+                <span>2</span>
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-rose-600 shadow-sm">
+                <span className="text-sm" aria-hidden="true">❤️</span>
+                <span>1</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {demo === "plan" ? (
+        <div className="mx-auto max-w-[17rem] rounded-2xl bg-white p-3 text-slate-900 shadow-xl">
+          <div className="mb-2 flex items-center justify-between text-xs font-black">
+            <ChevronLeft size={16} />
+            <span>2026.06</span>
+            <ChevronRight size={16} />
+          </div>
+          <div className="grid grid-cols-7 gap-1 text-center text-xs font-black">
+            {Array.from({ length: 21 }).map((_, index) => (
+              <div key={index} className={`relative grid h-7 place-items-center rounded-md ${index === 12 ? "bg-teal-50 text-teal-800 ring-2 ring-teal-600" : "bg-slate-100 text-slate-500"}`}>
+                {index + 1}
+                {(index === 5 || index === 12 || index === 16) ? <span className="absolute bottom-0.5 h-1.5 w-1.5 rounded-full bg-emerald-500" /> : null}
+                {(index === 8 || index === 12) ? <span className="absolute bottom-0.5 ml-2 h-1.5 w-1.5 rounded-full bg-amber-500" /> : null}
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-center text-xs font-black text-emerald-700">전체 64%</div>
+        </div>
+      ) : null}
+
+      {demo === "settings" ? (
+        <div className="mx-auto max-w-[17rem] rounded-2xl bg-white p-3 text-slate-900 shadow-xl bible-guide-rise">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-sm font-black">성경방 설정</p>
+            <Settings size={17} className="text-teal-700" />
+          </div>
+          <div className="space-y-2 text-xs font-black">
+            <div className="flex justify-between rounded-lg bg-slate-100 px-3 py-2"><span>번역본</span><span className="text-teal-700">개역개정</span></div>
+            <div className="flex justify-between rounded-lg bg-slate-100 px-3 py-2"><span>글씨 크기</span><span className="text-teal-700">크게</span></div>
+            <div className="flex justify-between rounded-lg bg-slate-100 px-3 py-2"><span>줄 간격</span><span className="text-teal-700">기본</span></div>
+            <div className="flex justify-between rounded-lg bg-slate-100 px-3 py-2"><span>멤버</span><span className="text-teal-700">ME</span></div>
+          </div>
+        </div>
+      ) : null}
+
+      <style>{`
+        @keyframes bibleGuideRise { 0% { opacity: 0; transform: translateY(14px) scale(0.98); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+        @keyframes bibleGuidePulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(13, 148, 136, 0.18); } 50% { box-shadow: 0 0 0 10px rgba(13, 148, 136, 0); } }
+        @keyframes bibleGuideSwipe { 0% { left: 58%; opacity: 0; } 18% { opacity: 1; } 68% { left: 78%; opacity: 1; } 100% { left: 82%; opacity: 0; } }
+        @keyframes bibleGuideFloat { 0% { opacity: 0; transform: translateY(16px); } 100% { opacity: 1; transform: translateY(0); } }
+        .bible-guide-rise { animation: bibleGuideRise 420ms ease-out both; }
+        .bible-guide-pulse { animation: bibleGuidePulse 1500ms ease-in-out infinite; }
+        .bible-guide-swipe { animation: bibleGuideSwipe 1700ms ease-in-out infinite; }
+        .bible-guide-float { animation: bibleGuideFloat 520ms ease-out both; }
+      `}</style>
+    </div>
+  );
+}
+
 function TabButton({ active, icon, label, onClick }: { active: boolean; icon: ReactNode; label: string; onClick: () => void }) {
   return (
     <button
@@ -952,6 +1266,7 @@ function BibleRoomSettingsDrawer({
   onManage,
   onLeave,
   onHistory,
+  onGuide,
   onToast
 }: {
   open: boolean;
@@ -972,6 +1287,7 @@ function BibleRoomSettingsDrawer({
   onManage: () => void;
   onLeave: () => void;
   onHistory: (member: RoomMember) => void;
+  onGuide: () => void;
   onToast: (message: string) => void;
 }) {
   const router = useRouter();
@@ -1013,6 +1329,9 @@ function BibleRoomSettingsDrawer({
         <div className="mb-6 grid gap-2">
           <button type="button" onClick={onInfo} className="rounded-lg bg-slate-100 px-4 py-3 text-left font-bold text-slate-800 dark:bg-slate-900 dark:text-slate-100">
             방 정보
+          </button>
+          <button type="button" onClick={onGuide} className="rounded-lg bg-slate-100 px-4 py-3 text-left font-bold text-slate-800 dark:bg-slate-900 dark:text-slate-100">
+            사용법 보기
           </button>
           <button
             type="button"
@@ -1823,6 +2142,11 @@ function SharingTab({
   onToast: (message: string) => void;
   onToggleReaction: (reflection: Reflection, type: BibleReflectionReactionType) => Promise<boolean>;
 }) {
+  const [selectedReflectionId, setSelectedReflectionId] = useState<string | null>(null);
+  const selectedReflection = useMemo(
+    () => reflections.find((reflection) => reflection.id === selectedReflectionId) ?? null,
+    [reflections, selectedReflectionId]
+  );
   const grouped = useMemo(() => {
     return reflections.reduce<Record<string, Reflection[]>>((acc, reflection) => {
       const key = reflection.planDate ?? reflection.createdAt.slice(0, 10);
@@ -1840,8 +2164,45 @@ function SharingTab({
       ] as const);
   }, [grouped]);
 
+  useEffect(() => {
+    if (!selectedReflectionId || selectedReflection) return;
+    setSelectedReflectionId(null);
+  }, [selectedReflection, selectedReflectionId]);
+
+  const copySelectedReflection = useCallback(async () => {
+    if (!selectedReflection) return;
+
+    const bookName = selectedReflection.bookName ?? selectedReflection.bookCode;
+    const verseNumber = verseLabel(selectedReflection.verseContent, selectedReflection.verse);
+    const passageText = verseText(selectedReflection.verseContent, translation);
+    const copyText = `[${bookName} ${selectedReflection.chapter}:${verseNumber}]
+${passageText}
+
+${selectedReflection.content}`;
+
+    try {
+      await navigator.clipboard.writeText(copyText);
+      onToast("나눔을 복사했습니다.");
+      setSelectedReflectionId(null);
+    } catch {
+      onToast("복사에 실패했습니다.");
+    }
+  }, [onToast, selectedReflection, translation]);
+
+  const editSelectedReflection = useCallback(() => {
+    if (!selectedReflection || !selectedReflection.isMine) return;
+    setSelectedReflectionId(null);
+    onEdit(selectedReflection);
+  }, [onEdit, selectedReflection]);
+
+  const deleteSelectedReflection = useCallback(() => {
+    if (!selectedReflection || !selectedReflection.isMine) return;
+    setSelectedReflectionId(null);
+    onDelete(selectedReflection);
+  }, [onDelete, selectedReflection]);
+
   return (
-    <section className="flex-1 px-4 pb-8 pt-4 dark:bg-slate-950">
+    <section className={`flex-1 px-4 pt-4 dark:bg-slate-950 ${selectedReflection ? "pb-28" : "pb-8"}`}>
       {groupedEntries.length ? (
         groupedEntries.map(([date, items]) => (
           <div key={date} className="mb-6">
@@ -1853,11 +2214,10 @@ function SharingTab({
                 <SharingReflectionCard
                   key={reflection.id}
                   reflection={reflection}
+                  selected={selectedReflection?.id === reflection.id}
                   translation={translation}
+                  onSelect={() => setSelectedReflectionId((current) => (current === reflection.id ? null : reflection.id))}
                   onOpenPassage={onOpenPassage}
-                  onEdit={onEdit}
-                  onDelete={onDelete}
-                  onToast={onToast}
                   onToggleReaction={onToggleReaction}
                 />
               ))}
@@ -1872,50 +2232,69 @@ function SharingTab({
       <div ref={sentinelRef} className="h-8" />
       {loading ? <p className="text-center text-sm font-bold text-slate-400">불러오는 중입니다.</p> : null}
       {!nextCursor && reflections.length ? <p className="text-center text-xs font-bold text-slate-300">마지막 나눔입니다.</p> : null}
+
+      {selectedReflection ? (
+        <div
+          className="fixed left-1/2 z-30 w-[15rem] max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-2xl border border-slate-200/80 bg-white/95 p-2 shadow-[0_14px_40px_rgba(15,23,42,0.20)] backdrop-blur dark:border-slate-700 dark:bg-slate-900/95"
+          style={{ bottom: "max(1rem, env(safe-area-inset-bottom))" }}
+        >
+          <p className="mb-1 truncate text-center text-[11px] font-black text-slate-500 dark:text-slate-400">
+            {selectedReflection.authorNickname ?? "알 수 없음"}
+          </p>
+          <div className={`grid gap-1 ${selectedReflection.isMine ? "grid-cols-3" : "grid-cols-1"}`}>
+            <button
+              type="button"
+              onClick={() => void copySelectedReflection()}
+              className="flex min-h-10 items-center justify-center gap-1 rounded-xl bg-slate-100 px-2.5 text-xs font-black text-slate-800 dark:bg-slate-800 dark:text-slate-100"
+            >
+              <Clipboard size={14} />
+              복사
+            </button>
+            {selectedReflection.isMine ? (
+              <button
+                type="button"
+                onClick={editSelectedReflection}
+                className="flex min-h-10 items-center justify-center gap-1 rounded-xl bg-teal-700 px-2.5 text-xs font-black text-white"
+              >
+                <Edit3 size={14} />
+                수정
+              </button>
+            ) : null}
+            {selectedReflection.isMine ? (
+              <button
+                type="button"
+                onClick={deleteSelectedReflection}
+                className="flex min-h-10 items-center justify-center gap-1 rounded-xl bg-rose-50 px-2.5 text-xs font-black text-rose-700 dark:bg-rose-950/50 dark:text-rose-200"
+              >
+                <Trash2 size={14} />
+                삭제
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
 
 function SharingReflectionCard({
   reflection,
+  selected,
   translation,
+  onSelect,
   onOpenPassage,
-  onEdit,
-  onDelete,
-  onToast,
   onToggleReaction
 }: {
   reflection: Reflection;
+  selected: boolean;
   translation: BibleTranslationCode;
+  onSelect: () => void;
   onOpenPassage: (reflection: Reflection) => void;
-  onEdit: (reflection: Reflection) => void;
-  onDelete: (reflection: Reflection) => void;
-  onToast: (message: string) => void;
   onToggleReaction: (reflection: Reflection, type: BibleReflectionReactionType) => Promise<boolean>;
 }) {
-  const longPressTimerRef = useRef<number | null>(null);
-  const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
-  const suppressClickRef = useRef(false);
   const burstTimerRef = useRef<number | null>(null);
-  const [actionOpen, setActionOpen] = useState(false);
   const [reactionLoading, setReactionLoading] = useState<BibleReflectionReactionType | null>(null);
   const [reactionBurst, setReactionBurst] = useState<{ emoji: string; key: number } | null>(null);
-
-  const clearLongPress = useCallback(() => {
-    if (longPressTimerRef.current) {
-      window.clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-  }, []);
-
-  const openActions = useCallback(() => {
-    clearLongPress();
-    suppressClickRef.current = true;
-    window.setTimeout(() => {
-      suppressClickRef.current = false;
-    }, 350);
-    setActionOpen(true);
-  }, [clearLongPress]);
 
   const showReactionBurst = useCallback((emoji: string) => {
     if (burstTimerRef.current) {
@@ -1928,24 +2307,6 @@ function SharingReflectionCard({
       burstTimerRef.current = null;
     }, 1250);
   }, []);
-
-  const copyReflection = useCallback(async () => {
-    const bookName = reflection.bookName ?? reflection.bookCode;
-    const verseNumber = verseLabel(reflection.verseContent, reflection.verse);
-    const passageText = verseText(reflection.verseContent, translation);
-    const copyText = `[${bookName} ${reflection.chapter}:${verseNumber}]
-${passageText}
-
-${reflection.content}`;
-
-    try {
-      await navigator.clipboard.writeText(copyText);
-      onToast("나눔을 복사했습니다.");
-      setActionOpen(false);
-    } catch {
-      onToast("복사에 실패했습니다.");
-    }
-  }, [onToast, reflection, translation]);
 
   async function toggleReaction(type: BibleReflectionReactionType) {
     if (reactionLoading) return;
@@ -1960,74 +2321,56 @@ ${reflection.content}`;
     }
   }
 
-  function startLongPress(event: React.PointerEvent<HTMLElement>) {
-    clearLongPress();
-    pointerStartRef.current = { x: event.clientX, y: event.clientY };
-    longPressTimerRef.current = window.setTimeout(openActions, 650);
-  }
-
-  function cancelLongPress() {
-    clearLongPress();
-    pointerStartRef.current = null;
-  }
-
-  function cancelLongPressOnMove(event: React.PointerEvent<HTMLElement>) {
-    if (!pointerStartRef.current) return;
-
-    const dx = Math.abs(event.clientX - pointerStartRef.current.x);
-    const dy = Math.abs(event.clientY - pointerStartRef.current.y);
-    if (dx > 10 || dy > 10) cancelLongPress();
-  }
-
   useEffect(() => {
     return () => {
-      clearLongPress();
       if (burstTimerRef.current) window.clearTimeout(burstTimerRef.current);
     };
-  }, [clearLongPress]);
+  }, []);
 
   return (
     <article
-      className="rounded-lg bg-white p-4 shadow-soft dark:bg-slate-900 dark:shadow-none"
-      onClickCapture={(event) => {
-        if (!suppressClickRef.current) return;
-
-        event.preventDefault();
-        event.stopPropagation();
-        suppressClickRef.current = false;
+      role="button"
+      tabIndex={0}
+      onClick={onSelect}
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onSelect();
+        }
       }}
-      onPointerDown={startLongPress}
-      onPointerMove={cancelLongPressOnMove}
-      onPointerUp={cancelLongPress}
-      onPointerCancel={cancelLongPress}
-      onPointerLeave={cancelLongPress}
-      onContextMenu={(event) => {
-        event.preventDefault();
-        openActions();
-      }}
+      className={`cursor-pointer rounded-lg bg-white p-4 shadow-soft transition dark:bg-slate-900 dark:shadow-none ${
+        selected ? "ring-2 ring-teal-500 dark:ring-teal-400" : ""
+      }`}
     >
       {reactionBurst ? <ReactionEmojiBurst key={reactionBurst.key} emoji={reactionBurst.emoji} /> : null}
       <div className="mb-3 flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className={`truncate font-bold ${reflection.isMine ? "text-teal-700 dark:text-teal-300" : "text-slate-900 dark:text-slate-100"}`}>
+          <p className={`truncate font-bold ${selected || reflection.isMine ? "text-teal-700 dark:text-teal-300" : "text-slate-900 dark:text-slate-100"}`}>
             {reflection.authorNickname ?? "알 수 없음"}
           </p>
           <button
             type="button"
-            onClick={() => onOpenPassage(reflection)}
+            onClick={(event) => {
+              event.stopPropagation();
+              onOpenPassage(reflection);
+            }}
             className="mt-1 text-left text-xs font-black text-slate-500 underline decoration-slate-300 underline-offset-2 dark:text-slate-400 dark:decoration-slate-600"
           >
             {reflection.bookName ?? reflection.bookCode} {reflection.chapter}:{verseLabel(reflection.verseContent, reflection.verse)}
           </button>
         </div>
-        <time className="shrink-0 text-xs font-semibold text-slate-400">
+        <time className="shrink-0 text-xs font-semibold text-slate-400 dark:text-slate-500">
           {new Intl.DateTimeFormat("ko-KR", { dateStyle: "short", timeStyle: "short" }).format(new Date(reflection.createdAt))}
         </time>
       </div>
       {reflection.verseContent ? (
         <button
           type="button"
-          onClick={() => onOpenPassage(reflection)}
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpenPassage(reflection);
+          }}
           className="mb-3 block w-full rounded-lg bg-teal-50 px-3 py-2 text-left text-sm leading-6 text-teal-950 dark:bg-teal-950/50 dark:text-teal-100"
         >
           {verseText(reflection.verseContent, translation)}
@@ -2052,42 +2395,6 @@ ${reflection.content}`;
           onClick={() => void toggleReaction("HEART")}
         />
       </div>
-      {actionOpen ? (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/10 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-[1px]" onClick={() => setActionOpen(false)}>
-          <div className={`grid w-full max-w-xs gap-2 rounded-2xl border border-slate-200 bg-white/95 p-2 shadow-[0_18px_55px_rgba(15,23,42,0.24)] backdrop-blur dark:border-slate-700 dark:bg-slate-900/95 ${reflection.isMine ? "grid-cols-3" : "grid-cols-1"}`} onClick={(event) => event.stopPropagation()}>
-            <button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={() => void copyReflection()} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl bg-slate-100 text-xs font-black text-slate-700 dark:bg-slate-800 dark:text-slate-100">
-              <span className="text-lg" aria-hidden="true">📋</span>
-              복사
-            </button>
-            {reflection.isMine ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setActionOpen(false);
-                  onEdit(reflection);
-                }}
-                className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl bg-slate-100 text-xs font-black text-slate-700 dark:bg-slate-800 dark:text-slate-100"
-              >
-                <Edit3 size={18} />
-                수정
-              </button>
-            ) : null}
-            {reflection.isMine ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setActionOpen(false);
-                  onDelete(reflection);
-                }}
-                className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl bg-rose-50 text-xs font-black text-rose-700 dark:bg-rose-950/50 dark:text-rose-200"
-              >
-                <Trash2 size={18} />
-                삭제
-              </button>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
     </article>
   );
 }
