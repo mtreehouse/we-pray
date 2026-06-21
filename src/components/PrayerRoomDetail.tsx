@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Clipboard, Crown, Edit3, History, Settings, Trash2, X } from "lucide-react";
+import { CheckCircle2, ChevronLeft, Clipboard, Crown, Edit3, History, Settings, Trash2, X } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Toast } from "@/components/ui/Toast";
 
@@ -23,6 +23,7 @@ type PrayerPost = {
   content: string;
   createdAt: string;
   updatedAt: string;
+  answeredAt: string | null;
   prayerCount: number;
   isPrayedByMe: boolean;
 };
@@ -102,6 +103,7 @@ export function PrayerRoomDetail({ room, currentUserId, members, posts, nextCurs
   const [historyPosts, setHistoryPosts] = useState<PrayerPost[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [pendingPrayerIds, setPendingPrayerIds] = useState<string[]>([]);
+  const [pendingAnswerIds, setPendingAnswerIds] = useState<string[]>([]);
   const [prayerEffectVisible, setPrayerEffectVisible] = useState(false);
   const [prayerEffectKey, setPrayerEffectKey] = useState(0);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -129,6 +131,16 @@ export function PrayerRoomDetail({ room, currentUserId, members, posts, nextCurs
     setSelectedPost((post) => post ? update(post) : post);
   }
 
+  function updatePostAnsweredState(postId: string, answeredAt: string | null) {
+    const update = (post: PrayerPost) => post.id === postId ? { ...post, answeredAt } : post;
+
+    setLoadedPosts((items) => items.map(update));
+    setHistoryPosts((items) => items.map(update));
+    setSelectedPost((post) => post ? update(post) : post);
+    setEditingPost((post) => post ? update(post) : post);
+  }
+
+
   async function togglePostPrayer(post: PrayerPost) {
     if (pendingPrayerIds.includes(post.id)) return;
 
@@ -149,6 +161,29 @@ export function PrayerRoomDetail({ room, currentUserId, members, posts, nextCurs
       setToast("함께 기도하기에 실패했습니다.");
     } finally {
       setPendingPrayerIds((ids) => ids.filter((id) => id !== post.id));
+    }
+  }
+
+  async function togglePostAnswered(post: PrayerPost) {
+    if (post.userId !== currentUserId || pendingAnswerIds.includes(post.id)) return;
+
+    setPendingAnswerIds((ids) => [...ids, post.id]);
+
+    try {
+      const res = await fetch(`/api/rooms/${room.id}/posts/${post.id}/answer`, { method: "POST" });
+      const data = (await res.json()) as { answeredAt?: string | null; error?: string };
+
+      if (!res.ok || !("answeredAt" in data)) {
+        setToast(data.error ?? "응답 표시 저장에 실패했습니다.");
+        return;
+      }
+
+      updatePostAnsweredState(post.id, data.answeredAt ?? null);
+      setToast(data.answeredAt ? "기도 응답으로 표시했습니다." : "응답 표시를 해제했습니다.");
+    } catch {
+      setToast("응답 표시 저장에 실패했습니다.");
+    } finally {
+      setPendingAnswerIds((ids) => ids.filter((id) => id !== post.id));
     }
   }
 
@@ -351,13 +386,13 @@ export function PrayerRoomDetail({ room, currentUserId, members, posts, nextCurs
       />
       {selectedPost ? (
         <div
-          className="fixed left-1/2 z-30 w-[13rem] max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-2xl border border-slate-200/80 bg-white/95 p-2 shadow-[0_14px_40px_rgba(15,23,42,0.20)] backdrop-blur dark:border-slate-700 dark:bg-slate-900/95"
+          className="fixed left-1/2 z-30 w-[16.5rem] max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-2xl border border-slate-200/80 bg-white/95 p-2 shadow-[0_14px_40px_rgba(15,23,42,0.20)] backdrop-blur dark:border-slate-700 dark:bg-slate-900/95"
           style={{ bottom: "max(1rem, env(safe-area-inset-bottom))" }}
         >
           <p className="mb-1 truncate text-center text-[11px] font-black text-slate-500 dark:text-slate-400">
             {selectedPost.authorNickname ?? "알 수 없음"}
           </p>
-          <div className={`grid gap-1 ${selectedPost.userId === currentUserId ? "grid-cols-2" : "grid-cols-1"}`}>
+          <div className={`grid gap-1 ${selectedPost.userId === currentUserId ? "grid-cols-3" : "grid-cols-1"}`}>
             <button
               type="button"
               onClick={copySelectedPost}
@@ -374,6 +409,21 @@ export function PrayerRoomDetail({ room, currentUserId, members, posts, nextCurs
               >
                 <Edit3 size={14} />
                 수정
+              </button>
+            ) : null}
+            {selectedPost.userId === currentUserId ? (
+              <button
+                type="button"
+                onClick={() => void togglePostAnswered(selectedPost)}
+                disabled={pendingAnswerIds.includes(selectedPost.id)}
+                className={`flex min-h-10 items-center justify-center gap-1 rounded-xl px-2.5 text-xs font-black transition disabled:opacity-60 ${
+                  selectedPost.answeredAt
+                    ? "bg-amber-100 text-amber-800 dark:bg-amber-950/55 dark:text-amber-100"
+                    : "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/45 dark:text-indigo-200"
+                }`}
+              >
+                <CheckCircle2 size={14} />
+                {selectedPost.answeredAt ? "응답됨" : "응답"}
               </button>
             ) : null}
           </div>
@@ -435,11 +485,16 @@ function PrayerPostCard({
           onSelect();
         }
       }}
-      className={`w-full cursor-pointer rounded-lg bg-white p-4 text-left shadow-soft transition dark:border dark:border-slate-800 dark:bg-slate-900 dark:shadow-none ${
-        selected ? "ring-2 ring-teal-500 dark:ring-teal-400" : ""
-      }`}
+      className={`relative w-full cursor-pointer overflow-hidden rounded-lg bg-white p-4 text-left shadow-soft transition dark:border dark:border-slate-800 dark:bg-slate-900 dark:shadow-none ${
+        post.answeredAt ? "ring-1 ring-amber-200/80 dark:ring-amber-800/60" : ""
+      } ${selected ? "ring-2 ring-teal-500 dark:ring-teal-400" : ""}`}
     >
-      <div className="block w-full text-left">
+      {post.answeredAt ? (
+        <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rotate-[-13deg] rounded-lg border-2 border-amber-500/15 px-3 py-1.5 text-xl font-black tracking-[0.18em] text-amber-600/12 dark:border-amber-300/12 dark:text-amber-200/10" aria-hidden="true">
+          ANSWERED
+        </div>
+      ) : null}
+      <div className="relative block w-full text-left">
         <div className="mb-3 flex items-center justify-between gap-3">
           <p className={`font-bold ${selected || isMine ? "text-teal-700 dark:text-teal-300" : "text-slate-900 dark:text-slate-100"}`}>
             {post.authorNickname ?? "알 수 없음"}
@@ -450,7 +505,13 @@ function PrayerPostCard({
         </div>
         <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700 dark:text-slate-300">{post.content}</p>
       </div>
-      <div className="mt-3 flex items-center justify-end">
+      <div className="relative mt-3 flex items-center justify-between gap-3">
+        {post.answeredAt ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-black text-amber-700 ring-1 ring-amber-100 dark:bg-amber-950/45 dark:text-amber-100 dark:ring-amber-900/70">
+            <CheckCircle2 size={13} />
+            응답됨
+          </span>
+        ) : <span aria-hidden="true" />}
         <button
           type="button"
           onClick={(event) => {
@@ -907,6 +968,12 @@ function MemberHistoryModal({
                 <time className="text-xs font-bold text-slate-400 dark:text-slate-500">
                   {formatKoreanDateTime(post.createdAt)}
                 </time>
+                {post.answeredAt ? (
+                  <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-black text-amber-700 dark:bg-amber-950/45 dark:text-amber-100">
+                    <CheckCircle2 size={13} />
+                    응답됨
+                  </span>
+                ) : null}
                 <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-700 dark:text-slate-300">{post.content}</p>
               </article>
             ))}

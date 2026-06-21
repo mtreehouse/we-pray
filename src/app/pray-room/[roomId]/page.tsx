@@ -59,6 +59,7 @@ export default async function PrayerRoomDetailPage({ params }: PageProps) {
         content: true,
         createdAt: true,
         updatedAt: true,
+        answeredAt: true,
         user: { select: { nickname: true } },
         prayers: {
           where: { userId: user.id },
@@ -105,6 +106,7 @@ export default async function PrayerRoomDetailPage({ params }: PageProps) {
         content: post.content,
         createdAt: post.createdAt.toISOString(),
         updatedAt: post.updatedAt.toISOString(),
+        answeredAt: post.answeredAt?.toISOString() ?? null,
         prayerCount: post._count.prayers,
         isPrayedByMe: post.prayers.length > 0
       }))}

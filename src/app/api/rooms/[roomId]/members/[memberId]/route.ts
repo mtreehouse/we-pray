@@ -45,6 +45,7 @@ export async function GET(_req: Request, { params }: Params) {
       content: true,
       createdAt: true,
       updatedAt: true,
+      answeredAt: true,
       user: { select: { nickname: true } },
       prayers: {
         where: { userId: user.id },
@@ -64,6 +65,7 @@ export async function GET(_req: Request, { params }: Params) {
       content: post.content,
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
+      answeredAt: post.answeredAt,
       prayerCount: post._count.prayers,
       isPrayedByMe: post.prayers.length > 0
     }))

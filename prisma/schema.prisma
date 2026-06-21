@@ -102,13 +102,14 @@ model RoomMember {
 }
 
 model PrayerPost {
-  id        String    @id @default(cuid())
-  roomId    String
-  userId    String
-  content   String
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+  id         String    @id @default(cuid())
+  roomId     String
+  userId     String
+  content    String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  answeredAt DateTime?
+  deletedAt  DateTime?
 
   room    PrayerRoom         @relation(fields: [roomId], references: [id])
   user    User               @relation(fields: [userId], references: [id])

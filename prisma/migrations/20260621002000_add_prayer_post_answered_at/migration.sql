@@ -1,0 +1,1 @@
+ALTER TABLE "PrayerPost" ADD COLUMN "answeredAt" TIMESTAMP(3);
