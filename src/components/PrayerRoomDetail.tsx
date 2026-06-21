@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { CheckCircle2, ChevronLeft, Clipboard, Crown, Edit3, History, Settings, Trash2, X } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Toast } from "@/components/ui/Toast";
+import { noBrowserInputSuggestions, noBrowserPasswordSuggestions } from "@/lib/browser-input";
 
 type RoomMember = {
   id: string;
@@ -674,6 +675,7 @@ function PrayerPostModal({
     <Modal title={post ? "기도제목 수정" : "기도제목 작성"} open={open} onClose={onClose}>
       <div className="grid gap-3">
         <textarea
+          {...noBrowserInputSuggestions}
           value={content}
           onChange={(event) => {
             setContent(event.target.value);
@@ -905,6 +907,7 @@ function RoomManageModal({
     <Modal title="방 관리" open={open} onClose={onClose}>
       <div className="grid gap-3">
         <input
+          {...noBrowserInputSuggestions}
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
@@ -912,6 +915,7 @@ function RoomManageModal({
           maxLength={40}
         />
         <textarea
+          {...noBrowserInputSuggestions}
           value={description}
           onChange={(event) => setDescription(event.target.value)}
           className="min-h-24 rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
@@ -919,6 +923,7 @@ function RoomManageModal({
           maxLength={300}
         />
         <input
+          {...noBrowserPasswordSuggestions}
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"

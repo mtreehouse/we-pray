@@ -26,6 +26,7 @@ import {
 import { Modal } from "@/components/ui/Modal";
 import { Toast } from "@/components/ui/Toast";
 import { APP_DARK_MODE_STORAGE_KEY } from "@/lib/ui-settings";
+import { noBrowserInputSuggestions, noBrowserPasswordSuggestions } from "@/lib/browser-input";
 
 type RoomMember = {
   id: string;
@@ -1704,6 +1705,7 @@ function BibleRoomManageModal({
     <Modal title="성경방 관리" open={open} onClose={onClose}>
       <div className="grid gap-3">
         <input
+          {...noBrowserInputSuggestions}
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           className="rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-teal-500"
@@ -1711,6 +1713,7 @@ function BibleRoomManageModal({
           maxLength={40}
         />
         <textarea
+          {...noBrowserInputSuggestions}
           value={description}
           onChange={(event) => setDescription(event.target.value)}
           className="min-h-24 rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-teal-500"
@@ -1718,6 +1721,7 @@ function BibleRoomManageModal({
           maxLength={300}
         />
         <input
+          {...noBrowserPasswordSuggestions}
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           className="rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-teal-500"
@@ -3089,6 +3093,7 @@ function ReflectionEditorScreen({
           <p className="text-sm leading-6 text-slate-700 dark:text-slate-200">{passageText}</p>
         </div>
         <textarea
+          {...noBrowserInputSuggestions}
           value={content}
           onChange={(event) => onContentChange(event.target.value)}
           className="min-h-[45dvh] w-full rounded-lg border border-slate-200 bg-white px-4 py-3 leading-7 text-slate-900 outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"

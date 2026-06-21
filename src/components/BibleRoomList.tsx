@@ -7,6 +7,7 @@ import { BookOpen, CalendarDays, Crown, Plus, Search } from "lucide-react";
 import { RoomListGuide } from "@/components/RoomListGuide";
 import { Modal } from "@/components/ui/Modal";
 import { Toast } from "@/components/ui/Toast";
+import { noBrowserInputSuggestions, noBrowserPasswordSuggestions } from "@/lib/browser-input";
 
 type BibleRoomSummary = {
   id: string;
@@ -194,6 +195,7 @@ function FindBibleRoomModal({
       <div className="grid gap-3">
         <div className="flex gap-2">
           <input
+            {...noBrowserInputSuggestions}
             value={q}
             onChange={(event) => setQ(event.target.value)}
             onKeyDown={(event) => {
@@ -257,6 +259,7 @@ function FindBibleRoomModal({
               <>
                 <p className="mb-2 text-sm font-bold text-slate-800 dark:text-slate-200">{selectedRoom.title} 입장</p>
                 <input
+                  {...noBrowserPasswordSuggestions}
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
@@ -329,6 +332,7 @@ function CreateBibleRoomModal({
     <Modal title="성경방 생성" open={open} onClose={onClose}>
       <div className="grid max-h-[75dvh] gap-4 overflow-y-auto pr-1">
         <input
+          {...noBrowserInputSuggestions}
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
@@ -336,6 +340,7 @@ function CreateBibleRoomModal({
           maxLength={40}
         />
         <textarea
+          {...noBrowserInputSuggestions}
           value={description}
           onChange={(event) => setDescription(event.target.value)}
           className="min-h-24 rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
@@ -343,6 +348,7 @@ function CreateBibleRoomModal({
           maxLength={300}
         />
         <input
+          {...noBrowserPasswordSuggestions}
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"

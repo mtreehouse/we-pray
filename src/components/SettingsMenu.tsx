@@ -8,6 +8,7 @@ import { BookOpen, ChevronRight, HelpCircle, Info, LogIn, LogOut, MessageCircle,
 import { AppGuideOverlay, type GuideKind } from "@/components/AppGuideOverlay";
 import { Modal } from "@/components/ui/Modal";
 import { Toast } from "@/components/ui/Toast";
+import { noBrowserInputSuggestions } from "@/lib/browser-input";
 import { WithdrawLink } from "@/components/WithdrawLink";
 import { APP_DARK_MODE_CHANGE_EVENT, APP_DARK_MODE_STORAGE_KEY } from "@/lib/ui-settings";
 
@@ -291,6 +292,7 @@ export function SettingsMenu({ isLoggedIn, currentNickname, appVersion }: Settin
           <label className="grid gap-2 text-sm font-black text-slate-700 dark:text-slate-200">
             새 닉네임
             <input
+              {...noBrowserInputSuggestions}
               value={nicknameInput}
               onChange={(event) => {
                 setNicknameInput(event.target.value);
