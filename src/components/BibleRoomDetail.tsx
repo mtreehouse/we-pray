@@ -230,6 +230,12 @@ function isBibleLineHeight(value: unknown): value is BibleLineHeight {
   return value === "compact" || value === "normal" || value === "relaxed" || value === "spacious";
 }
 
+function isIosDevice() {
+  if (typeof window === "undefined") return false;
+  const userAgent = window.navigator.userAgent;
+  return /iPad|iPhone|iPod/.test(userAgent) || (window.navigator.platform === "MacIntel" && window.navigator.maxTouchPoints > 1);
+}
+
 
 export function BibleRoomDetail({
   room,
@@ -1871,6 +1877,7 @@ function BibleTab({
   guideStepKey?: BibleActionGuideStepKey | null;
 }) {
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const edgeSwipeGuardRef = useRef<{ x: number; y: number; active: boolean } | null>(null);
   const readingTopRef = useRef<HTMLDivElement | null>(null);
   const firstVerseRef = useRef<HTMLDivElement | null>(null);
   const pendingChapterScrollRef = useRef(false);
@@ -1899,6 +1906,47 @@ function BibleTab({
   useEffect(() => {
     setSelectedVerse(null);
   }, [currentChapter?.bookCode, currentChapter?.chapter, selectedDate, translation]);
+
+  useEffect(() => {
+    const readingArea = readingTopRef.current;
+    if (!readingArea || !isIosDevice()) return;
+
+    const edgeWidth = 32;
+    const horizontalThreshold = 6;
+
+    function handleTouchStart(event: TouchEvent) {
+      const touch = event.touches[0];
+      edgeSwipeGuardRef.current = touch ? { x: touch.clientX, y: touch.clientY, active: touch.clientX <= edgeWidth } : null;
+    }
+
+    function handleTouchMove(event: TouchEvent) {
+      const start = edgeSwipeGuardRef.current;
+      const touch = event.touches[0];
+      if (!start?.active || !touch) return;
+
+      const deltaX = touch.clientX - start.x;
+      const deltaY = touch.clientY - start.y;
+      if (deltaX > horizontalThreshold && Math.abs(deltaX) > Math.abs(deltaY) * 1.05) {
+        event.preventDefault();
+      }
+    }
+
+    function clearEdgeSwipeGuard() {
+      edgeSwipeGuardRef.current = null;
+    }
+
+    readingArea.addEventListener("touchstart", handleTouchStart, { passive: true });
+    readingArea.addEventListener("touchmove", handleTouchMove, { passive: false });
+    readingArea.addEventListener("touchend", clearEdgeSwipeGuard, { passive: true });
+    readingArea.addEventListener("touchcancel", clearEdgeSwipeGuard, { passive: true });
+
+    return () => {
+      readingArea.removeEventListener("touchstart", handleTouchStart);
+      readingArea.removeEventListener("touchmove", handleTouchMove);
+      readingArea.removeEventListener("touchend", clearEdgeSwipeGuard);
+      readingArea.removeEventListener("touchcancel", clearEdgeSwipeGuard);
+    };
+  }, []);
 
   useEffect(() => {
     if (!guideStepKey) return;
@@ -2037,7 +2085,7 @@ function BibleTab({
       <div
         ref={readingTopRef}
         data-reading-area="true"
-        className="scroll-mt-12"
+        className="scroll-mt-12 overscroll-x-contain"
         onTouchStart={(event) => {
           const touch = event.touches[0];
           touchStartRef.current = touch ? { x: touch.clientX, y: touch.clientY } : null;
