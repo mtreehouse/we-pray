@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Crown, Plus, Search } from "lucide-react";
+import { RoomListGuide } from "@/components/RoomListGuide";
 import { Modal } from "@/components/ui/Modal";
 import { Toast } from "@/components/ui/Toast";
 
@@ -25,6 +26,7 @@ export function PrayRoomList({ rooms }: { rooms: RoomSummary[] }) {
   return (
     <div className="pb-24">
       <Toast message={toast} onClose={() => setToast("")} />
+      <RoomListGuide />
       <div className="grid gap-3">
         {rooms.length ? (
           rooms.map((room) => (
@@ -54,7 +56,7 @@ export function PrayRoomList({ rooms }: { rooms: RoomSummary[] }) {
 
       <div className="fixed inset-x-0 bottom-0 z-20 safe-bottom">
         <div className="mx-auto flex w-full max-w-xl justify-end px-4 pb-4">
-          <div className="flex items-center gap-2 rounded-full border border-white/80 bg-white/90 p-1.5 shadow-[0_16px_42px_rgba(15,23,42,0.18)] backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
+          <div data-room-list-guide="actions" className="flex items-center gap-2 rounded-full border border-white/80 bg-white/90 p-1.5 shadow-[0_16px_42px_rgba(15,23,42,0.18)] backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
             <button
               type="button"
               onClick={() => setFindOpen(true)}

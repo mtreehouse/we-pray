@@ -288,6 +288,7 @@ export function BibleRoomDetail({
   );
   const planDateRange = useMemo(() => getPlanDateRange(room, planDays), [planDays, room]);
   const currentChapter = chapters[chapterIndex] ?? null;
+  const activeBibleGuideSteps = bibleActionGuideSteps;
 
   const showToast = useCallback((message: string) => {
     setToast(message);
@@ -368,14 +369,14 @@ export function BibleRoomDetail({
 
   const advanceGuide = useCallback(() => {
     setGuideStepIndex((index) => {
-      if (index >= bibleActionGuideSteps.length - 1) {
+      if (index >= activeBibleGuideSteps.length - 1) {
         finishGuide();
         return index;
       }
 
       return index + 1;
     });
-  }, [finishGuide]);
+  }, [activeBibleGuideSteps.length, finishGuide]);
 
   const selectDarkMode = useCallback((enabled: boolean) => {
     setDarkMode(enabled);
@@ -519,8 +520,14 @@ export function BibleRoomDetail({
 
   useEffect(() => {
     if (!guideOpen) return;
+    if (guideStepIndex <= activeBibleGuideSteps.length - 1) return;
+    setGuideStepIndex(Math.max(0, activeBibleGuideSteps.length - 1));
+  }, [activeBibleGuideSteps.length, guideOpen, guideStepIndex]);
 
-    const step = bibleActionGuideSteps[guideStepIndex];
+  useEffect(() => {
+    if (!guideOpen) return;
+
+    const step = activeBibleGuideSteps[guideStepIndex];
     if (!step) return;
 
     if (step.key === "sharing") {
@@ -545,7 +552,7 @@ export function BibleRoomDetail({
 
     const timers = [90, 260, 520, 900].map((delay) => window.setTimeout(scrollToGuideTarget, delay));
     return () => timers.forEach((timer) => window.clearTimeout(timer));
-  }, [guideOpen, guideStepIndex, selectTab]);
+  }, [activeBibleGuideSteps, guideOpen, guideStepIndex, selectTab]);
 
   useEffect(() => {
     const previousTab = previousActiveTabRef.current;
@@ -921,7 +928,7 @@ export function BibleRoomDetail({
           lineHeight={bibleLineHeight}
           onReflect={setReflectionTarget}
           onToast={showToast}
-          guideStepKey={guideOpen ? bibleActionGuideSteps[guideStepIndex]?.key : null}
+          guideStepKey={guideOpen ? activeBibleGuideSteps[guideStepIndex]?.key : null}
         />
       ) : null}
 
@@ -937,7 +944,7 @@ export function BibleRoomDetail({
           onDelete={deleteReflection}
           onToast={showToast}
           onToggleReaction={toggleReflectionReaction}
-          guideActive={guideOpen && bibleActionGuideSteps[guideStepIndex]?.key === "sharing"}
+          guideActive={guideOpen && activeBibleGuideSteps[guideStepIndex]?.key === "sharing"}
         />
       ) : null}
 
@@ -975,8 +982,9 @@ export function BibleRoomDetail({
       />
       <BibleRoomActionGuide
         open={guideOpen}
+        steps={activeBibleGuideSteps}
         stepIndex={guideStepIndex}
-        onClose={closeGuide}
+        onClose={finishGuide}
         onBack={() => setGuideStepIndex((index) => Math.max(0, index - 1))}
         onNext={advanceGuide}
       />
@@ -1093,12 +1101,14 @@ function queryGuideElement(selector: string) {
 
 function BibleRoomActionGuide({
   open,
+  steps,
   stepIndex,
   onClose,
   onBack,
   onNext
 }: {
   open: boolean;
+  steps: BibleActionGuideStep[];
   stepIndex: number;
   onClose: () => void;
   onBack: () => void;
@@ -1108,8 +1118,8 @@ function BibleRoomActionGuide({
   const [extraRect, setExtraRect] = useState<SpotlightRect | null>(null);
   const [backRect, setBackRect] = useState<SpotlightRect | null>(null);
   const [viewport, setViewport] = useState({ width: 0, height: 0 });
-  const step = bibleActionGuideSteps[stepIndex];
-  const isLast = stepIndex === bibleActionGuideSteps.length - 1;
+  const step = steps[stepIndex];
+  const isLast = stepIndex === steps.length - 1;
 
   const updateSpotlight = useCallback(() => {
     if (!open || !step) return;
@@ -1249,7 +1259,7 @@ function BibleRoomActionGuide({
               건너뛰기
             </button>
             <div className="justify-self-center rounded-full bg-white/75 px-2 py-0.5 text-[11px] font-black text-teal-700 shadow-sm dark:bg-slate-900/70 dark:text-teal-200">
-              {stepIndex + 1}/{bibleActionGuideSteps.length}
+              {stepIndex + 1}/{steps.length}
             </div>
             <div className="flex items-center gap-1.5">
               <button
@@ -1764,6 +1774,41 @@ function MemberReflectionHistoryModal({
   );
 }
 
+const BIBLE_GUIDE_SAMPLE_CHAPTER: ReadingChapter = {
+  bookCode: "MAT",
+  bookName: "마태복음",
+  chapter: 7,
+  verses: [
+    {
+      verse: 1,
+      content: {
+        ko_krv: "비판을 받지 아니하려거든 비판하지 말라",
+        ko_nkrv: "비판을 받지 아니하려거든 비판하지 말라"
+      },
+      reflectionCount: 0,
+      myReflectionId: null
+    },
+    {
+      verse: 2,
+      content: {
+        ko_krv: "너희의 비판하는 그 비판으로 너희가 비판을 받을 것이요 너희의 헤아리는 그 헤아림으로 너희가 헤아림을 받을 것이니라",
+        ko_nkrv: "너희가 비판하는 그 비판으로 너희가 비판을 받을 것이요 너희가 헤아리는 그 헤아림으로 너희가 헤아림을 받을 것이니라"
+      },
+      reflectionCount: 0,
+      myReflectionId: null
+    },
+    {
+      verse: 3,
+      content: {
+        ko_krv: "어찌하여 형제의 눈 속에 있는 티는 보고 네 눈 속에 있는 들보는 깨닫지 못하느냐",
+        ko_nkrv: "어찌하여 형제의 눈 속에 있는 티는 보고 네 눈 속에 있는 들보는 깨닫지 못하느냐"
+      },
+      reflectionCount: 0,
+      myReflectionId: null
+    }
+  ]
+};
+
 function BibleTab({
   days,
   selectedDate,
@@ -1818,6 +1863,11 @@ function BibleTab({
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [selectedVerse, setSelectedVerse] = useState<VerseTarget | null>(null);
   const [swipeHint, setSwipeHint] = useState<{ direction: "prev" | "next"; strength: number; offset: number } | null>(null);
+  const isGuideSampleChapter = !currentChapter && (guideStepKey === "reading" || guideStepKey === "verse" || guideStepKey === "complete");
+  const displayChapter = currentChapter ?? (isGuideSampleChapter ? BIBLE_GUIDE_SAMPLE_CHAPTER : null);
+  const displayChapterIndex = isGuideSampleChapter ? 0 : chapterIndex;
+  const displayChapterCount = isGuideSampleChapter ? 1 : chapters.length;
+  const showCompleteButton = isGuideSampleChapter || (displayChapterIndex >= displayChapterCount - 1 && Boolean(onToggleComplete));
 
   function scrollToFirstVerse() {
     window.requestAnimationFrame(() => {
@@ -1844,13 +1894,13 @@ function BibleTab({
       return;
     }
 
-    if (!currentChapter?.verses.length) return;
+    if (!displayChapter?.verses.length) return;
 
-    const firstVerse = currentChapter.verses[0];
+    const firstVerse = displayChapter.verses[0];
     setSelectedVerse({
-      bookCode: currentChapter.bookCode,
-      bookName: currentChapter.bookName,
-      chapter: currentChapter.chapter,
+      bookCode: displayChapter.bookCode,
+      bookName: displayChapter.bookName,
+      chapter: displayChapter.chapter,
       verse: firstVerse.verse,
       text: verseText(firstVerse.content, translation)
     });
@@ -1858,7 +1908,7 @@ function BibleTab({
     window.requestAnimationFrame(() => {
       firstVerseRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
     });
-  }, [currentChapter, guideStepKey, translation]);
+  }, [displayChapter, guideStepKey, translation]);
 
   function goPrev() {
     if (chapterIndex === 0) return;
@@ -2029,7 +2079,7 @@ function BibleTab({
       >
         {readingLoading ? (
           <div data-guide="bible-reading" className="border-b border-slate-100 bg-white p-6 text-center text-sm font-bold text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400">본문을 불러오는 중입니다.</div>
-        ) : currentChapter ? (
+        ) : displayChapter ? (
           <article data-guide="bible-reading" className="bg-white px-4 pb-4 pt-3 dark:bg-slate-950">
             {swipeHint ? (
               <div
@@ -2048,7 +2098,7 @@ function BibleTab({
               <button
                 type="button"
                 onClick={goPrevInPlace}
-                disabled={chapterIndex === 0}
+                disabled={displayChapterIndex === 0}
                 className="grid h-10 w-10 place-items-center rounded-full border border-slate-200 text-slate-700 disabled:opacity-30 dark:border-slate-700 dark:text-slate-200"
                 aria-label="이전 장"
                 title="이전 장"
@@ -2056,13 +2106,13 @@ function BibleTab({
                 <ChevronLeft size={19} />
               </button>
               <div className="min-w-0 text-center">
-                <h2 className="truncate text-lg font-black text-slate-950 dark:text-slate-50">{currentChapter.bookName} {currentChapter.chapter}장</h2>
-                <p className="text-xs font-bold text-slate-400 dark:text-slate-500">{chapterIndex + 1} / {chapters.length}</p>
+                <h2 className="truncate text-lg font-black text-slate-950 dark:text-slate-50">{displayChapter.bookName} {displayChapter.chapter}장</h2>
+                <p className="text-xs font-bold text-slate-400 dark:text-slate-500">{displayChapterIndex + 1} / {displayChapterCount}</p>
               </div>
               <button
                 type="button"
                 onClick={goNextInPlace}
-                disabled={chapterIndex >= chapters.length - 1}
+                disabled={displayChapterIndex >= displayChapterCount - 1}
                 className="grid h-10 w-10 place-items-center rounded-full border border-slate-200 text-slate-700 disabled:opacity-30 dark:border-slate-700 dark:text-slate-200"
                 aria-label="다음 장"
                 title="다음 장"
@@ -2071,18 +2121,18 @@ function BibleTab({
               </button>
             </div>
             <div ref={firstVerseRef} className={`grid scroll-mt-12 ${lineHeight === "compact" ? "gap-0" : "gap-1.5"}`}>
-              {currentChapter.verses.map((verse, index) => (
+              {displayChapter.verses.map((verse, index) => (
                 <VerseRow
                   key={verse.verse}
-                  chapter={currentChapter}
+                  chapter={displayChapter}
                   verse={verse}
                   translation={translation}
                   fontSize={fontSize}
                   lineHeight={lineHeight}
                   selected={Boolean(
                     selectedVerse
-                      && selectedVerse.bookCode === currentChapter.bookCode
-                      && selectedVerse.chapter === currentChapter.chapter
+                      && selectedVerse.bookCode === displayChapter.bookCode
+                      && selectedVerse.chapter === displayChapter.chapter
                       && selectedVerse.verse === verse.verse
                   )}
                   guideTarget={index === 0}
@@ -2091,7 +2141,7 @@ function BibleTab({
               ))}
             </div>
             <div data-guide="bible-bottom-nav" className="mt-5 flex items-center gap-2 border-t border-slate-100 pt-4 dark:border-slate-800">
-              {chapterIndex > 0 ? (
+              {displayChapterIndex > 0 ? (
                 <button
                   type="button"
                   onClick={() => {
@@ -2107,7 +2157,7 @@ function BibleTab({
                 onClick={() => {
                   goPrev();
                 }}
-                disabled={chapterIndex === 0}
+                disabled={displayChapterIndex === 0}
                 className="flex min-h-12 flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-black text-slate-700 disabled:opacity-35 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
               >
                 <ChevronLeft size={17} />
@@ -2118,13 +2168,13 @@ function BibleTab({
                 onClick={() => {
                   goNext();
                 }}
-                disabled={chapterIndex >= chapters.length - 1}
+                disabled={displayChapterIndex >= displayChapterCount - 1}
                 className="flex min-h-12 flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-black text-slate-700 disabled:opacity-35 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
               >
                 다음 장
                 <ChevronRight size={17} />
               </button>
-              {chapterIndex < chapters.length - 1 ? (
+              {displayChapterIndex < displayChapterCount - 1 ? (
                 <button
                   type="button"
                   onClick={() => {
@@ -2136,10 +2186,10 @@ function BibleTab({
                 </button>
               ) : null}
             </div>
-            {chapterIndex >= chapters.length - 1 && onToggleComplete ? (
+            {showCompleteButton ? (
               <button
                 type="button"
-                onClick={onToggleComplete}
+                onClick={isGuideSampleChapter ? undefined : onToggleComplete}
                 disabled={completing}
                 data-guide="bible-complete"
                 className={`mt-3 flex min-h-14 w-full items-center justify-center gap-2 rounded-lg border px-4 py-3 font-black transition disabled:opacity-60 ${
