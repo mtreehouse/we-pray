@@ -169,14 +169,14 @@ export function AppGuideOverlay({ kind, open, onClose }: { kind: GuideKind; open
 
   return (
     <div className="fixed inset-0 z-[90] flex items-end justify-center bg-slate-950/62 px-4 pb-4 pt-10 backdrop-blur-sm sm:items-center">
-      <div className="w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-[0_24px_70px_rgba(0,0,0,0.32)] dark:bg-slate-950 dark:text-slate-100">
-        <div className="border-b border-slate-100 px-4 py-3 dark:border-slate-800">
+      <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-amber-300 bg-amber-50 shadow-[0_24px_70px_rgba(120,53,15,0.38)] dark:border-amber-600/70 dark:bg-amber-950 dark:text-amber-50">
+        <div className="border-b border-amber-200 bg-amber-100/70 px-4 py-3 dark:border-amber-800 dark:bg-amber-900/55">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-xs font-black text-teal-700 dark:text-teal-300">{title}</p>
-              <h2 className="mt-0.5 truncate text-lg font-black text-slate-950 dark:text-slate-50">{step.title}</h2>
+              <p className="text-xs font-black text-amber-800 dark:text-amber-100">{title}</p>
+              <h2 className="mt-0.5 truncate text-lg font-black text-amber-950 dark:text-amber-50">{step.title}</h2>
             </div>
-            <button type="button" onClick={onClose} className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-slate-100 text-slate-600 dark:bg-slate-900 dark:text-slate-200" aria-label="사용법 닫기">
+            <button type="button" onClick={onClose} className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/80 text-amber-800 shadow-sm dark:bg-slate-900/70 dark:text-amber-100" aria-label="사용법 닫기">
               <X size={18} />
             </button>
           </div>
@@ -185,15 +185,15 @@ export function AppGuideOverlay({ kind, open, onClose }: { kind: GuideKind; open
         <div className="grid gap-4 p-4">
           <GuideDemoView demo={step.demo} />
           <div>
-            <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-teal-50 px-2.5 py-1 text-xs font-black text-teal-700 dark:bg-teal-950/50 dark:text-teal-200">
+            <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-white/80 px-2.5 py-1 text-xs font-black text-amber-800 shadow-sm dark:bg-slate-900/70 dark:text-amber-100">
               {step.icon}
               {step.label}
             </div>
-            <p className="text-sm font-semibold leading-6 text-slate-600 dark:text-slate-300">{step.description}</p>
+            <p className="text-sm font-bold leading-6 text-amber-900/85 dark:text-amber-100/85">{step.description}</p>
             <div className="mt-3 grid gap-2">
               {step.bullets.map((bullet) => (
-                <div key={bullet} className="flex items-start gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs font-bold leading-5 text-slate-600 dark:bg-slate-900 dark:text-slate-300">
-                  <Check className="mt-0.5 shrink-0 text-teal-600 dark:text-teal-300" size={14} />
+                <div key={bullet} className="flex items-start gap-2 rounded-lg bg-white/75 px-3 py-2 text-xs font-bold leading-5 text-amber-900/85 dark:bg-slate-900/55 dark:text-amber-100/85">
+                  <Check className="mt-0.5 shrink-0 text-amber-700 dark:text-amber-200" size={14} />
                   <span>{bullet}</span>
                 </div>
               ))}
@@ -201,11 +201,11 @@ export function AppGuideOverlay({ kind, open, onClose }: { kind: GuideKind; open
           </div>
         </div>
 
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-t border-slate-100 px-4 py-3 dark:border-slate-800">
-          <button type="button" onClick={onClose} className="justify-self-start text-sm font-black text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300">
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-t border-amber-200 bg-amber-100/60 px-4 py-3 dark:border-amber-800 dark:bg-amber-900/45">
+          <button type="button" onClick={onClose} className="justify-self-start text-sm font-black text-amber-800/65 hover:text-amber-950 dark:text-amber-100/65 dark:hover:text-amber-50">
             건너뛰기
           </button>
-          <div className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-black text-slate-500 dark:bg-slate-900 dark:text-slate-300">
+          <div className="rounded-full bg-white/80 px-2.5 py-1 text-xs font-black text-amber-800 shadow-sm dark:bg-slate-900/70 dark:text-amber-100">
             {stepIndex + 1}/{steps.length}
           </div>
           <div className="flex items-center justify-end gap-2">
@@ -213,7 +213,7 @@ export function AppGuideOverlay({ kind, open, onClose }: { kind: GuideKind; open
               type="button"
               onClick={() => setStepIndex((index) => Math.max(0, index - 1))}
               disabled={stepIndex === 0}
-              className="grid h-10 w-10 place-items-center rounded-full bg-slate-100 text-slate-600 disabled:opacity-30 dark:bg-slate-900 dark:text-slate-200"
+              className="grid h-10 w-10 place-items-center rounded-full bg-white/80 text-amber-800 shadow-sm disabled:opacity-30 dark:bg-slate-900/70 dark:text-amber-100"
               aria-label="이전 사용법"
             >
               <ChevronLeft size={18} />
@@ -224,7 +224,7 @@ export function AppGuideOverlay({ kind, open, onClose }: { kind: GuideKind; open
                 if (isLast) onClose();
                 else setStepIndex((index) => Math.min(steps.length - 1, index + 1));
               }}
-              className="inline-flex h-10 min-w-[4.75rem] items-center justify-center whitespace-nowrap rounded-full bg-teal-700 px-4 text-sm font-black text-white"
+              className="guide-cta-animated inline-flex h-10 min-w-[4.75rem] items-center justify-center whitespace-nowrap rounded-full px-4 text-sm font-black text-white"
             >
               {isLast ? "시작하기" : "다음"}
             </button>

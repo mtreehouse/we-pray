@@ -43,3 +43,43 @@ textarea {
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom);
 }
+
+
+@property --guide-cta-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes guideCtaBorderSpin {
+  to {
+    --guide-cta-angle: 360deg;
+  }
+}
+
+.guide-cta-animated {
+  position: relative;
+  isolation: isolate;
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(135deg, #637ee1 0%, #7289ea 100%) padding-box,
+    conic-gradient(from var(--guide-cta-angle), rgba(99, 126, 225, 0.12), #ffffff 9%, #9aaaf4 18%, #637ee1 30%, rgba(99, 126, 225, 0.18) 44%, rgba(99, 126, 225, 0.12) 100%) border-box;
+  box-shadow: 0 10px 24px rgba(99, 126, 225, 0.28);
+  animation: guideCtaBorderSpin 1.8s linear infinite;
+}
+
+.guide-cta-animated:hover {
+  filter: brightness(1.03);
+}
+
+.guide-cta-animated:focus-visible {
+  outline: 3px solid rgba(99, 126, 225, 0.28);
+  outline-offset: 3px;
+}
+
+.dark .guide-cta-animated {
+  background:
+    linear-gradient(135deg, #637ee1 0%, #8fa0f0 100%) padding-box,
+    conic-gradient(from var(--guide-cta-angle), rgba(99, 126, 225, 0.22), #dfe5ff 10%, #9aaaf4 22%, #637ee1 34%, rgba(99, 126, 225, 0.24) 50%, rgba(99, 126, 225, 0.22) 100%) border-box;
+  box-shadow: 0 10px 26px rgba(99, 126, 225, 0.22);
+}

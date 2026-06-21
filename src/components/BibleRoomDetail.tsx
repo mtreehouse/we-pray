@@ -1258,13 +1258,13 @@ function BibleRoomActionGuide({
         </div>
       ))}
       <div className="pointer-events-auto fixed max-w-[calc(100%-2rem)]" style={tipStyle}>
-        <div className="rounded-xl border border-teal-200 bg-teal-50/95 p-3 text-teal-950 shadow-[0_16px_38px_rgba(13,148,136,0.28)] ring-1 ring-white/70 backdrop-blur dark:border-teal-700/70 dark:bg-teal-950/95 dark:text-teal-50 dark:shadow-[0_16px_40px_rgba(0,0,0,0.45)] dark:ring-teal-400/10">
+        <div className="rounded-xl border border-amber-300 bg-amber-50/95 p-3 text-amber-950 shadow-[0_16px_38px_rgba(217,119,6,0.30)] ring-1 ring-white/70 backdrop-blur dark:border-amber-500/70 dark:bg-amber-950/95 dark:text-amber-50 dark:shadow-[0_16px_40px_rgba(0,0,0,0.45)] dark:ring-amber-300/10">
           <p className="text-sm font-black leading-5">{step.description}</p>
           <div className="mt-2.5 grid grid-cols-[auto_1fr_auto] items-center gap-2">
-            <button type="button" onClick={onClose} className="text-xs font-black text-teal-700/70 dark:text-teal-200/70">
+            <button type="button" onClick={onClose} className="text-xs font-black text-amber-800/75 dark:text-amber-100/75">
               건너뛰기
             </button>
-            <div className="justify-self-center rounded-full bg-white/75 px-2 py-0.5 text-[11px] font-black text-teal-700 shadow-sm dark:bg-slate-900/70 dark:text-teal-200">
+            <div className="justify-self-center rounded-full bg-white/80 px-2 py-0.5 text-[11px] font-black text-amber-800 shadow-sm dark:bg-slate-900/70 dark:text-amber-100">
               {stepIndex + 1}/{steps.length}
             </div>
             <div className="flex items-center gap-1.5">
@@ -1272,7 +1272,7 @@ function BibleRoomActionGuide({
                 type="button"
                 onClick={onBack}
                 disabled={stepIndex === 0}
-                className="grid h-8 w-8 place-items-center rounded-full bg-white/80 text-teal-800 shadow-sm disabled:opacity-30 dark:bg-slate-900/80 dark:text-teal-100"
+                className="grid h-8 w-8 place-items-center rounded-full bg-white/80 text-amber-800 shadow-sm disabled:opacity-30 dark:bg-slate-900/80 dark:text-amber-100"
                 aria-label="이전 사용법"
               >
                 <ChevronLeft size={16} />
@@ -1280,7 +1280,7 @@ function BibleRoomActionGuide({
               <button
                 type="button"
                 onClick={onNext}
-                className="inline-flex h-8 min-w-[4.2rem] items-center justify-center whitespace-nowrap rounded-full bg-teal-700 px-3 text-xs font-black text-white shadow-sm dark:bg-teal-500 dark:text-slate-950"
+                className="guide-cta-animated inline-flex h-8 min-w-[4.2rem] items-center justify-center whitespace-nowrap rounded-full px-3 text-xs font-black text-white dark:text-white"
               >
                 {isLast ? "시작" : "다음"}
               </button>

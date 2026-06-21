@@ -71,6 +71,32 @@ export function RoomListGuide() {
   useEffect(() => {
     if (!open) return;
 
+    const scrollY = window.scrollY;
+    const previousOverflow = document.body.style.overflow;
+    const previousPosition = document.body.style.position;
+    const previousTop = document.body.style.top;
+    const previousWidth = document.body.style.width;
+    const previousTouchAction = document.body.style.touchAction;
+
+    document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = "100%";
+    document.body.style.touchAction = "none";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.position = previousPosition;
+      document.body.style.top = previousTop;
+      document.body.style.width = previousWidth;
+      document.body.style.touchAction = previousTouchAction;
+      window.scrollTo(0, scrollY);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+
     const update = () => updateRect();
     const timers = [30, 120, 260, 520].map((delay) => window.setTimeout(update, delay));
     window.addEventListener("resize", update);
@@ -143,27 +169,27 @@ export function RoomListGuide() {
         </div>
       ) : null}
       <div className="pointer-events-auto fixed max-w-[calc(100%-2rem)]" style={cardStyle}>
-        <div className="rounded-xl border border-[#8FA0F0]/50 bg-white/95 p-3 text-slate-950 shadow-[0_16px_38px_rgba(99,126,225,0.24)] backdrop-blur dark:border-[#8FA0F0]/35 dark:bg-slate-950/95 dark:text-slate-50">
+        <div className="rounded-xl border border-amber-300 bg-amber-50/95 p-3 text-amber-950 shadow-[0_16px_38px_rgba(217,119,6,0.28)] ring-1 ring-white/70 backdrop-blur dark:border-amber-500/70 dark:bg-amber-950/95 dark:text-amber-50 dark:ring-amber-300/10">
           <div className="mb-2 flex items-center gap-2 text-sm font-black">
-            <span className="grid h-8 w-8 place-items-center rounded-full bg-[#637EE1]/10 text-[#637EE1] dark:bg-[#637EE1]/20 dark:text-[#AEBBFF]">
+            <span className="grid h-8 w-8 place-items-center rounded-full bg-white/80 text-amber-700 shadow-sm dark:bg-slate-900/70 dark:text-amber-200">
               <Search size={16} />
             </span>
             <span className="inline-flex min-w-0 items-center gap-1.5">
               방 찾기와
-              <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-300">
+              <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-white/80 text-amber-700 shadow-sm dark:bg-slate-900/70 dark:text-amber-200">
                 <Plus size={15} />
               </span>
               생성
             </span>
           </div>
-          <p className="text-sm font-semibold leading-6 text-slate-600 dark:text-slate-300">
+          <p className="text-sm font-bold leading-6 text-amber-900/85 dark:text-amber-100/85">
             돋보기로 이미 만들어진 방을 찾고,<br />+ 버튼으로 새 방을 만들 수 있어요.
           </p>
           <div className="mt-3 flex justify-end">
             <button
               type="button"
               onClick={closeGuide}
-              className="h-9 rounded-full bg-[#637EE1] px-4 text-xs font-black text-white shadow-[0_10px_22px_rgba(99,126,225,0.28)]"
+              className="guide-cta-animated h-9 rounded-full px-4 text-xs font-black text-white"
             >
               확인
             </button>
