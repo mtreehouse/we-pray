@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Plus, Search } from "lucide-react";
 
 const ROOM_LIST_GUIDE_STORAGE_KEY = "wepray:room-list-guide:v1";
+const GUIDE_COMPLETED_EVENT = "wepray:guide-completed";
 
 type GuideRect = {
   top: number;
@@ -26,6 +27,7 @@ export function RoomListGuide() {
     setOpen(false);
     try {
       window.localStorage.setItem(ROOM_LIST_GUIDE_STORAGE_KEY, "done");
+      window.dispatchEvent(new Event(GUIDE_COMPLETED_EVENT));
     } catch {
       // Keep the guide session-only when browser storage is unavailable.
     }

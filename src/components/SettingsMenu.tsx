@@ -4,13 +4,15 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
-import { BookOpen, ChevronRight, HelpCircle, Info, LogIn, LogOut, MessageCircle, Moon, Pencil, Save, Sun, Trash2, UserRound } from "lucide-react";
+import { BookOpen, ChevronRight, Download, HelpCircle, Info, LogIn, LogOut, MessageCircle, Moon, Pencil, Save, Sun, Trash2, UserRound } from "lucide-react";
 import { AppGuideOverlay, type GuideKind } from "@/components/AppGuideOverlay";
 import { Modal } from "@/components/ui/Modal";
 import { Toast } from "@/components/ui/Toast";
 import { noBrowserInputSuggestions } from "@/lib/browser-input";
 import { WithdrawLink } from "@/components/WithdrawLink";
 import { APP_DARK_MODE_CHANGE_EVENT, APP_DARK_MODE_STORAGE_KEY } from "@/lib/ui-settings";
+
+const REQUEST_PWA_INSTALL_EVENT = "wepray:pwa-install-request";
 
 type SettingsMenuProps = {
   isLoggedIn: boolean;
@@ -183,6 +185,21 @@ export function SettingsMenu({ isLoggedIn, currentNickname, appVersion }: Settin
               사용법
             </span>
             <span className="mt-1 block text-xs font-bold text-slate-500 dark:text-slate-400">성경방과 기도방 가이드를 확인합니다.</span>
+          </span>
+          <ChevronRight size={18} className="text-slate-400" />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new Event(REQUEST_PWA_INSTALL_EVENT))}
+          className="flex items-center justify-between gap-3 rounded-lg bg-white/90 px-4 py-4 text-left shadow-soft dark:border dark:border-slate-800 dark:bg-slate-900/85"
+        >
+          <span className="min-w-0">
+            <span className="flex items-center gap-2 font-black text-slate-950 dark:text-slate-50">
+              <Download size={17} className="text-violet-700 dark:text-violet-300" />
+              PWA 설치
+            </span>
+            <span className="mt-1 block text-xs font-bold text-slate-500 dark:text-slate-400">홈 화면에 바로 추가할 수 있어요.</span>
           </span>
           <ChevronRight size={18} className="text-slate-400" />
         </button>

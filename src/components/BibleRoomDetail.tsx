@@ -216,6 +216,7 @@ const BIBLE_FONT_SIZE_STORAGE_KEY = "wepray:bible-font-size";
 const BIBLE_LINE_HEIGHT_STORAGE_KEY = "wepray:bible-line-height";
 const BIBLE_DARK_MODE_STORAGE_PREFIX = "wepray:bible-room-dark-mode";
 const BIBLE_GUIDE_STORAGE_KEY = "wepray:bible-room-guide:v5";
+const GUIDE_COMPLETED_EVENT = "wepray:guide-completed";
 
 function isBibleTranslationCode(value: unknown): value is BibleTranslationCode {
   return value === "ko_krv" || value === "ko_nkrv";
@@ -345,6 +346,7 @@ export function BibleRoomDetail({
   const markGuideDone = useCallback(() => {
     try {
       window.localStorage.setItem(bibleGuideStorageKey, "done");
+      window.dispatchEvent(new Event(GUIDE_COMPLETED_EVENT));
     } catch {
       // localStorage may be unavailable in private browsing or restricted webviews.
     }
