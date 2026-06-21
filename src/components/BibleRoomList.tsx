@@ -71,7 +71,7 @@ export function BibleRoomList({ rooms }: { rooms: BibleRoomSummary[] }) {
                 <span className="rounded-full bg-slate-100 px-2.5 py-1 dark:bg-slate-800 dark:text-slate-200">{planTypeLabels[room.planType] ?? room.planType}</span>
               </div>
               <p className="mt-3 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                생성자 {room.creatorNickname ?? "알 수 없음"} · 멤버 {room.memberCount}명
+                방장 {room.creatorNickname ?? "알 수 없음"} · 멤버 {room.memberCount}명
               </p>
             </Link>
           ))
@@ -200,7 +200,7 @@ function FindBibleRoomModal({
               if (event.key === "Enter") void search();
             }}
             className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-            placeholder="방 제목 또는 생성자"
+            placeholder="방 제목 또는 방장"
           />
           <button
             type="button"
@@ -232,7 +232,7 @@ function FindBibleRoomModal({
                 <span className="rounded-full bg-slate-100 px-2 py-0.5 dark:bg-slate-800 dark:text-slate-200">{room.durationMonths}개월</span>
                 <span className="rounded-full bg-slate-100 px-2 py-0.5 dark:bg-slate-800 dark:text-slate-200">멤버 {room.memberCount}명</span>
               </span>
-              <span className="mt-2 block text-xs text-slate-500 dark:text-slate-400">생성자 {room.creatorNickname ?? "알 수 없음"}</span>
+              <span className="mt-2 block text-xs text-slate-500 dark:text-slate-400">방장 {room.creatorNickname ?? "알 수 없음"}</span>
             </button>
           ))}
           {!loading && q && results.length === 0 ? (

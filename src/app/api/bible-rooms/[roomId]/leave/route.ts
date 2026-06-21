@@ -17,7 +17,7 @@ export async function POST(_req: Request, { params }: Params) {
   }
 
   if (member.role === RoomMemberRole.creator) {
-    return NextResponse.json({ error: "성경방 생성자는 방 삭제 후 나갈 수 있습니다." }, { status: 400 });
+    return NextResponse.json({ error: "방장은 방 나가기 대신 방 삭제만 가능합니다." }, { status: 400 });
   }
 
   await prisma.bibleRoomMember.update({

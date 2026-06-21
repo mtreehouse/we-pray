@@ -690,11 +690,11 @@ function RoomSettingsDrawer({
       <button
         type="button"
         onClick={onClose}
-        className={`absolute inset-0 bg-slate-950/30 transition-opacity dark:bg-slate-950/70 ${open ? "opacity-100" : "opacity-0"}`}
+        className={`absolute inset-0 z-0 bg-slate-950/30 transition-opacity dark:bg-slate-950/70 ${open ? "opacity-100" : "opacity-0"}`}
         aria-label="설정 닫기"
       />
       <aside
-        className={`absolute right-0 top-0 h-full w-[86%] max-w-sm bg-white p-5 shadow-soft transition-transform dark:bg-slate-950 dark:shadow-[0_18px_48px_rgba(0,0,0,0.45)] ${
+        className={`absolute right-0 top-0 z-10 h-full w-[86%] max-w-sm overflow-y-auto overscroll-contain bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-soft transition-transform dark:bg-slate-950 dark:shadow-[0_18px_48px_rgba(0,0,0,0.45)] ${
           open ? "translate-x-0" : "translate-x-full"
         }`}
       >
@@ -714,9 +714,11 @@ function RoomSettingsDrawer({
               방 관리
             </button>
           ) : null}
-          <button type="button" onClick={onLeave} className="rounded-lg bg-rose-50 px-4 py-3 text-left font-bold text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
-            방 나가기
-          </button>
+          {!room.isCreator ? (
+            <button type="button" onClick={onLeave} className="touch-manipulation rounded-lg bg-rose-50 px-4 py-3 text-left font-bold text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
+              방 나가기
+            </button>
+          ) : null}
         </div>
 
         <h3 className="mb-3 text-sm font-black text-slate-500 dark:text-slate-400">멤버 {members.length}</h3>
@@ -771,7 +773,7 @@ function RoomInfoModal({ room, open, onClose }: { room: RoomDetail; open: boolea
       <dl className="grid gap-3 text-sm">
         <InfoRow label="방 제목" value={room.title} />
         <InfoRow label="방 설명" value={room.description} />
-        <InfoRow label="생성자" value={room.creatorNickname ?? "알 수 없음"} />
+        <InfoRow label="방장" value={room.creatorNickname ?? "알 수 없음"} />
         <InfoRow label="생성일자" value={formatKoreanDate(room.createdAt, "long")} />
       </dl>
     </Modal>

@@ -16,7 +16,7 @@ export async function DELETE(_req: Request, { params }: Params) {
   const requester = await requireBibleRoomMember(roomId, user.id);
 
   if (!requester || requester.role !== RoomMemberRole.creator) {
-    return NextResponse.json({ error: "성경방 생성자만 내보낼 수 있습니다." }, { status: 403 });
+    return NextResponse.json({ error: "방장만 내보낼 수 있습니다." }, { status: 403 });
   }
 
   const target = await prisma.bibleRoomMember.findFirst({

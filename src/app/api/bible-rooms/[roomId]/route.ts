@@ -64,7 +64,7 @@ export async function PATCH(req: Request, { params }: Params) {
   const member = await requireBibleRoomMember(roomId, user.id);
 
   if (!member || member.role !== RoomMemberRole.creator) {
-    return NextResponse.json({ error: "성경방 생성자만 관리할 수 있습니다." }, { status: 403 });
+    return NextResponse.json({ error: "방장만 관리할 수 있습니다." }, { status: 403 });
   }
 
   const body = (await req.json()) as {
@@ -99,7 +99,7 @@ export async function DELETE(_req: Request, { params }: Params) {
   const member = await requireBibleRoomMember(roomId, user.id);
 
   if (!member || member.role !== RoomMemberRole.creator) {
-    return NextResponse.json({ error: "성경방 생성자만 삭제할 수 있습니다." }, { status: 403 });
+    return NextResponse.json({ error: "방장만 삭제할 수 있습니다." }, { status: 403 });
   }
 
   await prisma.bibleRoom.update({

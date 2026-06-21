@@ -43,7 +43,7 @@ export function PrayRoomList({ rooms }: { rooms: RoomSummary[] }) {
                 {room.role === "creator" ? <Crown className="shrink-0 text-amber-500" size={20} /> : null}
               </div>
               <p className="mt-3 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                생성자 {room.creatorNickname ?? "알 수 없음"}
+                방장 {room.creatorNickname ?? "알 수 없음"}
               </p>
             </Link>
           ))
@@ -237,7 +237,7 @@ function FindRoomModal({
             value={q}
             onChange={(event) => setQ(event.target.value)}
             className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-            placeholder="방 제목 또는 생성자"
+            placeholder="방 제목 또는 방장"
           />
           <button
             type="button"
@@ -261,7 +261,7 @@ function FindRoomModal({
               className="mb-2 w-full rounded-lg border border-slate-200 bg-white p-3 text-left dark:border-slate-800 dark:bg-slate-900"
             >
               <span className="block font-bold text-slate-900 dark:text-slate-100">{room.title}</span>
-              <span className="text-xs text-slate-500 dark:text-slate-400">생성자 {room.creatorNickname ?? "알 수 없음"}</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">방장 {room.creatorNickname ?? "알 수 없음"}</span>
             </button>
           ))}
         </div>
