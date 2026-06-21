@@ -9,10 +9,10 @@ type Params = {
   }>;
 };
 
-type ReactionType = "LIKE" | "HEART";
+type ReactionType = "PRAY" | "LIKE" | "HEART";
 
 function isReactionType(value: unknown): value is ReactionType {
-  return value === "LIKE" || value === "HEART";
+  return value === "PRAY" || value === "LIKE" || value === "HEART";
 }
 
 function toReactionState(
@@ -20,8 +20,10 @@ function toReactionState(
   myReactions: Array<{ type: ReactionType }>
 ) {
   return {
+    prayCount: reactionCounts.find((item) => item.type === "PRAY")?._count._all ?? 0,
     likeCount: reactionCounts.find((item) => item.type === "LIKE")?._count._all ?? 0,
     heartCount: reactionCounts.find((item) => item.type === "HEART")?._count._all ?? 0,
+    isPrayedByMe: myReactions.some((item) => item.type === "PRAY"),
     isLikedByMe: myReactions.some((item) => item.type === "LIKE"),
     isHeartedByMe: myReactions.some((item) => item.type === "HEART")
   };

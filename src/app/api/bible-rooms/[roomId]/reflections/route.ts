@@ -23,19 +23,20 @@ function findPlanDate(
 
 function createReactionSummary(
   reflectionIds: string[],
-  reactionCounts: Array<{ reflectionId: string; type: "LIKE" | "HEART"; _count: { _all: number } }>,
-  myReactions: Array<{ reflectionId: string; type: "LIKE" | "HEART" }>
+  reactionCounts: Array<{ reflectionId: string; type: "LIKE" | "HEART" | "PRAY"; _count: { _all: number } }>,
+  myReactions: Array<{ reflectionId: string; type: "LIKE" | "HEART" | "PRAY" }>
 ) {
-  const summary = new Map<string, { likeCount: number; heartCount: number; isLikedByMe: boolean; isHeartedByMe: boolean }>();
+  const summary = new Map<string, { prayCount: number; likeCount: number; heartCount: number; isPrayedByMe: boolean; isLikedByMe: boolean; isHeartedByMe: boolean }>();
 
   for (const reflectionId of reflectionIds) {
-    summary.set(reflectionId, { likeCount: 0, heartCount: 0, isLikedByMe: false, isHeartedByMe: false });
+    summary.set(reflectionId, { prayCount: 0, likeCount: 0, heartCount: 0, isPrayedByMe: false, isLikedByMe: false, isHeartedByMe: false });
   }
 
   for (const item of reactionCounts) {
     const target = summary.get(item.reflectionId);
     if (!target) continue;
 
+    if (item.type === "PRAY") target.prayCount = item._count._all;
     if (item.type === "LIKE") target.likeCount = item._count._all;
     if (item.type === "HEART") target.heartCount = item._count._all;
   }
@@ -44,6 +45,7 @@ function createReactionSummary(
     const target = summary.get(item.reflectionId);
     if (!target) continue;
 
+    if (item.type === "PRAY") target.isPrayedByMe = true;
     if (item.type === "LIKE") target.isLikedByMe = true;
     if (item.type === "HEART") target.isHeartedByMe = true;
   }
@@ -154,7 +156,7 @@ export async function GET(req: Request, { params }: Params) {
         userId: reflection.userId,
         authorNickname: reflection.user.nickname,
         isMine: reflection.userId === user.id,
-        ...(reactionSummary.get(reflection.id) ?? { likeCount: 0, heartCount: 0, isLikedByMe: false, isHeartedByMe: false })
+        ...(reactionSummary.get(reflection.id) ?? { prayCount: 0, likeCount: 0, heartCount: 0, isPrayedByMe: false, isLikedByMe: false, isHeartedByMe: false })
       };
     }),
     nextCursor: hasMore ? items[items.length - 1]?.id ?? null : null
@@ -244,8 +246,10 @@ export async function POST(req: Request, { params }: Params) {
       userId: user.id,
       authorNickname: user.nickname,
       isMine: true,
+      prayCount: 0,
       likeCount: 0,
       heartCount: 0,
+      isPrayedByMe: false,
       isLikedByMe: false,
       isHeartedByMe: false
     }

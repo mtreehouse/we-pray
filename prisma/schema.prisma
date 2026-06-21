@@ -38,6 +38,7 @@ enum BiblePlanType {
 enum BibleReflectionReactionType {
   LIKE
   HEART
+  PRAY
 }
 
 model User {

@@ -77,11 +77,13 @@ type ReadingChapter = {
   verses: ReadingVerse[];
 };
 
-type BibleReflectionReactionType = "LIKE" | "HEART";
+type BibleReflectionReactionType = "PRAY" | "LIKE" | "HEART";
 
 type ReflectionReactionState = {
+  prayCount: number;
   likeCount: number;
   heartCount: number;
+  isPrayedByMe: boolean;
   isLikedByMe: boolean;
   isHeartedByMe: boolean;
 };
@@ -833,8 +835,10 @@ export function BibleRoomDetail({
       const data = (await res.json()) as Partial<ReflectionReactionState> & { error?: string };
 
       if (!res.ok
+        || typeof data.prayCount !== "number"
         || typeof data.likeCount !== "number"
         || typeof data.heartCount !== "number"
+        || typeof data.isPrayedByMe !== "boolean"
         || typeof data.isLikedByMe !== "boolean"
         || typeof data.isHeartedByMe !== "boolean") {
         showToast(data.error ?? "반응 저장에 실패했습니다.");
@@ -842,8 +846,10 @@ export function BibleRoomDetail({
       }
 
       updateReflectionReactionState(reflection.id, {
+        prayCount: data.prayCount,
         likeCount: data.likeCount,
         heartCount: data.heartCount,
+        isPrayedByMe: data.isPrayedByMe,
         isLikedByMe: data.isLikedByMe,
         isHeartedByMe: data.isHeartedByMe
       });
@@ -2342,8 +2348,10 @@ function SharingTab({
     userId: "guide-sample-user",
     authorNickname: "가이드",
     isMine: true,
+    prayCount: 1,
     likeCount: 1,
     heartCount: 1,
+    isPrayedByMe: false,
     isLikedByMe: false,
     isHeartedByMe: false
   }), []);
@@ -2524,28 +2532,28 @@ function SharingReflectionCard({
 }) {
   const burstTimerRef = useRef<number | null>(null);
   const [reactionLoading, setReactionLoading] = useState<BibleReflectionReactionType | null>(null);
-  const [reactionBurst, setReactionBurst] = useState<{ emoji: string; key: number } | null>(null);
+  const [reactionBurst, setReactionBurst] = useState<{ emoji: string; variant: "pray" | "celebrate"; key: number } | null>(null);
 
-  const showReactionBurst = useCallback((emoji: string) => {
+  const showReactionBurst = useCallback((emoji: string, variant: "pray" | "celebrate" = "celebrate") => {
     if (burstTimerRef.current) {
       window.clearTimeout(burstTimerRef.current);
     }
 
-    setReactionBurst({ emoji, key: Date.now() });
+    setReactionBurst({ emoji, variant, key: Date.now() });
     burstTimerRef.current = window.setTimeout(() => {
       setReactionBurst(null);
       burstTimerRef.current = null;
-    }, 1250);
+    }, variant === "pray" ? 1550 : 1250);
   }, []);
 
   async function toggleReaction(type: BibleReflectionReactionType) {
     if (reactionLoading) return;
 
-    const wasActive = type === "LIKE" ? reflection.isLikedByMe : reflection.isHeartedByMe;
+    const wasActive = type === "PRAY" ? reflection.isPrayedByMe : type === "LIKE" ? reflection.isLikedByMe : reflection.isHeartedByMe;
     setReactionLoading(type);
     try {
       const ok = await onToggleReaction(reflection, type);
-      if (ok && !wasActive) showReactionBurst(type === "LIKE" ? "👍" : "❤️");
+      if (ok && !wasActive) showReactionBurst(type === "PRAY" ? "🙏" : type === "LIKE" ? "👍" : "❤️", type === "PRAY" ? "pray" : "celebrate");
     } finally {
       setReactionLoading(null);
     }
@@ -2574,7 +2582,7 @@ function SharingReflectionCard({
         selected ? "ring-2 ring-teal-500 dark:ring-teal-400" : ""
       }`}
     >
-      {reactionBurst ? <ReactionEmojiBurst key={reactionBurst.key} emoji={reactionBurst.emoji} /> : null}
+      {reactionBurst ? <ReactionEmojiBurst key={reactionBurst.key} emoji={reactionBurst.emoji} variant={reactionBurst.variant} /> : null}
       <div className="mb-3 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className={`truncate font-bold ${selected || reflection.isMine ? "text-teal-700 dark:text-teal-300" : "text-slate-900 dark:text-slate-100"}`}>
@@ -2610,7 +2618,17 @@ function SharingReflectionCard({
       <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700 dark:text-slate-300">{reflection.content}</p>
       <div className="mt-3 flex items-center justify-end gap-1.5 text-xs font-black">
         <ReactionButton
+          emoji="🙏"
+          label="기도할게요"
+          count={reflection.prayCount}
+          active={reflection.isPrayedByMe}
+          tone="pray"
+          loading={reactionLoading === "PRAY"}
+          onClick={() => void toggleReaction("PRAY")}
+        />
+        <ReactionButton
           emoji="👍"
+          label="좋아요"
           count={reflection.likeCount}
           active={reflection.isLikedByMe}
           tone="like"
@@ -2619,6 +2637,7 @@ function SharingReflectionCard({
         />
         <ReactionButton
           emoji="❤️"
+          label="하트"
           count={reflection.heartCount}
           active={reflection.isHeartedByMe}
           tone="heart"
@@ -2632,6 +2651,7 @@ function SharingReflectionCard({
 
 function ReactionButton({
   emoji,
+  label,
   count,
   active,
   tone,
@@ -2639,15 +2659,18 @@ function ReactionButton({
   onClick
 }: {
   emoji: string;
+  label: string;
   count: number;
   active: boolean;
-  tone: "like" | "heart";
+  tone: "pray" | "like" | "heart";
   loading: boolean;
   onClick: () => void;
 }) {
-  const activeClasses = tone === "like"
-    ? "border-sky-200 bg-sky-50 text-sky-700 shadow-[0_6px_16px_rgba(14,165,233,0.16)] dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-200"
-    : "border-rose-200 bg-rose-50 text-rose-700 shadow-[0_6px_16px_rgba(244,63,94,0.16)] dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200";
+  const activeClasses = tone === "pray"
+    ? "border-amber-200 bg-amber-50 text-amber-800 shadow-[0_6px_16px_rgba(245,158,11,0.14)] dark:border-amber-900 dark:bg-amber-950/35 dark:text-amber-200"
+    : tone === "like"
+      ? "border-sky-200 bg-sky-50 text-sky-700 shadow-[0_6px_16px_rgba(14,165,233,0.16)] dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-200"
+      : "border-rose-200 bg-rose-50 text-rose-700 shadow-[0_6px_16px_rgba(244,63,94,0.16)] dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200";
 
   return (
     <button
@@ -2659,7 +2682,8 @@ function ReactionButton({
       }}
       disabled={loading}
       aria-pressed={active}
-      aria-label={`${emoji} 반응 ${active ? "취소" : "추가"}`}
+      aria-label={`${label} ${active ? "취소" : "추가"}`}
+      title={label}
       className={`inline-flex h-8 items-center gap-1 rounded-full border px-2.5 transition disabled:opacity-60 ${
         active ? activeClasses : "border-slate-200 bg-slate-100 text-slate-500 hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
       }`}
@@ -2670,7 +2694,7 @@ function ReactionButton({
   );
 }
 
-function ReactionEmojiBurst({ emoji }: { emoji: string }) {
+function ReactionEmojiBurst({ emoji, variant = "celebrate" }: { emoji: string; variant?: "pray" | "celebrate" }) {
   const particles = [
     { x: -72, delay: 0, scale: 1.1 },
     { x: -42, delay: 70, scale: 0.9 },
@@ -2680,14 +2704,16 @@ function ReactionEmojiBurst({ emoji }: { emoji: string }) {
     { x: 78, delay: 150, scale: 0.9 }
   ];
 
+  const isPrayer = variant === "pray";
+
   return (
     <>
       <div className="pointer-events-none fixed inset-x-0 bottom-12 z-[60] flex justify-center">
-        <div className="relative h-32 w-52">
+        <div className={isPrayer ? "relative h-36 w-48" : "relative h-32 w-52"}>
           {particles.map((particle, index) => (
             <span
               key={`${particle.x}-${index}`}
-              className="reaction-burst-particle absolute left-1/2 bottom-0 text-2xl drop-shadow-[0_8px_14px_rgba(15,23,42,0.22)]"
+              className={`${isPrayer ? "prayer-burst-particle text-3xl" : "reaction-burst-particle text-2xl"} absolute left-1/2 bottom-0 drop-shadow-[0_8px_14px_rgba(15,23,42,0.18)]`}
               style={{
                 "--burst-x": `${particle.x}px`,
                 "--burst-scale": particle.scale,
@@ -2701,6 +2727,13 @@ function ReactionEmojiBurst({ emoji }: { emoji: string }) {
         </div>
       </div>
       <style>{`
+        @keyframes prayerBurstRise {
+          0% { opacity: 0; transform: translate3d(-50%, 24px, 0) scale(0.82); filter: blur(1px); }
+          22% { opacity: 0.95; transform: translate3d(calc(-50% + var(--burst-x) * 0.08), 2px, 0) scale(calc(var(--burst-scale) * 0.98)); filter: blur(0); }
+          78% { opacity: 0.72; transform: translate3d(calc(-50% + var(--burst-x) * 0.34), -72px, 0) scale(var(--burst-scale)); }
+          100% { opacity: 0; transform: translate3d(calc(-50% + var(--burst-x) * 0.45), -104px, 0) scale(0.88); filter: blur(1px); }
+        }
+
         @keyframes reactionBurstRise {
           0% { opacity: 0; transform: translate3d(-50%, 28px, 0) scale(0.72); }
           16% { opacity: 1; transform: translate3d(calc(-50% + var(--burst-x) * 0.22), 0, 0) scale(calc(var(--burst-scale) * 1.08)); }
@@ -2710,6 +2743,10 @@ function ReactionEmojiBurst({ emoji }: { emoji: string }) {
 
         .reaction-burst-particle {
           animation: reactionBurstRise 1050ms cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+        }
+
+        .prayer-burst-particle {
+          animation: prayerBurstRise 1450ms ease-out forwards;
         }
       `}</style>
     </>
