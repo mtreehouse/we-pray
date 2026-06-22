@@ -1073,7 +1073,8 @@ const bibleActionGuideSteps: BibleActionGuideStep[] = [
   },
   {
     key: "complete",
-    selector: '[data-guide="bible-complete"], [data-guide="bible-bottom-nav"], [data-guide="bible-chapter-header"]',
+    selector: '[data-guide="bible-bottom-nav"]',
+    extraSelector: '[data-guide="bible-complete"]',
     description: "말씀 맨 아래에서 장을 이동하고, 마지막 장에서는 읽기 완료를 체크해요."
   },
   {
@@ -1213,7 +1214,16 @@ function BibleRoomActionGuide({
 
   if (!open || !step) return null;
 
-  const pulseStyles = [rect, extraRect]
+  const mergeRects = (first: SpotlightRect, second: SpotlightRect) => {
+    const left = Math.min(first.left, second.left);
+    const top = Math.min(first.top, second.top);
+    const right = Math.max(first.left + first.width, second.left + second.width);
+    const bottom = Math.max(first.top + first.height, second.top + second.height);
+
+    return { top, left, width: right - left, height: bottom - top };
+  };
+  const completePulseRect = step.key === "complete" && rect && extraRect ? mergeRects(rect, extraRect) : null;
+  const pulseStyles = (completePulseRect ? [completePulseRect] : [rect, extraRect])
     .filter((target): target is SpotlightRect => Boolean(target))
     .map((target) => ({
       top: target.top,
@@ -1229,9 +1239,11 @@ function BibleRoomActionGuide({
     : 16;
   const estimatedTipHeight = step.key === "reading" ? 198 : 118;
   const preferredTipTop = rect
-    ? rect.top + rect.height + 10 <= viewport.height - estimatedTipHeight
-      ? rect.top + rect.height + 10
-      : rect.top - estimatedTipHeight - 10
+    ? step.key === "complete"
+      ? rect.top - estimatedTipHeight - 14
+      : rect.top + rect.height + 10 <= viewport.height - estimatedTipHeight
+        ? rect.top + rect.height + 10
+        : rect.top - estimatedTipHeight - 10
     : 96;
   const tipStyle: CSSProperties = viewport.width
     ? {
