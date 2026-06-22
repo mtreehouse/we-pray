@@ -15,6 +15,7 @@ export default async function AdminUsersPage() {
       nickname: true,
       provider: true,
       role: true,
+      bibleCopyrightAllowed: true,
       createdAt: true
     },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
@@ -45,6 +46,7 @@ export default async function AdminUsersPage() {
           nickname: user.nickname,
           provider: user.provider,
           role: user.role,
+          bibleCopyrightAllowed: user.bibleCopyrightAllowed,
           createdAt: user.createdAt.toISOString(),
           isMe: user.id === currentUser.id
         }))}

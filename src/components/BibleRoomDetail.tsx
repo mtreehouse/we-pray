@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Toast } from "@/components/ui/Toast";
+import { defaultBibleTranslationCode, defaultBibleTranslationSettings, isBibleTranslationCode, type BibleTranslationCode, type BibleTranslationSettingView } from "@/lib/bible-translations";
 import { APP_DARK_MODE_STORAGE_KEY } from "@/lib/ui-settings";
 import { noBrowserInputSuggestions, noBrowserPasswordSuggestions } from "@/lib/browser-input";
 
@@ -153,7 +154,6 @@ type DateRange = {
   endDate: string;
 };
 
-type BibleTranslationCode = "ko_krv" | "ko_nkrv";
 type BibleFontSize = "small" | "normal" | "large" | "xlarge";
 type BibleLineHeight = "compact" | "normal" | "relaxed" | "spacious";
 
@@ -173,11 +173,6 @@ const planTypeLabels: Record<string, string> = {
   정주행: "정주행",
   연대기순: "연대기순",
   병행: "병행"
-};
-
-const bibleTranslationLabels: Record<BibleTranslationCode, string> = {
-  ko_krv: "개역한글",
-  ko_nkrv: "개역개정"
 };
 
 const bibleFontSizeLabels: Record<BibleFontSize, string> = {
@@ -208,7 +203,7 @@ const bibleLineHeightClasses: Record<BibleLineHeight, string> = {
   spacious: "leading-9"
 };
 
-const DEFAULT_BIBLE_TRANSLATION: BibleTranslationCode = "ko_krv";
+const DEFAULT_BIBLE_TRANSLATION: BibleTranslationCode = defaultBibleTranslationCode;
 const DEFAULT_BIBLE_FONT_SIZE: BibleFontSize = "normal";
 const DEFAULT_BIBLE_LINE_HEIGHT: BibleLineHeight = "normal";
 const BIBLE_TRANSLATION_STORAGE_KEY = "wepray:bible-translation";
@@ -217,10 +212,6 @@ const BIBLE_LINE_HEIGHT_STORAGE_KEY = "wepray:bible-line-height";
 const BIBLE_DARK_MODE_STORAGE_PREFIX = "wepray:bible-room-dark-mode";
 const BIBLE_GUIDE_STORAGE_KEY = "wepray:bible-room-guide:v5";
 const GUIDE_COMPLETED_EVENT = "wepray:guide-completed";
-
-function isBibleTranslationCode(value: unknown): value is BibleTranslationCode {
-  return value === "ko_krv" || value === "ko_nkrv";
-}
 
 function isBibleFontSize(value: unknown): value is BibleFontSize {
   return value === "small" || value === "normal" || value === "large" || value === "xlarge";
@@ -240,11 +231,15 @@ function isIosDevice() {
 export function BibleRoomDetail({
   room,
   currentUserId,
+  bibleCopyrightAllowed,
+  translations,
   members,
   initialDate
 }: {
   room: RoomDetail;
   currentUserId: string;
+  bibleCopyrightAllowed: boolean;
+  translations: BibleTranslationSettingView[];
   members: RoomMember[];
   initialDate: string;
 }) {
@@ -298,6 +293,22 @@ export function BibleRoomDetail({
   );
   const planDateRange = useMemo(() => getPlanDateRange(room, planDays), [planDays, room]);
   const currentChapter = chapters[chapterIndex] ?? null;
+  const translationSettings = useMemo(
+    () => translations.length > 0 ? translations : defaultBibleTranslationSettings,
+    [translations]
+  );
+  const visibleTranslationSettings = useMemo(
+    () => translationSettings.filter((item) => item.isVisible),
+    [translationSettings]
+  );
+  const selectableTranslationSettings = useMemo(
+    () => visibleTranslationSettings.filter((item) => !item.requiresCopyright || bibleCopyrightAllowed),
+    [bibleCopyrightAllowed, visibleTranslationSettings]
+  );
+  const currentTranslationSetting = useMemo(
+    () => translationSettings.find((item) => item.code === translation) ?? defaultBibleTranslationSettings[0],
+    [translation, translationSettings]
+  );
   const activeBibleGuideSteps = bibleActionGuideSteps;
 
   const showToast = useCallback((message: string) => {
@@ -323,13 +334,24 @@ export function BibleRoomDetail({
   }, []);
 
   const selectTranslation = useCallback((nextTranslation: BibleTranslationCode) => {
+    const setting = translationSettings.find((item) => item.code === nextTranslation);
+    if (!setting?.isVisible) {
+      showToast("현재 노출되지 않는 번역본입니다.");
+      return;
+    }
+
+    if (setting.requiresCopyright && !bibleCopyrightAllowed) {
+      showToast(setting.label + "은 저작권 허용 후 선택할 수 있습니다.");
+      return;
+    }
+
     setTranslation(nextTranslation);
     try {
       window.localStorage.setItem(BIBLE_TRANSLATION_STORAGE_KEY, nextTranslation);
     } catch {
       // localStorage may be unavailable in private browsing or restricted webviews.
     }
-  }, []);
+  }, [bibleCopyrightAllowed, showToast, translationSettings]);
 
   const selectBibleFontSize = useCallback((nextFontSize: BibleFontSize) => {
     setBibleFontSize(nextFontSize);
@@ -396,7 +418,7 @@ export function BibleRoomDetail({
     } catch {
       // localStorage may be unavailable in private browsing or restricted webviews.
     }
-  }, [bibleDarkModeStorageKey]);
+  }, [bibleCopyrightAllowed, bibleDarkModeStorageKey, selectableTranslationSettings, translationSettings]);
 
   const loadPlans = useCallback(async () => {
     const res = await fetch(`/api/bible-rooms/${room.id}/plans`);
@@ -489,7 +511,16 @@ export function BibleRoomDetail({
       const savedLineHeight = window.localStorage.getItem(BIBLE_LINE_HEIGHT_STORAGE_KEY);
       const savedDarkMode = window.localStorage.getItem(bibleDarkModeStorageKey);
       const savedAppDarkMode = window.localStorage.getItem(APP_DARK_MODE_STORAGE_KEY);
-      if (isBibleTranslationCode(savedTranslation)) setTranslation(savedTranslation);
+      if (isBibleTranslationCode(savedTranslation)) {
+        const savedSetting = translationSettings.find((item) => item.code === savedTranslation);
+        if (savedSetting?.isVisible && (!savedSetting.requiresCopyright || bibleCopyrightAllowed)) {
+          setTranslation(savedTranslation);
+        } else {
+          const fallback = selectableTranslationSettings[0]?.code ?? DEFAULT_BIBLE_TRANSLATION;
+          setTranslation(fallback);
+          window.localStorage.setItem(BIBLE_TRANSLATION_STORAGE_KEY, fallback);
+        }
+      }
       if (isBibleFontSize(savedFontSize)) setBibleFontSize(savedFontSize);
       if (isBibleLineHeight(savedLineHeight)) setBibleLineHeight(savedLineHeight);
       if (savedDarkMode === "true" || savedDarkMode === "false") setDarkMode(savedDarkMode === "true");
@@ -982,7 +1013,7 @@ export function BibleRoomDetail({
         currentUserId={currentUserId}
         members={members}
         reflections={reflections}
-        translationLabel={bibleTranslationLabels[translation]}
+        translationLabel={currentTranslationSetting?.label ?? DEFAULT_BIBLE_TRANSLATION}
         fontSize={bibleFontSize}
         lineHeight={bibleLineHeight}
         darkMode={darkMode}
@@ -1007,6 +1038,8 @@ export function BibleRoomDetail({
       <BibleTranslationModal
         open={translationOpen}
         selected={translation}
+        translations={visibleTranslationSettings}
+        copyrightAllowed={bibleCopyrightAllowed}
         onClose={() => setTranslationOpen(false)}
         onSelect={selectTranslation}
       />
@@ -1627,22 +1660,33 @@ function InfoTile({ label, value }: { label: string; value: string }) {
 function BibleTranslationModal({
   open,
   selected,
+  translations,
+  copyrightAllowed,
   onClose,
   onSelect
 }: {
   open: boolean;
   selected: BibleTranslationCode;
+  translations: BibleTranslationSettingView[];
+  copyrightAllowed: boolean;
   onClose: () => void;
   onSelect: (translation: BibleTranslationCode) => void;
 }) {
-  const options = Object.entries(bibleTranslationLabels) as Array<[BibleTranslationCode, string]>;
+  const options = translations;
 
   return (
     <Modal title="번역본 설정" open={open} onClose={onClose}>
       <div className="grid gap-2">
-        {options.map(([code, label]) => {
+        {options.length === 0 ? (
+          <p className="rounded-lg bg-slate-50 px-4 py-3 text-sm font-bold text-slate-500 dark:bg-slate-900 dark:text-slate-400">
+            현재 노출 중인 번역본이 없습니다.
+          </p>
+        ) : null}
+        {options.map((option) => {
+          const code = option.code;
+          const label = option.label;
           const active = selected === code;
-          const disabled = code === "ko_nkrv";
+          const disabled = option.requiresCopyright && !copyrightAllowed;
 
           return (
             <button

@@ -54,6 +54,7 @@ model User {
   providerUserId String
   nickname       String?      @unique
   role           UserRole     @default(user)
+  bibleCopyrightAllowed Boolean @default(false)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   deletedAt      DateTime?
@@ -278,6 +279,16 @@ model BibleProgress {
   @@unique([roomId, userId, readingDate])
   @@index([roomId, readingDate])
   @@index([userId])
+}
+
+model BibleTranslationSetting {
+  code              String   @id
+  label             String
+  isVisible         Boolean  @default(true)
+  requiresCopyright Boolean  @default(false)
+  sortOrder         Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
 
 model Feedback {

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { BibleRoomDetail } from "@/components/BibleRoomDetail";
 import { todayDateKey } from "@/lib/bible-plan";
+import { normalizeBibleTranslationSettings } from "@/lib/bible-translations";
 import { prisma } from "@/lib/prisma";
 import { requireBibleRoomMember, requireNickname } from "@/lib/permissions";
 
@@ -45,9 +46,23 @@ export default async function BibleRoomDetailPage({ params }: PageProps) {
 
   if (!room) notFound();
 
+  const translationRows = await prisma.bibleTranslationSetting.findMany({
+    select: {
+      code: true,
+      label: true,
+      isVisible: true,
+      requiresCopyright: true,
+      sortOrder: true
+    },
+    orderBy: [{ sortOrder: "asc" }, { code: "asc" }]
+  });
+  const translations = normalizeBibleTranslationSettings(translationRows);
+
   return (
     <BibleRoomDetail
       currentUserId={user.id}
+      bibleCopyrightAllowed={user.bibleCopyrightAllowed}
+      translations={translations}
       initialDate={todayDateKey()}
       room={{
         id: room.id,

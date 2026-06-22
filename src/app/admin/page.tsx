@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, MessageSquareText, Users } from "lucide-react";
+import { BookOpen, ChevronLeft, ChevronRight, MessageSquareText, Users } from "lucide-react";
 import { requireAdmin } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +16,12 @@ const menuItems = [
     icon: Users,
     title: "사용자 관리",
     description: "가입한 사용자 목록과 계정 상태를 확인합니다."
+  },
+  {
+    href: "/admin/bible-translations",
+    icon: BookOpen,
+    title: "성경 번역본 관리",
+    description: "번역본 노출과 저작권 필요 여부를 관리합니다."
   }
 ];
 

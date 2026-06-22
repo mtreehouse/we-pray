@@ -17,6 +17,7 @@ export async function getCurrentUser() {
       providerUserId: true,
       nickname: true,
       role: true,
+      bibleCopyrightAllowed: true,
       deletedAt: true
     }
   });

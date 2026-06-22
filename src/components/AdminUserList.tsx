@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Search, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Search, Trash2, X } from "lucide-react";
 import { Toast } from "@/components/ui/Toast";
 
 type AdminUser = {
@@ -9,6 +9,7 @@ type AdminUser = {
   nickname: string | null;
   provider: string;
   role: string;
+  bibleCopyrightAllowed: boolean;
   createdAt: string;
   isMe: boolean;
 };
@@ -36,6 +37,8 @@ export function AdminUserList({ users, initialNextCursor }: { users: AdminUser[]
   const [nextCursor, setNextCursor] = useState<string | null>(initialNextCursor);
   const [toast, setToast] = useState("");
   const [loading, setLoading] = useState(false);
+  const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
+  const [permissionSavingId, setPermissionSavingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
   const [deleteInput, setDeleteInput] = useState("");
   const [deleting, setDeleting] = useState(false);
@@ -62,12 +65,14 @@ export function AdminUserList({ users, initialNextCursor }: { users: AdminUser[]
     const nextItems = data.users ?? [];
     setItems((current) => reset ? nextItems : [...current, ...nextItems]);
     setNextCursor(data.nextCursor ?? null);
+    if (reset) setExpandedIds({});
   }
 
   function searchUsers() {
     if (loading) return;
     setItems([]);
     setNextCursor(null);
+    setExpandedIds({});
     void loadUsers(search, null, true);
   }
 
@@ -84,6 +89,31 @@ export function AdminUserList({ users, initialNextCursor }: { users: AdminUser[]
     if (deleting) return;
     setDeleteTarget(null);
     setDeleteInput("");
+  }
+
+  async function toggleCopyrightAllowed(user: AdminUser) {
+    if (permissionSavingId) return;
+    const nextAllowed = !user.bibleCopyrightAllowed;
+    setPermissionSavingId(user.id);
+
+    const res = await fetch(`/api/admin/users/${user.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bibleCopyrightAllowed: nextAllowed })
+    });
+    const data = await res.json().catch(() => ({})) as { error?: string; user?: { bibleCopyrightAllowed: boolean } };
+    setPermissionSavingId(null);
+
+    if (!res.ok || !data.user) {
+      setToast(data.error ?? "저작권 허용 설정을 저장하지 못했습니다.");
+      return;
+    }
+
+    setItems((current) => current.map((item) => item.id === user.id ? {
+      ...item,
+      bibleCopyrightAllowed: data.user?.bibleCopyrightAllowed ?? nextAllowed
+    } : item));
+    setToast(data.user.bibleCopyrightAllowed ? "저작권 허용을 켰습니다." : "저작권 허용을 껐습니다.");
   }
 
   async function removeUser() {
@@ -166,33 +196,69 @@ export function AdminUserList({ users, initialNextCursor }: { users: AdminUser[]
         </div>
       ) : null}
 
-      {items.map((user) => (
-        <article key={user.id} className="rounded-lg bg-white p-4 shadow-soft dark:border dark:border-slate-800 dark:bg-slate-900">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="flex min-w-0 items-center gap-2">
-                <h2 className="truncate font-black text-slate-950 dark:text-slate-50">{user.nickname ?? "닉네임 없음"}</h2>
-                {user.isMe ? <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-black text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300">ME</span> : null}
-              </div>
-              <p className="mt-1 text-sm font-semibold text-slate-500 dark:text-slate-400">
-                {user.provider} · {user.role}
-              </p>
-              <p className="mt-1 text-xs font-semibold text-slate-400 dark:text-slate-500">
-                가입 {formatDate(user.createdAt)}
-              </p>
+      {items.map((user) => {
+        const expanded = Boolean(expandedIds[user.id]);
+        const permissionSaving = permissionSavingId === user.id;
+
+        return (
+          <article key={user.id} className="overflow-hidden rounded-lg bg-white shadow-soft dark:border dark:border-slate-800 dark:bg-slate-900">
+            <div className="flex items-stretch gap-2 p-4">
+              <button
+                type="button"
+                onClick={() => setExpandedIds((current) => ({ ...current, [user.id]: !expanded }))}
+                className="flex min-w-0 flex-1 items-start justify-between gap-3 text-left"
+              >
+                <div className="min-w-0">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <h2 className="truncate font-black text-slate-950 dark:text-slate-50">{user.nickname ?? "닉네임 없음"}</h2>
+                    {user.isMe ? <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-black text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300">ME</span> : null}
+                    {user.bibleCopyrightAllowed ? <span className="rounded-full bg-teal-50 px-2 py-0.5 text-[10px] font-black text-teal-700 dark:bg-teal-500/15 dark:text-teal-300">COPYRIGHT</span> : null}
+                  </div>
+                  <p className="mt-1 text-sm font-semibold text-slate-500 dark:text-slate-400">
+                    {user.provider} · {user.role}
+                  </p>
+                  <p className="mt-1 text-xs font-semibold text-slate-400 dark:text-slate-500">
+                    가입 {formatDate(user.createdAt)}
+                  </p>
+                </div>
+                <span className="mt-1 shrink-0 text-slate-400">
+                  {expanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => openDeleteModal(user)}
+                disabled={user.isMe}
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-rose-50 text-rose-700 disabled:bg-slate-100 disabled:text-slate-300 dark:bg-rose-500/15 dark:text-rose-300 dark:disabled:bg-slate-800 dark:disabled:text-slate-600"
+                aria-label="사용자 삭제"
+              >
+                <Trash2 size={18} />
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => openDeleteModal(user)}
-              disabled={user.isMe}
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-rose-50 text-rose-700 disabled:bg-slate-100 disabled:text-slate-300 dark:bg-rose-500/15 dark:text-rose-300 dark:disabled:bg-slate-800 dark:disabled:text-slate-600"
-              aria-label="사용자 삭제"
-            >
-              <Trash2 size={18} />
-            </button>
-          </div>
-        </article>
-      ))}
+
+            {expanded ? (
+              <div className="border-t border-slate-100 px-4 py-3 dark:border-slate-800">
+                <div className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-3 dark:bg-slate-950/60">
+                  <div className="min-w-0">
+                    <p className="font-black text-slate-900 dark:text-slate-100">저작권 허용</p>
+                    <p className="mt-1 text-xs font-semibold leading-5 text-slate-500 dark:text-slate-400">개역개정 번역본 선택을 허용합니다.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => toggleCopyrightAllowed(user)}
+                    disabled={permissionSaving}
+                    className={`relative h-8 w-14 shrink-0 rounded-full transition disabled:opacity-60 ${user.bibleCopyrightAllowed ? "bg-teal-600" : "bg-slate-300 dark:bg-slate-700"}`}
+                    aria-pressed={user.bibleCopyrightAllowed}
+                    aria-label="저작권 허용"
+                  >
+                    <span className={`absolute top-1 h-6 w-6 rounded-full bg-white shadow transition ${user.bibleCopyrightAllowed ? "left-7" : "left-1"}`} />
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </article>
+        );
+      })}
 
       <div ref={loadMoreRef} className="min-h-4" />
       {loading ? <p className="py-3 text-center text-sm font-bold text-slate-400">불러오는 중</p> : null}
