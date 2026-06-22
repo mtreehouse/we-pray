@@ -17,6 +17,7 @@ const REQUEST_PWA_INSTALL_EVENT = "wepray:pwa-install-request";
 type SettingsMenuProps = {
   isLoggedIn: boolean;
   currentNickname?: string | null;
+  currentProvider?: string | null;
   appVersion: string;
 };
 
@@ -39,7 +40,14 @@ const wePrayInfoSections = [
   }
 ];
 
-export function SettingsMenu({ isLoggedIn, currentNickname, appVersion }: SettingsMenuProps) {
+function providerLabel(provider?: string | null) {
+  if (provider === "google") return "Google";
+  if (provider === "kakao") return "Kakao";
+  if (provider === "naver") return "Naver";
+  return "SNS";
+}
+
+export function SettingsMenu({ isLoggedIn, currentNickname, currentProvider, appVersion }: SettingsMenuProps) {
   const router = useRouter();
   const [appDarkMode, setAppDarkMode] = useState(false);
   const [nickname, setNickname] = useState(currentNickname ?? "");
@@ -227,7 +235,13 @@ export function SettingsMenu({ isLoggedIn, currentNickname, appVersion }: Settin
                   <UserRound size={17} className="text-teal-700 dark:text-teal-300" />
                   <p className="font-black text-slate-950 dark:text-slate-50">닉네임</p>
                 </div>
-                <p className="truncate text-sm font-bold text-slate-600 dark:text-slate-300">{nickname || "닉네임 미설정"}</p>
+                <div className="flex min-w-0 items-center gap-2">
+                  <p className="truncate text-sm font-bold text-slate-600 dark:text-slate-300">{nickname || "닉네임 미설정"}</p>
+                  <span className={"inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-black " + (currentProvider === "google" ? "bg-sky-50 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300" : currentProvider === "kakao" ? "bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300" : currentProvider === "naver" ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300")}>
+                    <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                    {providerLabel(currentProvider)}
+                  </span>
+                </div>
               </div>
               <button
                 type="button"
@@ -258,21 +272,6 @@ export function SettingsMenu({ isLoggedIn, currentNickname, appVersion }: Settin
 
         <button
           type="button"
-          onClick={() => window.dispatchEvent(new Event(REQUEST_PWA_INSTALL_EVENT))}
-          className="flex items-center justify-between gap-3 rounded-lg bg-white/90 px-4 py-4 text-left shadow-soft dark:border dark:border-slate-800 dark:bg-slate-900/85"
-        >
-          <span className="min-w-0">
-            <span className="flex items-center gap-2 font-black text-slate-950 dark:text-slate-50">
-              <Download size={17} className="text-violet-700 dark:text-violet-300" />
-              앱 화면으로 설치
-            </span>
-            <span className="mt-1 block text-xs font-bold text-slate-500 dark:text-slate-400">홈 화면에 바로 추가할 수 있어요.</span>
-          </span>
-          <ChevronRight size={18} className="text-slate-400" />
-        </button>
-
-        <button
-          type="button"
           onClick={() => setInfoOpen(true)}
           className="flex items-center justify-between gap-3 rounded-lg bg-white/90 px-4 py-4 text-left shadow-soft dark:border dark:border-slate-800 dark:bg-slate-900/85"
         >
@@ -286,6 +285,21 @@ export function SettingsMenu({ isLoggedIn, currentNickname, appVersion }: Settin
           <ChevronRight size={18} className="text-slate-400" />
         </button>
 
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new Event(REQUEST_PWA_INSTALL_EVENT))}
+          className="flex items-center justify-between gap-3 rounded-lg bg-white/90 px-4 py-4 text-left shadow-soft dark:border dark:border-slate-800 dark:bg-slate-900/85"
+        >
+          <span className="min-w-0">
+            <span className="flex items-center gap-2 font-black text-slate-950 dark:text-slate-50">
+              <Download size={17} className="text-violet-700 dark:text-violet-300" />
+              앱 화면으로 설치
+            </span>
+            <span className="mt-1 block text-xs font-bold text-slate-500 dark:text-slate-400">홈 화면에 바로 추가할 수 있어요.</span>
+          </span>
+          <ChevronRight size={18} className="text-slate-400" />
+        </button>
+        
         <button
           type="button"
           onClick={clearAppCache}

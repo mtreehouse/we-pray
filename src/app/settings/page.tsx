@@ -19,7 +19,7 @@ export default async function SettingsPage() {
         <p className="text-sm font-bold text-teal-700 dark:text-teal-300">WePray</p>
         <h1 className="mt-1 text-2xl font-black text-slate-950 dark:text-slate-50">설정</h1>
       </header>
-      <SettingsMenu isLoggedIn={Boolean(user)} currentNickname={user?.nickname} appVersion={packageJson.version} />
+      <SettingsMenu isLoggedIn={Boolean(user)} currentNickname={user?.nickname} currentProvider={user?.provider} appVersion={packageJson.version} />
       <footer className="mt-auto px-2 pt-8 text-center text-[11px] font-semibold text-slate-400 dark:text-slate-500">
         Copyright © 2026 Yunwoo Kim. All rights reserved.
       </footer>
