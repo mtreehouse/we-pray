@@ -971,6 +971,7 @@ export function BibleRoomDetail({
           planDateRange={planDateRange}
           progress={progress}
           onSelectDate={setPlanSelectedDate}
+          guideActive={guideOpen && activeBibleGuideSteps[guideStepIndex]?.key === "plan"}
         />
       ) : null}
 
@@ -1794,6 +1795,8 @@ function MemberReflectionHistoryModal({
   );
 }
 
+const BIBLE_GUIDE_SAMPLE_DATE = "2026-06-20";
+
 const BIBLE_GUIDE_SAMPLE_CHAPTER: ReadingChapter = {
   bookCode: "MAT",
   bookName: "마태복음",
@@ -1825,6 +1828,66 @@ const BIBLE_GUIDE_SAMPLE_CHAPTER: ReadingChapter = {
       },
       reflectionCount: 0,
       myReflectionId: null
+    }
+  ]
+};
+
+const BIBLE_GUIDE_SAMPLE_DAYS: PlanDay[] = [
+  {
+    date: BIBLE_GUIDE_SAMPLE_DATE,
+    isCompleted: true,
+    hasReflection: true,
+    plans: [
+      { id: "guide-plan-1", bookCode: "MAT", bookName: "마태복음", startChapter: 7, endChapter: 7 },
+      { id: "guide-plan-2", bookCode: "MRK", bookName: "마가복음", startChapter: 1, endChapter: 1 }
+    ]
+  },
+  {
+    date: "2026-06-21",
+    isCompleted: false,
+    hasReflection: true,
+    plans: [{ id: "guide-plan-3", bookCode: "LUK", bookName: "누가복음", startChapter: 15, endChapter: 15 }]
+  },
+  {
+    date: "2026-06-22",
+    isCompleted: false,
+    hasReflection: false,
+    plans: [{ id: "guide-plan-4", bookCode: "JHN", bookName: "요한복음", startChapter: 3, endChapter: 3 }]
+  }
+];
+
+const BIBLE_GUIDE_SAMPLE_PROGRESS: ProgressSummary = {
+  totalPlanDays: 3,
+  currentPlanDays: 2,
+  completedCount: 1,
+  totalCount: 2,
+  earnedPoints: 3,
+  possiblePoints: 4,
+  overallRate: 75,
+  members: [
+    {
+      userId: "guide-user-1",
+      nickname: "가이드",
+      role: "creator",
+      joinedAt: "2026-06-20T00:00:00.000Z",
+      completedCount: 1,
+      reflectionCount: 1,
+      totalCount: 2,
+      earnedPoints: 2,
+      possiblePoints: 2,
+      rate: 100
+    },
+    {
+      userId: "guide-user-2",
+      nickname: "함께읽는이",
+      role: "member",
+      joinedAt: "2026-06-20T00:00:00.000Z",
+      completedCount: 0,
+      reflectionCount: 1,
+      totalCount: 2,
+      earnedPoints: 1,
+      possiblePoints: 2,
+      rate: 50
     }
   ]
 };
@@ -1884,11 +1947,16 @@ function BibleTab({
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [selectedVerse, setSelectedVerse] = useState<VerseTarget | null>(null);
   const [swipeHint, setSwipeHint] = useState<{ direction: "prev" | "next"; strength: number; offset: number } | null>(null);
-  const isGuideSampleChapter = !currentChapter && (guideStepKey === "reading" || guideStepKey === "verse" || guideStepKey === "complete");
-  const displayChapter = currentChapter ?? (isGuideSampleChapter ? BIBLE_GUIDE_SAMPLE_CHAPTER : null);
-  const displayChapterIndex = isGuideSampleChapter ? 0 : chapterIndex;
-  const displayChapterCount = isGuideSampleChapter ? 1 : chapters.length;
-  const showCompleteButton = isGuideSampleChapter || (displayChapterIndex >= displayChapterCount - 1 && Boolean(onToggleComplete));
+  const isBibleGuideSample = guideStepKey === "date" || guideStepKey === "reading" || guideStepKey === "verse" || guideStepKey === "complete";
+  const displayDate = isBibleGuideSample ? BIBLE_GUIDE_SAMPLE_DATE : selectedDate;
+  const displayDays = isBibleGuideSample ? BIBLE_GUIDE_SAMPLE_DAYS : days;
+  const displayPlanDateRange = isBibleGuideSample ? { startDate: BIBLE_GUIDE_SAMPLE_DATE, endDate: "2026-06-22" } : planDateRange;
+  const displayChapter = isBibleGuideSample ? BIBLE_GUIDE_SAMPLE_CHAPTER : currentChapter;
+  const displayChapterIndex = isBibleGuideSample ? (guideStepKey === "complete" ? 1 : 0) : chapterIndex;
+  const displayChapterCount = isBibleGuideSample ? 2 : chapters.length;
+  const displayCompleted = isBibleGuideSample ? guideStepKey === "complete" : isCompleted;
+  const displayCompleting = isBibleGuideSample ? false : completing;
+  const showCompleteButton = isBibleGuideSample ? guideStepKey === "complete" : displayChapterIndex >= displayChapterCount - 1 && Boolean(onToggleComplete);
 
   function scrollToFirstVerse() {
     window.requestAnimationFrame(() => {
@@ -1973,41 +2041,41 @@ function BibleTab({
   }, [displayChapter, guideStepKey, translation]);
 
   function goPrev() {
-    if (chapterIndex === 0) return;
+    if (isBibleGuideSample || chapterIndex === 0) return;
     setSwipeHint(null);
     pendingChapterScrollRef.current = true;
     onPrev();
   }
 
   function goNext() {
-    if (chapterIndex >= chapters.length - 1) return;
+    if (isBibleGuideSample || chapterIndex >= chapters.length - 1) return;
     setSwipeHint(null);
     pendingChapterScrollRef.current = true;
     onNext();
   }
 
   function goFirst() {
-    if (chapterIndex === 0) return;
+    if (isBibleGuideSample || chapterIndex === 0) return;
     setSwipeHint(null);
     pendingChapterScrollRef.current = true;
     onFirst();
   }
 
   function goLast() {
-    if (chapterIndex >= chapters.length - 1) return;
+    if (isBibleGuideSample || chapterIndex >= chapters.length - 1) return;
     setSwipeHint(null);
     pendingChapterScrollRef.current = true;
     onLast();
   }
 
   function goPrevInPlace() {
-    if (chapterIndex === 0) return;
+    if (isBibleGuideSample || chapterIndex === 0) return;
     setSwipeHint(null);
     onPrev();
   }
 
   function goNextInPlace() {
-    if (chapterIndex >= chapters.length - 1) return;
+    if (isBibleGuideSample || chapterIndex >= chapters.length - 1) return;
     setSwipeHint(null);
     onNext();
   }
@@ -2055,7 +2123,7 @@ function BibleTab({
           aria-expanded={datePickerOpen}
         >
           <CalendarDays size={17} className="text-teal-700 dark:text-teal-300" />
-          {formatDateKey(selectedDate)}
+          {formatDateKey(displayDate)}
         </button>
         {datePickerOpen ? (
           <>
@@ -2068,11 +2136,11 @@ function BibleTab({
             />
             <div data-guide="bible-date-calendar" className="absolute left-4 right-4 top-full z-50 mt-2 rounded-lg border border-slate-200 bg-white p-3 shadow-[0_18px_45px_rgba(15,23,42,0.18)] dark:border-slate-800 dark:bg-slate-900">
               <PlanCalendar
-                days={days}
-                selectedDate={selectedDate}
-                planDateRange={planDateRange}
+                days={displayDays}
+                selectedDate={displayDate}
+                planDateRange={displayPlanDateRange}
                 onSelectDate={(date) => {
-                  onSelectDate(date);
+                  if (!isBibleGuideSample) onSelectDate(date);
                   setDatePickerOpen(false);
                 }}
                 compact
@@ -2103,7 +2171,7 @@ function BibleTab({
           }
 
           const direction = deltaX > 0 ? "prev" : "next";
-          const canMove = direction === "prev" ? chapterIndex > 0 : chapterIndex < chapters.length - 1;
+          const canMove = isBibleGuideSample ? true : direction === "prev" ? chapterIndex > 0 : chapterIndex < chapters.length - 1;
           if (!canMove) {
             setSwipeHint(null);
             return;
@@ -2133,13 +2201,15 @@ function BibleTab({
           const deltaY = touch.clientY - start.y;
           if (Math.abs(deltaX) > 45 && Math.abs(deltaX) > Math.abs(deltaY) * 1.15) {
             event.preventDefault();
-            if (deltaX < 0) goNext();
-            if (deltaX > 0) goPrev();
+            if (!isBibleGuideSample) {
+              if (deltaX < 0) goNext();
+              if (deltaX > 0) goPrev();
+            }
           }
           clearSwipeHint();
         }}
       >
-        {readingLoading ? (
+        {readingLoading && !isBibleGuideSample ? (
           <div data-guide="bible-reading" className="border-b border-slate-100 bg-white p-6 text-center text-sm font-bold text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400">본문을 불러오는 중입니다.</div>
         ) : displayChapter ? (
           <article data-guide="bible-reading" className="bg-white px-4 pb-4 pt-3 dark:bg-slate-950">
@@ -2160,7 +2230,7 @@ function BibleTab({
               <button
                 type="button"
                 onClick={goPrevInPlace}
-                disabled={displayChapterIndex === 0}
+                disabled={isBibleGuideSample || displayChapterIndex === 0}
                 className="grid h-10 w-10 place-items-center rounded-full border border-slate-200 text-slate-700 disabled:opacity-30 dark:border-slate-700 dark:text-slate-200"
                 aria-label="이전 장"
                 title="이전 장"
@@ -2174,7 +2244,7 @@ function BibleTab({
               <button
                 type="button"
                 onClick={goNextInPlace}
-                disabled={displayChapterIndex >= displayChapterCount - 1}
+                disabled={isBibleGuideSample || displayChapterIndex >= displayChapterCount - 1}
                 className="grid h-10 w-10 place-items-center rounded-full border border-slate-200 text-slate-700 disabled:opacity-30 dark:border-slate-700 dark:text-slate-200"
                 aria-label="다음 장"
                 title="다음 장"
@@ -2207,7 +2277,7 @@ function BibleTab({
                 <button
                   type="button"
                   onClick={() => {
-                    goFirst();
+                    if (!isBibleGuideSample) goFirst();
                   }}
                   className="min-h-12 w-12 rounded-lg border border-slate-200 bg-white px-2 text-xs font-black text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
                 >
@@ -2240,7 +2310,7 @@ function BibleTab({
                 <button
                   type="button"
                   onClick={() => {
-                    goLast();
+                    if (!isBibleGuideSample) goLast();
                   }}
                   className="min-h-12 w-12 rounded-lg border border-slate-200 bg-white px-2 text-xs font-black text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
                 >
@@ -2251,18 +2321,18 @@ function BibleTab({
             {showCompleteButton ? (
               <button
                 type="button"
-                onClick={isGuideSampleChapter ? undefined : onToggleComplete}
-                disabled={completing}
+                onClick={isBibleGuideSample ? undefined : onToggleComplete}
+                disabled={displayCompleting}
                 data-guide="bible-complete"
                 className={`mt-3 flex min-h-14 w-full items-center justify-center gap-2 rounded-lg border px-4 py-3 font-black transition disabled:opacity-60 ${
-                  isCompleted
+                  displayCompleted
                     ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200"
                     : "border-slate-200 bg-slate-100 text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400"
                 }`}
               >
                 <span
                   className={`grid h-6 w-6 place-items-center rounded-full ${
-                    isCompleted ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-400"
+                    displayCompleted ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-400"
                   }`}
                 >
                   <Check size={15} strokeWidth={3} />
@@ -2396,7 +2466,7 @@ function SharingTab({
       ko_krv: "어찌하여 형제의 눈 속에 있는 티는 보고 네 눈 속에 있는 들보는 깨닫지 못하느냐",
       ko_nkrv: "어찌하여 형제의 눈 속에 있는 티는 보고 네 눈 속에 있는 들보는 깨닫지 못하느냐"
     },
-    planDate: null,
+    planDate: BIBLE_GUIDE_SAMPLE_DATE,
     content: "이 말씀을 붙들고 내 마음을 먼저 돌아보려 합니다.",
     createdAt: "2026-06-20T00:00:00.000Z",
     userId: "guide-sample-user",
@@ -2409,16 +2479,17 @@ function SharingTab({
     isLikedByMe: false,
     isHeartedByMe: false
   }), []);
-  const guideHasSample = guideActive && reflections.length === 0;
-  const actionReflection = selectedReflection ?? (guideHasSample ? guideSampleReflection : null);
+  const displayReflections = guideActive ? [guideSampleReflection] : reflections;
+  const displaySelectedReflection = guideActive ? guideSampleReflection : selectedReflection;
+  const actionReflection = displaySelectedReflection;
   const grouped = useMemo(() => {
-    return reflections.reduce<Record<string, Reflection[]>>((acc, reflection) => {
+    return displayReflections.reduce<Record<string, Reflection[]>>((acc, reflection) => {
       const key = reflection.planDate ?? reflection.createdAt.slice(0, 10);
       acc[key] = acc[key] ?? [];
       acc[key].push(reflection);
       return acc;
     }, {});
-  }, [reflections]);
+  }, [displayReflections]);
   const groupedEntries = useMemo(() => {
     return Object.entries(grouped)
       .sort(([dateA], [dateB]) => dateB.localeCompare(dateA))
@@ -2429,25 +2500,25 @@ function SharingTab({
   }, [grouped]);
 
   useEffect(() => {
-    if (!selectedReflectionId || selectedReflection) return;
+    if (!selectedReflectionId || displaySelectedReflection) return;
     setSelectedReflectionId(null);
-  }, [selectedReflection, selectedReflectionId]);
+  }, [displaySelectedReflection, selectedReflectionId]);
 
   useEffect(() => {
     if (!guideActive) return;
-    setSelectedReflectionId((current) => current ?? reflections[0]?.id ?? null);
-  }, [guideActive, reflections]);
+    setSelectedReflectionId(null);
+  }, [guideActive]);
 
   const copySelectedReflection = useCallback(async () => {
-    if (!selectedReflection) return;
+    if (!displaySelectedReflection) return;
 
-    const bookName = selectedReflection.bookName ?? selectedReflection.bookCode;
-    const verseNumber = verseLabel(selectedReflection.verseContent, selectedReflection.verse);
-    const passageText = verseText(selectedReflection.verseContent, translation);
-    const copyText = `[${bookName} ${selectedReflection.chapter}:${verseNumber}]
+    const bookName = displaySelectedReflection.bookName ?? displaySelectedReflection.bookCode;
+    const verseNumber = verseLabel(displaySelectedReflection.verseContent, displaySelectedReflection.verse);
+    const passageText = verseText(displaySelectedReflection.verseContent, translation);
+    const copyText = `[${bookName} ${displaySelectedReflection.chapter}:${verseNumber}]
 ${passageText}
 
-${selectedReflection.content}`;
+${displaySelectedReflection.content}`;
 
     try {
       await navigator.clipboard.writeText(copyText);
@@ -2456,19 +2527,19 @@ ${selectedReflection.content}`;
     } catch {
       onToast("복사에 실패했습니다.");
     }
-  }, [onToast, selectedReflection, translation]);
+  }, [onToast, displaySelectedReflection, translation]);
 
   const editSelectedReflection = useCallback(() => {
-    if (!selectedReflection || !selectedReflection.isMine) return;
+    if (!displaySelectedReflection?.isMine || guideActive) return;
     setSelectedReflectionId(null);
-    onEdit(selectedReflection);
-  }, [onEdit, selectedReflection]);
+    onEdit(displaySelectedReflection);
+  }, [displaySelectedReflection, guideActive, onEdit]);
 
   const deleteSelectedReflection = useCallback(() => {
-    if (!selectedReflection || !selectedReflection.isMine) return;
+    if (!displaySelectedReflection?.isMine || guideActive) return;
     setSelectedReflectionId(null);
-    onDelete(selectedReflection);
-  }, [onDelete, selectedReflection]);
+    onDelete(displaySelectedReflection);
+  }, [displaySelectedReflection, guideActive, onDelete]);
 
   return (
     <section data-guide="sharing-feed" className={`flex-1 px-4 pt-4 dark:bg-slate-950 ${actionReflection ? "pb-28" : "pb-8"}`}>
@@ -2484,41 +2555,26 @@ ${selectedReflection.content}`;
                   key={reflection.id}
                   reflection={reflection}
                   guideTarget={guideActive && index === 0}
-                  selected={selectedReflection?.id === reflection.id}
+                  selected={displaySelectedReflection?.id === reflection.id}
                   translation={translation}
-                  onSelect={() => setSelectedReflectionId((current) => (current === reflection.id ? null : reflection.id))}
-                  onOpenPassage={onOpenPassage}
-                  onToggleReaction={onToggleReaction}
+                  onSelect={() => {
+                    if (!guideActive) setSelectedReflectionId((current) => (current === reflection.id ? null : reflection.id));
+                  }}
+                  onOpenPassage={guideActive ? () => undefined : onOpenPassage}
+                  onToggleReaction={guideActive ? async () => false : onToggleReaction}
                 />
               ))}
             </div>
           </div>
         ))
       ) : (
-        guideHasSample ? (
-          <div className="grid gap-3">
-            <div className="mb-1 flex justify-center">
-              <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">가이드 예시</span>
-            </div>
-            <SharingReflectionCard
-              reflection={guideSampleReflection}
-              guideTarget
-              selected
-              translation={translation}
-              onSelect={() => undefined}
-              onOpenPassage={() => undefined}
-              onToggleReaction={async () => false}
-            />
-          </div>
-        ) : (
-          <div data-guide="sharing-card" className="rounded-lg border border-dashed border-slate-300 bg-white p-6 text-center text-sm leading-6 text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
-            아직 작성된 묵상이 없습니다.
-          </div>
-        )
+        <div data-guide="sharing-card" className="rounded-lg border border-dashed border-slate-300 bg-white p-6 text-center text-sm leading-6 text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
+          아직 작성된 묵상이 없습니다.
+        </div>
       )}
       <div ref={sentinelRef} className="h-8" />
-      {loading ? <p className="text-center text-sm font-bold text-slate-400">불러오는 중입니다.</p> : null}
-      {!nextCursor && reflections.length ? <p className="text-center text-xs font-bold text-slate-300">마지막 나눔입니다.</p> : null}
+      {!guideActive && loading ? <p className="text-center text-sm font-bold text-slate-400">불러오는 중입니다.</p> : null}
+      {!guideActive && !nextCursor && reflections.length ? <p className="text-center text-xs font-bold text-slate-300">마지막 나눔입니다.</p> : null}
 
       {actionReflection ? (
         <div
@@ -2542,7 +2598,7 @@ ${selectedReflection.content}`;
               <button
                 type="button"
                 onClick={editSelectedReflection}
-                disabled={!selectedReflection?.isMine}
+                disabled={guideActive || !displaySelectedReflection?.isMine}
                 className="flex min-h-10 items-center justify-center gap-1 rounded-xl bg-teal-700 px-2.5 text-xs font-black text-white disabled:bg-teal-100 disabled:text-teal-700 dark:disabled:bg-teal-950/60 dark:disabled:text-teal-200"
               >
                 <Edit3 size={14} />
@@ -2553,7 +2609,7 @@ ${selectedReflection.content}`;
               <button
                 type="button"
                 onClick={deleteSelectedReflection}
-                disabled={!selectedReflection?.isMine}
+                disabled={guideActive || !displaySelectedReflection?.isMine}
                 className="flex min-h-10 items-center justify-center gap-1 rounded-xl bg-rose-50 px-2.5 text-xs font-black text-rose-700 disabled:bg-rose-50 disabled:text-rose-400 dark:bg-rose-950/50 dark:text-rose-200 dark:disabled:bg-rose-950/30 dark:disabled:text-rose-300"
               >
                 <Trash2 size={14} />
@@ -2813,7 +2869,8 @@ function PlanTab({
   selectedDate,
   planDateRange,
   progress,
-  onSelectDate
+  onSelectDate,
+  guideActive = false
 }: {
   members: RoomMember[];
   days: PlanDay[];
@@ -2821,19 +2878,33 @@ function PlanTab({
   planDateRange: DateRange | null;
   progress: ProgressSummary | null;
   onSelectDate: (date: string) => void;
+  guideActive?: boolean;
 }) {
-  const selectedDay = days.find((day) => day.date === selectedDate) ?? null;
-  const progressByUser = new Map(progress?.members.map((member) => [member.userId, member]) ?? []);
+  const displayDays = guideActive ? BIBLE_GUIDE_SAMPLE_DAYS : days;
+  const displaySelectedDate = guideActive ? BIBLE_GUIDE_SAMPLE_DATE : selectedDate;
+  const displayPlanDateRange = guideActive ? { startDate: BIBLE_GUIDE_SAMPLE_DATE, endDate: "2026-06-22" } : planDateRange;
+  const displayProgress = guideActive ? BIBLE_GUIDE_SAMPLE_PROGRESS : progress;
+  const displayMembers = guideActive
+    ? BIBLE_GUIDE_SAMPLE_PROGRESS.members.map((member) => ({
+        id: member.userId,
+        userId: member.userId,
+        nickname: member.nickname,
+        role: member.role,
+        joinedAt: member.joinedAt
+      }))
+    : members;
+  const selectedDay = displayDays.find((day) => day.date === displaySelectedDate) ?? null;
+  const progressByUser = new Map(displayProgress?.members.map((member) => [member.userId, member]) ?? []);
   const [progressInfoOpen, setProgressInfoOpen] = useState(false);
 
   return (
     <section className="flex-1 px-4 pb-8 pt-4 dark:bg-slate-950">
       <div data-guide="plan-calendar">
-        <PlanCalendar days={days} selectedDate={selectedDate} planDateRange={planDateRange} onSelectDate={onSelectDate} showLegend />
+        <PlanCalendar days={displayDays} selectedDate={displaySelectedDate} planDateRange={displayPlanDateRange} onSelectDate={guideActive ? () => undefined : onSelectDate} showLegend />
       </div>
 
       <div className="mt-4 rounded-lg bg-white p-4 shadow-soft dark:bg-slate-900 dark:shadow-none">
-        <h3 className="mb-3 font-black text-slate-950 dark:text-slate-50">{formatDate(selectedDate)} 플랜</h3>
+        <h3 className="mb-3 font-black text-slate-950 dark:text-slate-50">{formatDate(displaySelectedDate)} 플랜</h3>
         {selectedDay?.plans.length ? (
           <div className="grid gap-2">
             {selectedDay.plans.map((plan) => (
@@ -2862,7 +2933,7 @@ function PlanTab({
             </button>
           </div>
           <span className="rounded-full bg-emerald-50 px-3 py-1 text-sm font-black text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-200">
-            전체 {progress?.overallRate ?? 0}%
+            전체 {displayProgress?.overallRate ?? 0}%
           </span>
         </div>
         <div className="grid gap-2">
