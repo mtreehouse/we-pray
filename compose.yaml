@@ -1,0 +1,3 @@
+# Guard file: this directory is for Next.js source only.
+# Run Docker Compose from /opt/we-pray, not /opt/we-pray/app.
+services: {}

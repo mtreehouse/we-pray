@@ -8,12 +8,27 @@ type Params = {
   }>;
 };
 
-export async function DELETE(_req: Request, { params }: Params) {
+export async function DELETE(req: Request, { params }: Params) {
   const admin = await requireAdmin();
   const { userId } = await params;
 
   if (admin.id === userId) {
     return NextResponse.json({ error: "관리자는 자기 자신을 삭제할 수 없습니다." }, { status: 400 });
+  }
+
+  const body = await req.json().catch(() => ({})) as { nickname?: string };
+  const user = await prisma.user.findFirst({
+    where: { id: userId, deletedAt: null },
+    select: { id: true, nickname: true }
+  });
+
+  if (!user) {
+    return NextResponse.json({ error: "사용자를 찾을 수 없습니다." }, { status: 404 });
+  }
+
+  const expectedNickname = user.nickname ?? "닉네임 없음";
+  if (body.nickname !== expectedNickname) {
+    return NextResponse.json({ error: "삭제할 사용자의 닉네임이 일치하지 않습니다." }, { status: 400 });
   }
 
   await prisma.user.update({

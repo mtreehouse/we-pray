@@ -17,8 +17,11 @@ export default async function HomePage() {
       </header>
       {user ? (
         <div className="mb-3 flex justify-center">
-          <p className="max-w-full rounded-full border border-white/80 bg-white/90 px-3 py-1.5 text-center text-xs font-black text-teal-800 shadow-soft dark:border-slate-800 dark:bg-slate-900/85 dark:text-teal-200">
-            {user.nickname ?? "닉네임 미설정"}님
+          <p className="inline-flex max-w-full items-center gap-2 rounded-full border border-white/80 bg-white/90 px-3 py-1.5 text-center text-xs font-black text-teal-800 shadow-soft dark:border-slate-800 dark:bg-slate-900/85 dark:text-teal-200">
+            <span className="truncate">{user.nickname ?? "닉네임 미설정"}님</span>
+            {user.role === "admin" ? (
+              <span className="shrink-0 rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-black text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300">ADMIN</span>
+            ) : null}
           </p>
         </div>
       ) : null}

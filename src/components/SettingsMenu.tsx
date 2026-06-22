@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
-import { BookOpen, ChevronRight, Download, HelpCircle, Info, LogIn, LogOut, MessageCircle, Moon, Pencil, Save, Sun, Trash2, UserRound } from "lucide-react";
+import { BookOpen, ChevronRight, Download, HelpCircle, Info, LogIn, LogOut, MessageCircle, Moon, Pencil, Save, Send, Sun, Trash2, UserRound } from "lucide-react";
 import { AppGuideOverlay, type GuideKind } from "@/components/AppGuideOverlay";
 import { Modal } from "@/components/ui/Modal";
 import { Toast } from "@/components/ui/Toast";
@@ -30,12 +30,12 @@ const wePrayInfoSections = [
     body: "로그인은 Google, Kakao, Naver 계정을 사용하며, 서비스 이용에 필요한 기본 계정 정보와 닉네임만 사용합니다."
   },
   {
-    title: "문의 / 피드백",
-    body: "사용 중 불편한 점이나 개선 의견이 있다면 운영자에게 문의해 주세요. 더 편안한 공동체 도구가 되도록 반영하겠습니다."
-  },
-  {
     title: "주의사항",
     body: "공개된 방의 글은 참여 멤버가 볼 수 있습니다. 민감한 개인정보나 타인의 권리를 침해하는 내용은 작성하지 말아 주세요."
+  },
+  {
+    title: "문의 / 피드백",
+    body: "사용 중 불편한 점이나 개선 의견이 있다면 운영자에게 문의해 주세요. 더 편안한 공동체 도구가 되도록 반영하겠습니다."
   }
 ];
 
@@ -50,6 +50,12 @@ export function SettingsMenu({ isLoggedIn, currentNickname, appVersion }: Settin
   const [nicknameMessageType, setNicknameMessageType] = useState<"success" | "error">("success");
   const [toast, setToast] = useState("");
   const [infoOpen, setInfoOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackTitle, setFeedbackTitle] = useState("");
+  const [feedbackContent, setFeedbackContent] = useState("");
+  const [feedbackReplyEmail, setFeedbackReplyEmail] = useState("");
+  const [feedbackSaving, setFeedbackSaving] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState("");
   const [usageOpen, setUsageOpen] = useState(false);
   const [guideKind, setGuideKind] = useState<GuideKind | null>(null);
 
@@ -106,6 +112,54 @@ export function SettingsMenu({ isLoggedIn, currentNickname, appVersion }: Settin
     setNicknameMessage("");
     setNicknameMessageType("success");
     setNicknameOpen(true);
+  }
+
+  function openFeedbackModal() {
+    if (!isLoggedIn) {
+      setToast("로그인 후 문의를 작성할 수 있습니다.");
+      return;
+    }
+
+    setFeedbackTitle("");
+    setFeedbackContent("");
+    setFeedbackReplyEmail("");
+    setFeedbackMessage("");
+    setFeedbackOpen(true);
+  }
+
+  async function submitFeedback() {
+    if (feedbackSaving) return;
+    const title = feedbackTitle.trim();
+    const content = feedbackContent.trim();
+    const replyEmail = feedbackReplyEmail.trim();
+
+    if (!title) {
+      setFeedbackMessage("문의 제목을 입력해주세요.");
+      return;
+    }
+
+    if (!content) {
+      setFeedbackMessage("문의 내용을 입력해주세요.");
+      return;
+    }
+
+    setFeedbackSaving(true);
+    setFeedbackMessage("");
+    const res = await fetch("/api/feedbacks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, content, replyEmail })
+    });
+    const data = (await res.json()) as { error?: string };
+    setFeedbackSaving(false);
+
+    if (!res.ok) {
+      setFeedbackMessage(data.error ?? "문의 접수에 실패했습니다.");
+      return;
+    }
+
+    setFeedbackOpen(false);
+    setToast("문의가 접수되었습니다.");
   }
 
   async function saveNickname() {
@@ -367,9 +421,84 @@ export function SettingsMenu({ isLoggedIn, currentNickname, appVersion }: Settin
               <section key={section.title} className="rounded-lg bg-slate-50 px-4 py-3 dark:bg-slate-900">
                 <h4 className="font-black text-slate-950 dark:text-slate-50">{section.title}</h4>
                 <p className="mt-1 text-sm font-semibold leading-6 text-slate-600 dark:text-slate-300">{section.body}</p>
+                {section.title === "문의 / 피드백" ? (
+                  <button
+                    type="button"
+                    onClick={openFeedbackModal}
+                    className="mt-3 inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-teal-700 px-4 py-2 text-sm font-black text-white shadow-soft disabled:bg-slate-200 disabled:text-slate-500"
+                  >
+                    <Send size={15} />
+                    {isLoggedIn ? "문의하기" : "로그인 후 문의 가능"}
+                  </button>
+                ) : null}
               </section>
             ))}
           </div>
+        </div>
+      </Modal>
+
+      <Modal title="문의하기" open={feedbackOpen} onClose={() => {
+        if (!feedbackSaving) setFeedbackOpen(false);
+      }}>
+        <div className="grid gap-3">
+          <label className="grid gap-2 text-sm font-black text-slate-700 dark:text-slate-200">
+            제목
+            <input
+              {...noBrowserInputSuggestions}
+              value={feedbackTitle}
+              onChange={(event) => {
+                setFeedbackTitle(event.target.value);
+                setFeedbackMessage("");
+              }}
+              className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-base font-semibold text-slate-900 outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+              placeholder="문의 제목"
+              maxLength={80}
+              autoFocus
+            />
+          </label>
+          <label className="grid gap-2 text-sm font-black text-slate-700 dark:text-slate-200">
+            회신 이메일 <span className="text-xs font-bold text-slate-400">선택</span>
+            <input
+              {...noBrowserInputSuggestions}
+              value={feedbackReplyEmail}
+              onChange={(event) => {
+                setFeedbackReplyEmail(event.target.value);
+                setFeedbackMessage("");
+              }}
+              className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-base font-semibold text-slate-900 outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+              placeholder="reply@example.com"
+              maxLength={120}
+              inputMode="email"
+            />
+          </label>
+          <label className="grid gap-2 text-sm font-black text-slate-700 dark:text-slate-200">
+            내용
+            <textarea
+              {...noBrowserInputSuggestions}
+              value={feedbackContent}
+              onChange={(event) => {
+                setFeedbackContent(event.target.value);
+                setFeedbackMessage("");
+              }}
+              className="min-h-36 resize-none rounded-lg border border-slate-200 bg-white px-4 py-3 text-base font-semibold leading-7 text-slate-900 outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+              placeholder="불편한 점이나 개선 의견을 적어주세요."
+              maxLength={2000}
+            />
+          </label>
+          {feedbackMessage ? (
+            <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm font-bold text-rose-700 dark:bg-rose-950/40 dark:text-rose-200">
+              {feedbackMessage}
+            </p>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => void submitFeedback()}
+            disabled={feedbackSaving}
+            className="mt-1 inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-teal-700 px-4 py-3 font-black text-white shadow-soft disabled:opacity-60"
+          >
+            <Send size={17} />
+            {feedbackSaving ? "접수 중" : "문의 접수"}
+          </button>
         </div>
       </Modal>
     </>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookOpen, HeartHandshake, LogIn, Newspaper, Settings, Shield } from "lucide-react";
+import { BookOpen, HeartHandshake, LogIn, MessageSquareText, Newspaper, Settings } from "lucide-react";
 import type { UserRole } from "@prisma/client";
 
 type MainMenuProps = {
@@ -78,11 +78,11 @@ export function MainMenu({ isLoggedIn, role }: MainMenuProps) {
       </Link>
 
       {role === "admin" ? (
-        <Link href="/admin/users" className={itemClass}>
-          <Shield className="text-indigo-700 dark:text-indigo-300" size={22} />
+        <Link href="/admin" className={itemClass}>
+          <MessageSquareText className="text-indigo-700 dark:text-indigo-300" size={22} />
           <span>
             <span className="block font-bold text-slate-900 dark:text-slate-50">관리자 화면</span>
-            <span className="text-sm text-slate-500 dark:text-slate-400">사용자 관리</span>
+            <span className="text-sm text-slate-500 dark:text-slate-400">문의 / 피드백 · 사용자 관리</span>
           </span>
         </Link>
       ) : null}

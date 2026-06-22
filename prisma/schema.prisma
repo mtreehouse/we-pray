@@ -41,6 +41,13 @@ enum BibleReflectionReactionType {
   PRAY
 }
 
+enum FeedbackStatus {
+  NEW
+  READ
+  REPLIED
+  CLOSED
+}
+
 model User {
   id             String       @id @default(cuid())
   provider       AuthProvider
@@ -61,6 +68,7 @@ model User {
   bibleReflections         BibleReflection[]
   bibleReflectionReactions BibleReflectionReaction[]
   bibleProgress            BibleProgress[]
+  feedbacks                Feedback[]
 
   @@unique([provider, providerUserId])
   @@index([deletedAt])
@@ -270,4 +278,30 @@ model BibleProgress {
   @@unique([roomId, userId, readingDate])
   @@index([roomId, readingDate])
   @@index([userId])
+}
+
+model Feedback {
+  id             String         @id @default(cuid())
+  feedbackNumber Int            @unique @default(autoincrement())
+  userId         String
+  title          String
+  content        String
+  replyEmail     String?
+  status         FeedbackStatus @default(NEW)
+  adminMemo      String?
+  emailTo        String         @default("wepray.support@gmail.com")
+  emailSentAt    DateTime?
+  emailMessageId String?
+  emailError     String?
+  readAt         DateTime?
+  repliedAt      DateTime?
+  closedAt       DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([status, createdAt])
+  @@index([status, closedAt])
+  @@index([userId, createdAt])
 }

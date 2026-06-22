@@ -10,7 +10,14 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
     "prisma:dev": "prisma migrate dev",
-    "prisma:seed": "prisma db seed"
+    "prisma:seed": "prisma db seed",
+    "env:sync": "node scripts/sync-env.mjs",
+    "predev": "npm run env:sync",
+    "prebuild": "npm run env:sync",
+    "preprisma:generate": "npm run env:sync",
+    "preprisma:migrate": "npm run env:sync",
+    "preprisma:dev": "npm run env:sync",
+    "preprisma:seed": "npm run env:sync"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
