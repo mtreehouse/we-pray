@@ -1642,24 +1642,33 @@ function BibleTranslationModal({
       <div className="grid gap-2">
         {options.map(([code, label]) => {
           const active = selected === code;
+          const disabled = code === "ko_nkrv";
 
           return (
             <button
               key={code}
               type="button"
               onClick={() => {
+                if (disabled) return;
                 onSelect(code);
                 onClose();
               }}
-              className={`flex min-h-12 items-center justify-between gap-3 rounded-lg border px-4 py-3 text-left transition ${
-                active
-                  ? "border-teal-200 bg-teal-50 text-teal-900"
-                  : "border-slate-200 bg-white text-slate-800"
+              disabled={disabled}
+              className={`flex min-h-12 items-center justify-between gap-3 rounded-lg border px-4 py-3 text-left transition disabled:cursor-not-allowed disabled:opacity-70 ${
+                disabled
+                  ? "border-slate-200 bg-slate-50 text-slate-400 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-500"
+                  : active
+                    ? "border-teal-200 bg-teal-50 text-teal-900"
+                    : "border-slate-200 bg-white text-slate-800"
               }`}
             >
-              <span className="font-black">{label}</span>
-              {active ? (
-                <span className="grid h-6 w-6 place-items-center rounded-full bg-teal-700 text-white">
+              <span className="min-w-0 truncate font-black">{label}</span>
+              {disabled ? (
+                <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-black text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                  저작권 필요
+                </span>
+              ) : active ? (
+                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-teal-700 text-white">
                   <Check size={15} strokeWidth={3} />
                 </span>
               ) : null}
