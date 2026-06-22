@@ -20,10 +20,23 @@ type SettingsMenuProps = {
   appVersion: string;
 };
 
-const releaseItems = [
-  "Pray Room, Bible Room, Pray News 메뉴 제공",
-  "성경 통독 플랜, 나눔, 읽기 완료 달성률 지원",
-  "Google, Kakao, Naver 로그인 지원"
+const wePrayInfoSections = [
+  {
+    title: "서비스 소개",
+    body: "WePray는 기도제목을 함께 나누고, 성경 통독과 묵상을 기록하며 서로 격려하는 기독교 커뮤니티 앱입니다."
+  },
+  {
+    title: "개인정보 / 로그인 안내",
+    body: "로그인은 Google, Kakao, Naver 계정을 사용하며, 서비스 이용에 필요한 기본 계정 정보와 닉네임만 사용합니다."
+  },
+  {
+    title: "문의 / 피드백",
+    body: "사용 중 불편한 점이나 개선 의견이 있다면 운영자에게 문의해 주세요. 더 편안한 공동체 도구가 되도록 반영하겠습니다."
+  },
+  {
+    title: "주의사항",
+    body: "공개된 방의 글은 참여 멤버가 볼 수 있습니다. 민감한 개인정보나 타인의 권리를 침해하는 내용은 작성하지 말아 주세요."
+  }
 ];
 
 export function SettingsMenu({ isLoggedIn, currentNickname, appVersion }: SettingsMenuProps) {
@@ -36,7 +49,7 @@ export function SettingsMenu({ isLoggedIn, currentNickname, appVersion }: Settin
   const [nicknameMessage, setNicknameMessage] = useState("");
   const [nicknameMessageType, setNicknameMessageType] = useState<"success" | "error">("success");
   const [toast, setToast] = useState("");
-  const [releaseOpen, setReleaseOpen] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
   const [usageOpen, setUsageOpen] = useState(false);
   const [guideKind, setGuideKind] = useState<GuideKind | null>(null);
 
@@ -197,7 +210,7 @@ export function SettingsMenu({ isLoggedIn, currentNickname, appVersion }: Settin
           <span className="min-w-0">
             <span className="flex items-center gap-2 font-black text-slate-950 dark:text-slate-50">
               <Download size={17} className="text-violet-700 dark:text-violet-300" />
-              PWA 설치
+              앱 화면으로 설치
             </span>
             <span className="mt-1 block text-xs font-bold text-slate-500 dark:text-slate-400">홈 화면에 바로 추가할 수 있어요.</span>
           </span>
@@ -206,15 +219,15 @@ export function SettingsMenu({ isLoggedIn, currentNickname, appVersion }: Settin
 
         <button
           type="button"
-          onClick={() => setReleaseOpen(true)}
+          onClick={() => setInfoOpen(true)}
           className="flex items-center justify-between gap-3 rounded-lg bg-white/90 px-4 py-4 text-left shadow-soft dark:border dark:border-slate-800 dark:bg-slate-900/85"
         >
           <span className="min-w-0">
             <span className="flex items-center gap-2 font-black text-slate-950 dark:text-slate-50">
               <Info size={17} className="text-sky-700 dark:text-sky-300" />
-              WePray Version
+              WePray 란?
             </span>
-            <span className="mt-1 block text-xs font-bold text-slate-500 dark:text-slate-400">v{appVersion}</span>
+            <span className="mt-1 block text-xs font-bold text-slate-500 dark:text-slate-400">서비스 정보와 안내를 확인합니다.</span>
           </span>
           <ChevronRight size={18} className="text-slate-400" />
         </button>
@@ -343,17 +356,20 @@ export function SettingsMenu({ isLoggedIn, currentNickname, appVersion }: Settin
         </div>
       </Modal>
 
-      <Modal title="릴리즈 정보" open={releaseOpen} onClose={() => setReleaseOpen(false)}>
-        <div className="rounded-lg bg-slate-50 p-4 dark:bg-slate-900">
-          <p className="text-xs font-black text-teal-700 dark:text-teal-300">WePray v{appVersion}</p>
-          <h3 className="mt-1 text-lg font-black text-slate-950 dark:text-slate-50">이번 버전</h3>
-          <ul className="mt-4 grid gap-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-            {releaseItems.map((item) => (
-              <li key={item} className="rounded-lg bg-white px-3 py-2 font-semibold dark:bg-slate-950">
-                {item}
-              </li>
+      <Modal title="WePray 란?" open={infoOpen} onClose={() => setInfoOpen(false)}>
+        <div className="grid gap-3">
+          <div className="rounded-lg bg-slate-50 p-4 dark:bg-slate-900">
+            <p className="text-xs font-black text-teal-700 dark:text-teal-300">WePray v{appVersion}</p>
+            <h3 className="mt-1 text-lg font-black text-slate-950 dark:text-slate-50">함께 기도하고 말씀을 나누는 공간</h3>
+          </div>
+          <div className="grid gap-2">
+            {wePrayInfoSections.map((section) => (
+              <section key={section.title} className="rounded-lg bg-slate-50 px-4 py-3 dark:bg-slate-900">
+                <h4 className="font-black text-slate-950 dark:text-slate-50">{section.title}</h4>
+                <p className="mt-1 text-sm font-semibold leading-6 text-slate-600 dark:text-slate-300">{section.body}</p>
+              </section>
             ))}
-          </ul>
+          </div>
         </div>
       </Modal>
     </>
