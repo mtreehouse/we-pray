@@ -4,6 +4,7 @@ import { Providers } from "@/app/providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXTAUTH_URL ?? "https://wepray.imbyel.cloud"),
   title: "WePray",
   description: "함께 기도하고 말씀을 나누는 서비스",
   applicationName: "WePray",
@@ -19,6 +20,19 @@ export const metadata: Metadata = {
       { url: "/pwa-icon-512.png", sizes: "512x512", type: "image/png" }
     ],
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }]
+  },
+  openGraph: {
+    title: "WePray",
+    description: "함께 기도하고 말씀을 나누는 서비스",
+    siteName: "WePray",
+    images: [{ url: "/pwa-icon-512.png", width: 512, height: 512, alt: "WePray" }],
+    type: "website"
+  },
+  twitter: {
+    card: "summary",
+    title: "WePray",
+    description: "함께 기도하고 말씀을 나누는 서비스",
+    images: ["/pwa-icon-512.png"]
   }
 };
 

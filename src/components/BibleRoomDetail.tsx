@@ -20,9 +20,11 @@ import {
   Pencil,
   Send,
   Settings,
+  Share2,
   Trash2,
   X
 } from "lucide-react";
+import { RoomShareModal } from "@/components/RoomShareModal";
 import { Modal } from "@/components/ui/Modal";
 import { Toast } from "@/components/ui/Toast";
 import { defaultBibleTranslationCode, defaultBibleTranslationSettings, isBibleTranslationCode, type BibleTranslationCode, type BibleTranslationSettingView } from "@/lib/bible-translations";
@@ -1444,6 +1446,7 @@ function BibleRoomSettingsDrawer({
   onToast: (message: string) => void;
 }) {
   const router = useRouter();
+  const [shareOpen, setShareOpen] = useState(false);
 
   async function kick(member: RoomMember) {
     if (!confirm(`${member.nickname ?? "멤버"}님을 내보내시겠습니까?`)) return;
@@ -1483,6 +1486,10 @@ function BibleRoomSettingsDrawer({
         <div className="mb-6 grid gap-2">
           <button type="button" onClick={onInfo} className="rounded-lg bg-slate-100 px-4 py-3 text-left font-bold text-slate-800 dark:bg-slate-900 dark:text-slate-100">
             방 정보
+          </button>
+          <button type="button" onClick={() => setShareOpen(true)} className="flex items-center gap-2 rounded-lg bg-slate-100 px-4 py-3 text-left font-bold text-slate-800 dark:bg-slate-900 dark:text-slate-100">
+            <Share2 size={17} />
+            방 공유
           </button>
           <button
             type="button"
@@ -1607,6 +1614,14 @@ function BibleRoomSettingsDrawer({
           })}
         </div>
       </aside>
+      <RoomShareModal
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        kind="bible"
+        roomId={room.id}
+        roomTitle={room.title}
+        onToast={onToast}
+      />
     </div>
   );
 }

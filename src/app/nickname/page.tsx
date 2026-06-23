@@ -2,10 +2,17 @@ import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { NicknameSetup } from "@/components/NicknameSetup";
 import { requireUser } from "@/lib/permissions";
+import { safeNextPath } from "@/lib/redirect";
 
 export const dynamic = "force-dynamic";
 
-export default async function NicknamePage() {
+type NicknamePageProps = {
+  searchParams?: Promise<{ next?: string }>;
+};
+
+export default async function NicknamePage({ searchParams }: NicknamePageProps) {
+  const params = await searchParams;
+  const nextPath = safeNextPath(params?.next);
   const user = await requireUser();
 
   return (
@@ -20,7 +27,7 @@ export default async function NicknamePage() {
           방과 기도제목에 표시될 이름입니다. 중복 닉네임은 사용할 수 없습니다.
         </p>
         <div className="mt-6">
-          <NicknameSetup currentNickname={user.nickname} />
+          <NicknameSetup currentNickname={user.nickname} nextPath={nextPath} />
         </div>
       </section>
     </main>

@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { BibleRoomDetail } from "@/components/BibleRoomDetail";
 import { todayDateKey } from "@/lib/bible-plan";
 import { normalizeBibleTranslationSettings } from "@/lib/bible-translations";
@@ -16,7 +16,18 @@ export default async function BibleRoomDetailPage({ params }: PageProps) {
   const { roomId } = await params;
   const membership = await requireBibleRoomMember(roomId, user.id);
 
-  if (!membership) notFound();
+  if (!membership) {
+    const roomExists = await prisma.bibleRoom.findFirst({
+      where: { id: roomId, deletedAt: null },
+      select: { id: true }
+    });
+
+    if (roomExists) {
+      redirect("/join/bible-room/" + roomId);
+    }
+
+    notFound();
+  }
 
   const room = await prisma.bibleRoom.findFirst({
       where: { id: roomId, deletedAt: null },

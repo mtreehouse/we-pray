@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Toast } from "@/components/ui/Toast";
 import { noBrowserInputSuggestions } from "@/lib/browser-input";
 
-export function NicknameSetup({ currentNickname }: { currentNickname?: string | null }) {
+export function NicknameSetup({ currentNickname, nextPath = "/" }: { currentNickname?: string | null; nextPath?: string }) {
   const router = useRouter();
   const [nickname, setNickname] = useState(currentNickname ?? "");
   const [loading, setLoading] = useState(false);
@@ -28,7 +28,7 @@ export function NicknameSetup({ currentNickname }: { currentNickname?: string | 
       return;
     }
 
-    router.push("/");
+    router.push(nextPath);
     router.refresh();
   }
 

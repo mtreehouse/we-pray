@@ -1,8 +1,27 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { LoginButtonGroup } from "@/components/LoginButtonGroup";
+import { getCurrentUser } from "@/lib/permissions";
+import { safeNextPath } from "@/lib/redirect";
 
-export default function LoginPage() {
+type LoginPageProps = {
+  searchParams?: Promise<{ next?: string }>;
+};
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const params = await searchParams;
+  const nextPath = safeNextPath(params?.next);
+  const user = await getCurrentUser();
+
+  if (user) {
+    if (!user.nickname) {
+      redirect("/nickname?next=" + encodeURIComponent(nextPath));
+    }
+
+    redirect(nextPath);
+  }
+
   return (
     <main className="mx-auto min-h-dvh w-full max-w-xl px-4 py-6 dark:text-slate-100">
       <Link href="/" className="mb-6 inline-flex items-center gap-1 text-sm font-semibold text-slate-600 dark:text-slate-300">
@@ -15,7 +34,7 @@ export default function LoginPage() {
           SNS 로그인 후 처음 한 번 닉네임을 설정합니다.
         </p>
         <div className="mt-6">
-          <LoginButtonGroup />
+          <LoginButtonGroup nextPath={nextPath} />
         </div>
       </section>
     </main>

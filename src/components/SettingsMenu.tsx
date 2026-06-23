@@ -4,16 +4,16 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
-import { BookOpen, ChevronRight, Download, HelpCircle, Info, LogIn, LogOut, MessageCircle, Moon, Pencil, Save, Send, Sun, Trash2, UserRound } from "lucide-react";
+import { BookOpen, ChevronRight, Download, HelpCircle, Info, LogIn, LogOut, MessageCircle, Moon, Pencil, Save, Send, Share2, Sun, Trash2, UserRound } from "lucide-react";
 import { AppGuideOverlay, type GuideKind } from "@/components/AppGuideOverlay";
 import { Modal } from "@/components/ui/Modal";
 import { Toast } from "@/components/ui/Toast";
 import { noBrowserInputSuggestions } from "@/lib/browser-input";
+import { SiteShareModal } from "@/components/SiteShareModal";
 import { WithdrawLink } from "@/components/WithdrawLink";
 import { APP_DARK_MODE_CHANGE_EVENT, APP_DARK_MODE_STORAGE_KEY } from "@/lib/ui-settings";
 
 const REQUEST_PWA_INSTALL_EVENT = "wepray:pwa-install-request";
-
 type SettingsMenuProps = {
   isLoggedIn: boolean;
   currentNickname?: string | null;
@@ -66,6 +66,7 @@ export function SettingsMenu({ isLoggedIn, currentNickname, currentProvider, app
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [usageOpen, setUsageOpen] = useState(false);
   const [guideKind, setGuideKind] = useState<GuideKind | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
 
   useEffect(() => {
     setNickname(currentNickname ?? "");
@@ -113,6 +114,10 @@ export function SettingsMenu({ isLoggedIn, currentNickname, currentProvider, app
     document.documentElement.classList.remove("dark");
     window.dispatchEvent(new Event(APP_DARK_MODE_CHANGE_EVENT));
     setToast("저장된 기억 내용을 삭제했습니다.");
+  }
+
+  function openShareModal() {
+    setShareOpen(true);
   }
 
   function openNicknameModal() {
@@ -299,6 +304,21 @@ export function SettingsMenu({ isLoggedIn, currentNickname, currentProvider, app
           </span>
           <ChevronRight size={18} className="text-slate-400" />
         </button>
+
+        <button
+          type="button"
+          onClick={openShareModal}
+          className="flex items-center justify-between gap-3 rounded-lg bg-white/90 px-4 py-4 text-left shadow-soft dark:border dark:border-slate-800 dark:bg-slate-900/85"
+        >
+          <span className="min-w-0">
+            <span className="flex items-center gap-2 font-black text-slate-950 dark:text-slate-50">
+              <Share2 size={17} className="text-teal-700 dark:text-teal-300" />
+              WePray 공유
+            </span>
+            <span className="mt-1 block text-xs font-bold text-slate-500 dark:text-slate-400">사이트 링크를 공유합니다.</span>
+          </span>
+          <ChevronRight size={18} className="text-slate-400" />
+        </button>
         
         <button
           type="button"
@@ -384,6 +404,7 @@ export function SettingsMenu({ isLoggedIn, currentNickname, currentProvider, app
       </Modal>
 
       {guideKind ? <AppGuideOverlay kind={guideKind} open={Boolean(guideKind)} onClose={() => setGuideKind(null)} /> : null}
+      <SiteShareModal open={shareOpen} onClose={() => setShareOpen(false)} onToast={setToast} />
 
       <Modal title="닉네임 변경" open={nicknameOpen} onClose={() => setNicknameOpen(false)}>
         <div className="grid gap-3">

@@ -11,7 +11,7 @@ const providers = [
 
 const LAST_LOGIN_PROVIDER_KEY = "wepray:last-login-provider";
 
-export function LoginButtonGroup() {
+export function LoginButtonGroup({ nextPath = "/" }: { nextPath?: string }) {
   const { data: session, status } = useSession();
   const [lastProviderId, setLastProviderId] = useState<string | null>(null);
 
@@ -22,7 +22,8 @@ export function LoginButtonGroup() {
   function startLogin(providerId: string) {
     window.localStorage.setItem(LAST_LOGIN_PROVIDER_KEY, providerId);
     setLastProviderId(providerId);
-    void signIn(providerId, { callbackUrl: "/auth/complete" });
+    const callbackUrl = "/auth/complete?next=" + encodeURIComponent(nextPath);
+    void signIn(providerId, { callbackUrl });
   }
 
   if (status === "loading") {

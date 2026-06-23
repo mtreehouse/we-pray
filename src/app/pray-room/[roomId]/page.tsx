@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { PrayerRoomDetail } from "@/components/PrayerRoomDetail";
 import { prisma } from "@/lib/prisma";
 import { requireNickname, requireRoomMember } from "@/lib/permissions";
@@ -17,6 +17,15 @@ export default async function PrayerRoomDetailPage({ params }: PageProps) {
   const membership = await requireRoomMember(roomId, user.id);
 
   if (!membership) {
+    const roomExists = await prisma.prayerRoom.findFirst({
+      where: { id: roomId, deletedAt: null },
+      select: { id: true }
+    });
+
+    if (roomExists) {
+      redirect("/join/pray-room/" + roomId);
+    }
+
     notFound();
   }
 
