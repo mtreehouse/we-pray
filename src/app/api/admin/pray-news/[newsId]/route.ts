@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { PRAY_NEWS_CONTENT_HTML_LIMIT, getPrayNewsPlainText, normalizePrayNewsContentHtml } from "@/lib/pray-news-content";
 
 type Params = {
   params: Promise<{ newsId: string }>;
@@ -34,12 +35,14 @@ function normalizeImageUrl(value: unknown) {
 
 function normalizeInput(body: PrayNewsInput | null) {
   const title = typeof body?.title === "string" ? body.title.trim() : "";
-  const content = typeof body?.content === "string" ? body.content.trim() : "";
+  const content = normalizePrayNewsContentHtml(typeof body?.content === "string" ? body.content : "");
+  const contentText = getPrayNewsPlainText(content);
 
   if (!title) throw new Error("제목을 입력해주세요.");
   if (title.length > 80) throw new Error("제목은 80자 이하로 입력해주세요.");
-  if (!content) throw new Error("내용을 입력해주세요.");
-  if (content.length > 5000) throw new Error("내용은 5000자 이하로 입력해주세요.");
+  if (!contentText) throw new Error("내용을 입력해주세요.");
+  if (contentText.length > 5000) throw new Error("내용은 5000자 이하로 입력해주세요.");
+  if (content.length > PRAY_NEWS_CONTENT_HTML_LIMIT) throw new Error("본문 HTML 용량이 너무 큽니다. 이미지를 줄이거나 일부 내용을 정리해주세요.");
 
   return { title, content, imageUrl: normalizeImageUrl(body?.imageUrl) };
 }

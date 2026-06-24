@@ -19,12 +19,14 @@ const kindLabels = {
   pray: {
     title: "기도방 공유",
     label: "기도방",
-    path: "/join/pray-room/"
+    path: "/join/pray-room/",
+    passwordApiPrefix: "/api/rooms/"
   },
   bible: {
     title: "성경방 공유",
     label: "성경방",
-    path: "/join/bible-room/"
+    path: "/join/bible-room/",
+    passwordApiPrefix: "/api/bible-rooms/"
   }
 } as const;
 
@@ -82,9 +84,22 @@ export function RoomShareModal({ open, onClose, kind, roomId, roomTitle, onToast
     const url = absoluteUrl(roomPath);
     const title = "함께 나누는 기도의 힘, WePray";
     const body = "[" + roomTitle + "] " + labels.label + "에 초대합니다!\n기도로 연결되고, 말씀으로 함께 성장해요!";
-    const copyText = title + "\n\n" + body + "\n\n" + url;
+    const copyText = title + "\n\n" + body + "\n\n#입장 비밀번호 : " + trimmedPassword + "\n\n" + url;
 
     return { title, text: body, copyText, url, roomPath, password: trimmedPassword };
+  }
+
+  async function validatePassword(nextPassword: string) {
+    const res = await fetch(labels.passwordApiPrefix + roomId + "/password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: nextPassword })
+    });
+    const data = await res.json().catch(() => ({})) as { error?: string };
+
+    if (!res.ok) {
+      throw new Error(data.error ?? "비밀번호를 확인하지 못했습니다.");
+    }
   }
 
   async function shareRoom() {
@@ -96,14 +111,15 @@ export function RoomShareModal({ open, onClose, kind, roomId, roomTitle, onToast
 
     try {
       setSharing(true);
+      await validatePassword(content.password);
       const result = await shareOrCopy({ title: content.title, text: content.text, url: content.url, copyText: content.copyText });
       setSharing(false);
       setPassword("");
       onClose();
       onToast(result === "shared" ? "공유했습니다." : "공유 내용을 복사했습니다.");
-    } catch {
+    } catch (error) {
       setSharing(false);
-      onToast("공유에 실패했습니다.");
+      onToast(error instanceof Error ? error.message : "공유에 실패했습니다.");
     }
   }
 
@@ -121,6 +137,7 @@ export function RoomShareModal({ open, onClose, kind, roomId, roomTitle, onToast
 
     try {
       setKakaoSharing(true);
+      await validatePassword(content.password);
       await loadKakaoSdk();
       if (!window.Kakao) throw new Error("Kakao SDK is not ready.");
       if (!window.Kakao.isInitialized()) window.Kakao.init(kakaoJavascriptKey);
@@ -141,9 +158,9 @@ export function RoomShareModal({ open, onClose, kind, roomId, roomTitle, onToast
         }
       });
       setKakaoSharing(false);
-    } catch {
+    } catch (error) {
       setKakaoSharing(false);
-      onToast("카카오톡 공유에 실패했습니다.");
+      onToast(error instanceof Error ? error.message : "카카오톡 공유에 실패했습니다.");
     }
   }
 

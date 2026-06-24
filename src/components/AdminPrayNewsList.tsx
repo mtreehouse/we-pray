@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { ImageIcon, Pencil, Plus, Save, Trash2, X } from "lucide-react";
+import { useEffect, useRef, useState, type ClipboardEvent, type MouseEvent } from "react";
+import { Bold, ImageIcon, Italic, Link2, List, ListOrdered, Pencil, Plus, Quote, Save, Trash2, Underline, X } from "lucide-react";
 import { Toast } from "@/components/ui/Toast";
 import { noBrowserInputSuggestions } from "@/lib/browser-input";
+import { PRAY_NEWS_CONTENT_HTML_LIMIT, getPrayNewsPlainText, normalizePrayNewsContentHtml, toPrayNewsDisplayHtml } from "@/lib/pray-news-content";
 
 type AdminPrayNews = {
   id: string;
@@ -41,34 +42,147 @@ function formatKoreanDateTime(value: string) {
   return year + "." + month + "." + day + " " + hour + ":" + minute;
 }
 
-function LinkedText({ text }: { text: string }) {
-  const parts = text.split(/(https?:\/\/[^\s]+)/g);
+const editorButtonClass = "grid h-9 w-9 place-items-center rounded-lg bg-white text-slate-600 shadow-sm transition active:scale-95 dark:bg-slate-900 dark:text-slate-200";
+const MAX_PASTED_IMAGE_SIZE_BYTES = 1_500_000;
+
+function richContentClass(className = "") {
+  return (
+    "break-words text-sm leading-6 text-slate-700 dark:text-slate-300 " +
+    "[&_a]:font-bold [&_a]:text-[#637EE1] [&_a]:underline [&_a]:decoration-[#637EE1]/30 [&_a]:underline-offset-4 " +
+    "[&_blockquote]:my-3 [&_blockquote]:border-l-4 [&_blockquote]:border-[#637EE1]/30 [&_blockquote]:pl-3 [&_blockquote]:font-semibold [&_blockquote]:text-slate-600 [&_blockquote]:dark:text-slate-300 " +
+    "[&_h2]:my-2 [&_h2]:text-lg [&_h2]:font-black [&_h3]:my-2 [&_h3]:text-base [&_h3]:font-black " +
+    "[&_figure]:my-3 [&_figcaption]:mt-1 [&_figcaption]:text-center [&_figcaption]:text-xs [&_figcaption]:font-semibold [&_figcaption]:text-slate-400 " +
+        "[&_img]:mx-auto [&_img]:my-2 [&_img]:h-auto [&_img]:max-w-full [&_img]:rounded-lg " +
+        "[&_table]:my-3 [&_table]:w-full [&_table]:border-collapse [&_table]:text-xs [&_td]:border [&_td]:border-slate-200 [&_td]:p-2 [&_th]:border [&_th]:border-slate-200 [&_th]:bg-slate-50 [&_th]:p-2 [&_th]:font-black [&_td]:dark:border-slate-700 [&_th]:dark:border-slate-700 [&_th]:dark:bg-slate-800 " +
+        "[&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-slate-100 [&_pre]:p-3 [&_pre]:text-xs [&_pre]:dark:bg-slate-800 " +
+        "[&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_li]:my-1 [&_strong]:font-black [&_u]:underline " +
+    className
+  ).trim();
+}
+
+function PrayNewsContent({ content, className = "" }: { content: string; className?: string }) {
+  function handleClick(event: MouseEvent<HTMLDivElement>) {
+    const target = event.target as HTMLElement;
+    if (target.closest("a")) event.stopPropagation();
+  }
 
   return (
-    <>
-      {parts.map((part, index) => {
-        if (/^https?:\/\/[^\s]+$/.test(part)) {
-          return (
-            <a
-              key={index}
-              href={part}
-              target="_blank"
-              rel="noreferrer"
-              className="font-bold text-[#637EE1] underline decoration-[#637EE1]/30 underline-offset-4"
-            >
-              {part}
-            </a>
-          );
+    <div
+      onClick={handleClick}
+      className={richContentClass(className)}
+      dangerouslySetInnerHTML={{ __html: toPrayNewsDisplayHtml(content) }}
+    />
+  );
+}
+
+function RichTextEditor({ value, onChange, onNotice }: { value: string; onChange: (value: string) => void; onNotice?: (message: string) => void }) {
+  const editorRef = useRef<HTMLDivElement | null>(null);
+  const lastHtmlRef = useRef(value);
+  const plainText = getPrayNewsPlainText(value);
+
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    if (value !== lastHtmlRef.current && editor.innerHTML !== value) {
+      editor.innerHTML = value;
+      lastHtmlRef.current = value;
+    }
+  }, [value]);
+
+  function emitChange() {
+    const html = editorRef.current?.innerHTML ?? "";
+    lastHtmlRef.current = html;
+    onChange(html);
+  }
+
+  function insertHtml(html: string) {
+    editorRef.current?.focus();
+    document.execCommand("insertHTML", false, normalizePrayNewsContentHtml(html));
+    setTimeout(emitChange, 0);
+  }
+
+  function runCommand(command: string, commandValue?: string) {
+    editorRef.current?.focus();
+    document.execCommand(command, false, commandValue);
+    emitChange();
+  }
+
+  function setBlock(block: "p" | "h2" | "h3" | "blockquote") {
+    runCommand("formatBlock", block);
+  }
+
+  function insertLink() {
+    const url = window.prompt("링크 주소를 입력해주세요.");
+    if (!url) return;
+    try {
+      const normalized = new URL(url.trim());
+      if (normalized.protocol !== "http:" && normalized.protocol !== "https:") return;
+      runCommand("createLink", normalized.toString());
+    } catch {
+      return;
+    }
+  }
+
+  function handlePaste(event: ClipboardEvent<HTMLDivElement>) {
+    event.preventDefault();
+    const html = event.clipboardData.getData("text/html");
+    const text = event.clipboardData.getData("text/plain");
+    const imageFiles = Array.from(event.clipboardData.files).filter((file) => file.type.startsWith("image/"));
+
+    if (html || text) {
+      insertHtml(html || text);
+    }
+
+    if (!html && imageFiles.length > 0) {
+      for (const file of imageFiles) {
+        if (file.size > MAX_PASTED_IMAGE_SIZE_BYTES) {
+          onNotice?.("붙여넣은 이미지는 1.5MB 이하만 본문에 포함할 수 있습니다.");
+          continue;
         }
 
-        return <span key={index}>{part}</span>;
-      })}
-    </>
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (typeof reader.result !== "string") return;
+          insertHtml('<figure><img src="' + reader.result + '" alt=""><figcaption></figcaption></figure>');
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+  }
+
+  return (
+    <div className="overflow-hidden rounded-lg border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-950/70">
+      <div className="flex flex-wrap gap-1 border-b border-slate-200 p-2 dark:border-slate-800">
+        <button type="button" onMouseDown={(event) => { event.preventDefault(); runCommand("bold"); }} className={editorButtonClass} aria-label="굵게"><Bold size={15} /></button>
+        <button type="button" onMouseDown={(event) => { event.preventDefault(); runCommand("italic"); }} className={editorButtonClass} aria-label="기울임"><Italic size={15} /></button>
+        <button type="button" onMouseDown={(event) => { event.preventDefault(); runCommand("underline"); }} className={editorButtonClass} aria-label="밑줄"><Underline size={15} /></button>
+        <button type="button" onMouseDown={(event) => { event.preventDefault(); setBlock("h2"); }} className={editorButtonClass + " text-xs font-black"} aria-label="큰 제목">H2</button>
+        <button type="button" onMouseDown={(event) => { event.preventDefault(); setBlock("h3"); }} className={editorButtonClass + " text-xs font-black"} aria-label="작은 제목">H3</button>
+        <button type="button" onMouseDown={(event) => { event.preventDefault(); setBlock("blockquote"); }} className={editorButtonClass} aria-label="인용"><Quote size={15} /></button>
+        <button type="button" onMouseDown={(event) => { event.preventDefault(); runCommand("insertUnorderedList"); }} className={editorButtonClass} aria-label="목록"><List size={15} /></button>
+        <button type="button" onMouseDown={(event) => { event.preventDefault(); runCommand("insertOrderedList"); }} className={editorButtonClass} aria-label="번호 목록"><ListOrdered size={15} /></button>
+        <button type="button" onMouseDown={(event) => { event.preventDefault(); insertLink(); }} className={editorButtonClass} aria-label="링크"><Link2 size={15} /></button>
+      </div>
+      <div className="relative">
+        <div
+          ref={editorRef}
+          contentEditable
+          suppressContentEditableWarning
+          onInput={emitChange}
+          onBlur={emitChange}
+          onPaste={handlePaste}
+          className={richContentClass("min-h-44 px-3 py-3 outline-none focus:bg-white dark:focus:bg-slate-950")}
+        />
+        {!plainText ? (
+          <span className="pointer-events-none absolute left-3 top-3 text-sm font-semibold text-slate-400 dark:text-slate-600">내용</span>
+        ) : null}
+      </div>
+    </div>
   );
 }
 
 function formFromNews(news: AdminPrayNews): FormState {
-  return { title: news.title, content: news.content, imageUrl: news.imageUrl ?? "" };
+  return { title: news.title, content: normalizePrayNewsContentHtml(news.content), imageUrl: news.imageUrl ?? "" };
 }
 
 export function AdminPrayNewsList({ news, initialNextCursor }: { news: AdminPrayNews[]; initialNextCursor: string | null }) {
@@ -119,15 +233,25 @@ export function AdminPrayNewsList({ news, initialNextCursor }: { news: AdminPray
   async function submit() {
     if (saving) return;
     const title = form.title.trim();
-    const content = form.content.trim();
+    const content = normalizePrayNewsContentHtml(form.content);
+    const contentText = getPrayNewsPlainText(content);
     const imageUrl = form.imageUrl.trim();
 
     if (!title) {
       setToast("제목을 입력해주세요.");
       return;
     }
-    if (!content) {
+    if (!contentText) {
       setToast("내용을 입력해주세요.");
+      return;
+    }
+
+    if (contentText.length > 5000) {
+      setToast("내용은 5000자 이하로 입력해주세요.");
+      return;
+    }
+    if (content.length > PRAY_NEWS_CONTENT_HTML_LIMIT) {
+      setToast("본문 HTML 용량이 너무 큽니다. 이미지를 줄이거나 일부 내용을 정리해주세요.");
       return;
     }
 
@@ -226,14 +350,7 @@ export function AdminPrayNewsList({ news, initialNextCursor }: { news: AdminPray
             className="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-900 outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
             placeholder="이미지 링크 선택 입력"
           />
-          <textarea
-            {...noBrowserInputSuggestions}
-            value={form.content}
-            onChange={(event) => updateForm("content", event.target.value)}
-            className="min-h-36 resize-none rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm font-semibold leading-6 text-slate-900 outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-            placeholder="내용"
-            maxLength={5000}
-          />
+          <RichTextEditor value={form.content} onChange={(content) => updateForm("content", content)} onNotice={setToast} />
           {form.imageUrl.trim() ? (
             <div className="flex items-center gap-3 rounded-lg bg-slate-50 p-3 dark:bg-slate-950/60">
               <div className="aspect-square h-16 overflow-hidden rounded-lg bg-slate-200 dark:bg-slate-800">
@@ -275,9 +392,7 @@ export function AdminPrayNewsList({ news, initialNextCursor }: { news: AdminPray
                 </button>
               </div>
             </div>
-            <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-slate-700 dark:text-slate-300">
-              <LinkedText text={item.content} />
-            </p>
+                <PrayNewsContent content={item.content} className="mt-3" />
             {item.imageUrl ? null : (
               <p className="mt-3 inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-[11px] font-black text-slate-500 dark:bg-slate-800 dark:text-slate-300"><ImageIcon size={12} /> 이미지 없음</p>
             )}

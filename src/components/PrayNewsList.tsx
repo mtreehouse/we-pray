@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { getPrayNewsPlainText, toPrayNewsDisplayHtml } from "@/lib/pray-news-content";
 
 type PrayNewsItem = {
   id: string;
@@ -22,30 +23,29 @@ function formatKoreanDate(value: string) {
   return kst.getUTCFullYear() + ". " + (kst.getUTCMonth() + 1) + ". " + kst.getUTCDate() + ".";
 }
 
-function LinkedText({ text }: { text: string }) {
-  const parts = text.split(/(https?:\/\/[^\s]+)/g);
+function PrayNewsContent({ content, className = "" }: { content: string; className?: string }) {
+  function handleClick(event: MouseEvent<HTMLDivElement>) {
+    const target = event.target as HTMLElement;
+    if (target.closest("a")) event.stopPropagation();
+  }
 
   return (
-    <>
-      {parts.map((part, index) => {
-        if (/^https?:\/\/[^\s]+$/.test(part)) {
-          return (
-            <a
-              key={index}
-              href={part}
-              target="_blank"
-              rel="noreferrer"
-              onClick={(event) => event.stopPropagation()}
-              className="font-bold text-[#637EE1] underline decoration-[#637EE1]/30 underline-offset-4"
-            >
-              {part}
-            </a>
-          );
-        }
-
-        return <span key={index}>{part}</span>;
-      })}
-    </>
+    <div
+      onClick={handleClick}
+      className={(
+        "break-words text-sm leading-6 text-slate-700 dark:text-slate-300 " +
+        "[&_a]:font-bold [&_a]:text-[#637EE1] [&_a]:underline [&_a]:decoration-[#637EE1]/30 [&_a]:underline-offset-4 " +
+        "[&_blockquote]:my-3 [&_blockquote]:border-l-4 [&_blockquote]:border-[#637EE1]/30 [&_blockquote]:pl-3 [&_blockquote]:font-semibold [&_blockquote]:text-slate-600 [&_blockquote]:dark:text-slate-300 " +
+        "[&_br]:block [&_h2]:my-2 [&_h2]:text-lg [&_h2]:font-black [&_h3]:my-2 [&_h3]:text-base [&_h3]:font-black " +
+        "[&_figure]:my-3 [&_figcaption]:mt-1 [&_figcaption]:text-center [&_figcaption]:text-xs [&_figcaption]:font-semibold [&_figcaption]:text-slate-400 " +
+        "[&_img]:mx-auto [&_img]:my-2 [&_img]:h-auto [&_img]:max-w-full [&_img]:rounded-lg " +
+        "[&_table]:my-3 [&_table]:w-full [&_table]:border-collapse [&_table]:text-xs [&_td]:border [&_td]:border-slate-200 [&_td]:p-2 [&_th]:border [&_th]:border-slate-200 [&_th]:bg-slate-50 [&_th]:p-2 [&_th]:font-black [&_td]:dark:border-slate-700 [&_th]:dark:border-slate-700 [&_th]:dark:bg-slate-800 " +
+        "[&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-slate-100 [&_pre]:p-3 [&_pre]:text-xs [&_pre]:dark:bg-slate-800 " +
+        "[&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_li]:my-1 [&_strong]:font-black [&_u]:underline " +
+        className
+      ).trim()}
+      dangerouslySetInnerHTML={{ __html: toPrayNewsDisplayHtml(content) }}
+    />
   );
 }
 
@@ -112,7 +112,7 @@ export function PrayNewsList({ news, initialNextCursor }: { news: PrayNewsItem[]
     <section className="grid gap-3">
       {items.map((item) => {
         const expanded = expandedIds.has(item.id);
-        const previewLikelyTruncated = item.content.length > 80 || item.title.length > 30;
+        const previewText = getPrayNewsPlainText(item.content);
 
         return (
           <article
@@ -137,41 +137,34 @@ export function PrayNewsList({ news, initialNextCursor }: { news: PrayNewsItem[]
                 ) : null}
                 <h2 className="break-words font-black text-slate-950 dark:text-slate-50">{item.title}</h2>
                 <time className="mt-1 block text-xs font-bold text-slate-400 dark:text-slate-500">{formatKoreanDate(item.createdAt)}</time>
-                <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-slate-700 dark:text-slate-300">
-                  <LinkedText text={item.content} />
-                </p>
+                <PrayNewsContent content={item.content} className="mt-3" />
               </div>
             ) : (
               <div className="p-4">
                 {item.imageUrl ? (
-                  <div className="relative max-h-36 overflow-hidden pr-6 sm:max-h-[168px]">
+                  <>
                     <div className="float-left mb-2 mr-3 aspect-square w-[88px] overflow-hidden rounded-lg bg-slate-100 sm:w-[112px] dark:bg-slate-800">
                       <img src={item.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
                     </div>
-                    <h2 className="break-words font-black text-slate-950 dark:text-slate-50 text-sm">{item.title}</h2>
+                    <h2 className="break-words text-sm font-black text-slate-950 dark:text-slate-50">{item.title}</h2>
                     <time className="mt-1 block text-xs font-bold text-slate-400 dark:text-slate-500">{formatKoreanDate(item.createdAt)}</time>
-                    <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-slate-700 dark:text-slate-300">
-                      <LinkedText text={item.content} />
+                    <p
+                      className="mt-3 overflow-hidden break-words text-sm leading-6 text-slate-700 [display:-webkit-box] [text-overflow:ellipsis] [-webkit-box-orient:vertical] [-webkit-line-clamp:4] dark:text-slate-300"
+                      style={{ whiteSpace: "pre-wrap" }}
+                    >
+                      {previewText}
                     </p>
-                    {previewLikelyTruncated ? (
-                      <span className="absolute inset-x-0 bottom-0 flex h-6 items-center justify-end bg-white pl-1 text-sm font-bold leading-6 text-slate-500 dark:bg-slate-900 dark:text-slate-400">...</span>
-                    ) : null}
-                  </div>
+                    <div className="clear-both" />
+                  </>
                 ) : (
                   <>
                     <h2 className="break-words font-black text-slate-950 dark:text-slate-50">{item.title}</h2>
                     <time className="mt-1 block text-xs font-bold text-slate-400 dark:text-slate-500">{formatKoreanDate(item.createdAt)}</time>
                     <p
-                      className="mt-3 break-words text-sm leading-6 text-slate-700 dark:text-slate-300"
-                      style={{
-                        display: "-webkit-box",
-                        overflow: "hidden",
-                        WebkitBoxOrient: "vertical",
-                        WebkitLineClamp: 3,
-                        whiteSpace: "pre-wrap"
-                      }}
+                      className="mt-3 overflow-hidden break-words text-sm leading-6 text-slate-700 [display:-webkit-box] [text-overflow:ellipsis] [-webkit-box-orient:vertical] [-webkit-line-clamp:3] dark:text-slate-300"
+                      style={{ whiteSpace: "pre-wrap" }}
                     >
-                      <LinkedText text={item.content} />
+                      {previewText}
                     </p>
                   </>
                 )}
