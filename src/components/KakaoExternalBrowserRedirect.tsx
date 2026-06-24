@@ -42,8 +42,16 @@ export function KakaoExternalBrowserRedirect() {
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/70 px-5 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-5 text-center shadow-2xl dark:bg-slate-900">
-        <p className="text-base font-bold text-slate-950 dark:text-white">외부 브라우저로 이동해 주세요</p>
+      <div className="relative w-full max-w-sm rounded-2xl bg-white p-5 text-center shadow-2xl dark:bg-slate-900">
+        <button
+          type="button"
+          onClick={() => setShowFallback(false)}
+          className="absolute right-3 top-3 grid h-7 w-7 place-items-center rounded-full bg-slate-100 text-xs font-black text-slate-500 transition active:scale-95 dark:bg-slate-800 dark:text-slate-300"
+          aria-label="닫기"
+        >
+          ✕
+        </button>
+        <p className="px-7 text-base font-bold text-slate-950 dark:text-white">외부 브라우저로 이동해 주세요</p>
         <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
           카카오톡 안에서는 사이트 기능이 제한될 수 있어요.
         </p>
