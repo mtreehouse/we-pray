@@ -767,10 +767,10 @@ export function BibleRoomDetail({
           verses: chapter.verses.map((verse) =>
             verse.verse === target.verse
               ? {
-                  ...verse,
-                  reflectionCount: verse.reflectionCount + 1,
-                  myReflectionId: data.reflectionId ?? verse.myReflectionId
-                }
+                ...verse,
+                reflectionCount: verse.reflectionCount + 1,
+                myReflectionId: data.reflectionId ?? verse.myReflectionId
+              }
               : verse
           )
         };
@@ -907,9 +907,8 @@ export function BibleRoomDetail({
       <Toast message={toast} />
       <header
         ref={roomHeaderRef}
-        className={`sticky top-0 z-20 bg-white/95 px-4 backdrop-blur will-change-transform dark:bg-slate-950/95 ${
-          activeTab === "bible" ? "border-b border-transparent" : "border-b border-white/70 dark:border-slate-800"
-        }`}
+        className={`sticky top-0 z-20 bg-white/95 px-4 backdrop-blur will-change-transform dark:bg-slate-950/95 ${activeTab === "bible" ? "border-b border-transparent" : "border-b border-white/70 dark:border-slate-800"
+          }`}
         style={{ transform: `translateY(${-headerCollapseProgress * 100}%)` }}
       >
         <div className="grid h-14 grid-cols-[2.5rem_minmax(0,1fr)_2.5rem] items-center gap-2">
@@ -1204,8 +1203,8 @@ function BibleRoomActionGuide({
           && Math.abs(current.left - nextRect.left) < 1
           && Math.abs(current.width - nextRect.width) < 1
           && Math.abs(current.height - nextRect.height) < 1
-            ? current
-            : nextRect;
+          ? current
+          : nextRect;
       });
     };
 
@@ -1282,21 +1281,21 @@ function BibleRoomActionGuide({
     : 96;
   const tipStyle: CSSProperties = viewport.width
     ? {
-        width: tipWidth,
-        left: tipLeft,
-        top: clamp(preferredTipTop, 16, Math.max(16, viewport.height - estimatedTipHeight - 16))
-      }
+      width: tipWidth,
+      left: tipLeft,
+      top: clamp(preferredTipTop, 16, Math.max(16, viewport.height - estimatedTipHeight - 16))
+    }
     : { left: 16, right: 16, bottom: 16 };
 
   return (
     <div className="pointer-events-none fixed inset-0 z-[80]">
       {(backRect
         ? [
-            { left: 0, top: 0, width: viewport.width, height: backRect.top },
-            { left: 0, top: backRect.top, width: backRect.left, height: backRect.height },
-            { left: backRect.left + backRect.width, top: backRect.top, width: Math.max(0, viewport.width - backRect.left - backRect.width), height: backRect.height },
-            { left: 0, top: backRect.top + backRect.height, width: viewport.width, height: Math.max(0, viewport.height - backRect.top - backRect.height) }
-          ]
+          { left: 0, top: 0, width: viewport.width, height: backRect.top },
+          { left: 0, top: backRect.top, width: backRect.left, height: backRect.height },
+          { left: backRect.left + backRect.width, top: backRect.top, width: Math.max(0, viewport.width - backRect.left - backRect.width), height: backRect.height },
+          { left: 0, top: backRect.top + backRect.height, width: viewport.width, height: Math.max(0, viewport.height - backRect.top - backRect.height) }
+        ]
         : [{ left: 0, top: 0, width: viewport.width, height: viewport.height }]
       ).map((blocker, index) => (
         <div
@@ -1394,9 +1393,8 @@ function TabButton({ active, icon, label, dataGuide, onClick }: { active: boolea
       type="button"
       onClick={onClick}
       data-guide={dataGuide}
-      className={`flex h-10 items-center justify-center gap-1.5 rounded-lg text-sm font-black ${
-        active ? "bg-teal-700 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-900 dark:text-slate-300"
-      }`}
+      className={`flex h-10 items-center justify-center gap-1.5 rounded-lg text-sm font-black ${active ? "bg-teal-700 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-900 dark:text-slate-300"
+        }`}
     >
       {icon}
       {label}
@@ -1472,9 +1470,8 @@ function BibleRoomSettingsDrawer({
       />
       <aside
         data-guide="bible-settings"
-        className={`absolute right-0 top-0 z-10 h-full w-[86%] max-w-sm overflow-y-auto overscroll-contain bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-soft transition-transform dark:bg-slate-950 ${
-          open ? "translate-x-0" : "translate-x-full"
-        }`}
+        className={`absolute right-0 top-0 z-10 h-full w-[86%] max-w-sm overflow-y-auto overscroll-contain bg-white p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-soft transition-transform dark:bg-slate-950 ${open ? "translate-x-0" : "translate-x-full"
+          }`}
       >
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-lg font-black text-slate-950 dark:text-slate-50">성경방 설정</h2>
@@ -1486,10 +1483,6 @@ function BibleRoomSettingsDrawer({
         <div className="mb-6 grid gap-2">
           <button type="button" onClick={onInfo} className="rounded-lg bg-slate-100 px-4 py-3 text-left font-bold text-slate-800 dark:bg-slate-900 dark:text-slate-100">
             방 정보
-          </button>
-          <button type="button" onClick={() => setShareOpen(true)} className="flex items-center gap-2 rounded-lg bg-slate-100 px-4 py-3 text-left font-bold text-slate-800 dark:bg-slate-900 dark:text-slate-100">
-            <Share2 size={17} />
-            방 공유
           </button>
           <button
             type="button"
@@ -1510,11 +1503,10 @@ function BibleRoomSettingsDrawer({
                   key={size}
                   type="button"
                   onClick={() => onFontSizeChange(size)}
-                  className={`min-h-9 rounded-lg text-xs font-black transition ${
-                    fontSize === size
+                  className={`min-h-9 rounded-lg text-xs font-black transition ${fontSize === size
                       ? "bg-teal-700 text-white"
                       : "bg-white text-slate-600 dark:bg-slate-800 dark:text-slate-300"
-                  }`}
+                    }`}
                 >
                   {size === "small" ? "A-" : size === "normal" ? "A" : size === "large" ? "A+" : "A++"}
                 </button>
@@ -1532,11 +1524,10 @@ function BibleRoomSettingsDrawer({
                   key={height}
                   type="button"
                   onClick={() => onLineHeightChange(height)}
-                  className={`min-h-9 rounded-lg text-xs font-black transition ${
-                    lineHeight === height
+                  className={`min-h-9 rounded-lg text-xs font-black transition ${lineHeight === height
                       ? "bg-teal-700 text-white"
                       : "bg-white text-slate-600 dark:bg-slate-800 dark:text-slate-300"
-                  }`}
+                    }`}
                 >
                   {height === "compact" ? "좁게" : height === "normal" ? "기본" : height === "relaxed" ? "넓게" : "아주 넓게"}
                 </button>
@@ -1565,6 +1556,10 @@ function BibleRoomSettingsDrawer({
               방 관리
             </button>
           ) : null}
+          <button type="button" onClick={() => setShareOpen(true)} className="flex items-center gap-2 rounded-lg bg-slate-100 px-4 py-3 text-left font-bold text-slate-800 dark:bg-slate-900 dark:text-slate-100">
+            방 공유
+            <Share2 size={17} />
+          </button>
           {!room.isCreator ? (
             <button type="button" onClick={onLeave} className="touch-manipulation rounded-lg bg-rose-50 px-4 py-3 text-left font-bold text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
               방 나가기
@@ -1713,13 +1708,12 @@ function BibleTranslationModal({
                 onClose();
               }}
               disabled={disabled}
-              className={`flex min-h-12 items-center justify-between gap-3 rounded-lg border px-4 py-3 text-left transition disabled:cursor-not-allowed disabled:opacity-70 ${
-                disabled
+              className={`flex min-h-12 items-center justify-between gap-3 rounded-lg border px-4 py-3 text-left transition disabled:cursor-not-allowed disabled:opacity-70 ${disabled
                   ? "border-slate-200 bg-slate-50 text-slate-400 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-500"
                   : active
                     ? "border-teal-200 bg-teal-50 text-teal-900"
                     : "border-slate-200 bg-white text-slate-800"
-              }`}
+                }`}
             >
               <span className="min-w-0 truncate font-black">{label}</span>
               {disabled ? (
@@ -2343,9 +2337,9 @@ function BibleTab({
                   lineHeight={lineHeight}
                   selected={Boolean(
                     selectedVerse
-                      && selectedVerse.bookCode === displayChapter.bookCode
-                      && selectedVerse.chapter === displayChapter.chapter
-                      && selectedVerse.verse === verse.verse
+                    && selectedVerse.bookCode === displayChapter.bookCode
+                    && selectedVerse.chapter === displayChapter.chapter
+                    && selectedVerse.verse === verse.verse
                   )}
                   guideTarget={index === 0}
                   onToggle={toggleSelectedVerse}
@@ -2404,16 +2398,14 @@ function BibleTab({
                 onClick={isBibleGuideSample ? undefined : onToggleComplete}
                 disabled={displayCompleting}
                 data-guide="bible-complete"
-                className={`mt-3 flex min-h-14 w-full items-center justify-center gap-2 rounded-lg border px-4 py-3 font-black transition disabled:opacity-60 ${
-                  displayCompleted
+                className={`mt-3 flex min-h-14 w-full items-center justify-center gap-2 rounded-lg border px-4 py-3 font-black transition disabled:opacity-60 ${displayCompleted
                     ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200"
                     : "border-slate-200 bg-slate-100 text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400"
-                }`}
+                  }`}
               >
                 <span
-                  className={`grid h-6 w-6 place-items-center rounded-full ${
-                    displayCompleted ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-400"
-                  }`}
+                  className={`grid h-6 w-6 place-items-center rounded-full ${displayCompleted ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-400"
+                    }`}
                 >
                   <Check size={15} strokeWidth={3} />
                 </span>
@@ -2768,9 +2760,8 @@ function SharingReflectionCard({
           onSelect();
         }
       }}
-      className={`cursor-pointer rounded-lg bg-white p-4 shadow-soft transition dark:bg-slate-900 dark:shadow-none ${
-        selected ? "ring-2 ring-teal-500 dark:ring-teal-400" : ""
-      }`}
+      className={`cursor-pointer rounded-lg bg-white p-4 shadow-soft transition dark:bg-slate-900 dark:shadow-none ${selected ? "ring-2 ring-teal-500 dark:ring-teal-400" : ""
+        }`}
     >
       {reactionBurst ? <ReactionEmojiBurst key={reactionBurst.key} emoji={reactionBurst.emoji} variant={reactionBurst.variant} /> : null}
       <div className="mb-3 flex items-start justify-between gap-3">
@@ -2874,9 +2865,8 @@ function ReactionButton({
       aria-pressed={active}
       aria-label={`${label} ${active ? "취소" : "추가"}`}
       title={label}
-      className={`inline-flex h-8 items-center gap-1 rounded-full border px-2.5 transition disabled:opacity-60 ${
-        active ? activeClasses : "border-slate-200 bg-slate-100 text-slate-500 hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
-      }`}
+      className={`inline-flex h-8 items-center gap-1 rounded-full border px-2.5 transition disabled:opacity-60 ${active ? activeClasses : "border-slate-200 bg-slate-100 text-slate-500 hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+        }`}
     >
       <span className="text-sm leading-none" aria-hidden="true">{emoji}</span>
       <span>{count}</span>
@@ -2966,12 +2956,12 @@ function PlanTab({
   const displayProgress = guideActive ? BIBLE_GUIDE_SAMPLE_PROGRESS : progress;
   const displayMembers = guideActive
     ? BIBLE_GUIDE_SAMPLE_PROGRESS.members.map((member) => ({
-        id: member.userId,
-        userId: member.userId,
-        nickname: member.nickname,
-        role: member.role,
-        joinedAt: member.joinedAt
-      }))
+      id: member.userId,
+      userId: member.userId,
+      nickname: member.nickname,
+      role: member.role,
+      joinedAt: member.joinedAt
+    }))
     : members;
   const selectedDay = displayDays.find((day) => day.date === displaySelectedDate) ?? null;
   const progressByUser = new Map(displayProgress?.members.map((member) => [member.userId, member]) ?? []);
@@ -3144,15 +3134,14 @@ function PlanCalendar({
                 if (selectable) onSelectDate(date);
               }}
               disabled={!selectable}
-              className={`${compact ? "h-9" : "h-10"} relative rounded-lg pb-2 text-sm font-black transition ${
-                !selectable
+              className={`${compact ? "h-9" : "h-10"} relative rounded-lg pb-2 text-sm font-black transition ${!selectable
                   ? "bg-transparent text-slate-200 dark:text-slate-700"
                   : isToday
                     ? "bg-teal-50 text-teal-900 dark:bg-teal-950/40 dark:text-teal-100"
                     : plan
                       ? "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
                       : "bg-transparent text-slate-400 dark:text-slate-600"
-              } ${active ? "ring-2 ring-inset ring-teal-600 dark:ring-teal-400" : ""} disabled:cursor-default`}
+                } ${active ? "ring-2 ring-inset ring-teal-600 dark:ring-teal-400" : ""} disabled:cursor-default`}
             >
               <span>{Number(date.slice(8, 10))}</span>
               {selectable && (plan?.isCompleted || plan?.hasReflection) ? (
@@ -3336,9 +3325,8 @@ function PassageModal({
             <p
               key={verse.verse}
               ref={focused ? focusVerseRef : undefined}
-              className={`scroll-mt-6 rounded-md px-2 py-1.5 text-sm leading-7 ${
-                focused ? "bg-teal-50 text-teal-950" : "text-slate-700"
-              }`}
+              className={`scroll-mt-6 rounded-md px-2 py-1.5 text-sm leading-7 ${focused ? "bg-teal-50 text-teal-950" : "text-slate-700"
+                }`}
             >
               <span className="mr-2 text-xs font-black text-teal-700">{verseLabel(verse.content, verse.verse)}</span>
               {verseText(verse.content, translation)}

@@ -775,8 +775,8 @@ function RoomSettingsDrawer({
             방 정보
           </button>
           <button type="button" onClick={() => setShareOpen(true)} className="flex items-center gap-2 rounded-lg bg-slate-100 px-4 py-3 text-left font-bold text-slate-800 dark:bg-slate-900 dark:text-slate-100">
-            <Share2 size={17} />
             방 공유
+            <Share2 size={17} />
           </button>
           {room.isCreator ? (
             <button type="button" onClick={onManage} className="rounded-lg bg-slate-100 px-4 py-3 text-left font-bold text-slate-800 dark:bg-slate-900 dark:text-slate-100">

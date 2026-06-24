@@ -292,6 +292,21 @@ export function SettingsMenu({ isLoggedIn, currentNickname, currentProvider, app
 
         <button
           type="button"
+          onClick={openShareModal}
+          className="flex items-center justify-between gap-3 rounded-lg bg-white/90 px-4 py-4 text-left shadow-soft dark:border dark:border-slate-800 dark:bg-slate-900/85"
+        >
+          <span className="min-w-0">
+            <span className="flex items-center gap-2 font-black text-slate-950 dark:text-slate-50">
+              <Share2 size={17} className="text-teal-700 dark:text-teal-300" />
+              WePray 공유
+            </span>
+            <span className="mt-1 block text-xs font-bold text-slate-500 dark:text-slate-400">사이트 링크를 공유합니다.</span>
+          </span>
+          <ChevronRight size={18} className="text-slate-400" />
+        </button>
+
+        <button
+          type="button"
           onClick={() => window.dispatchEvent(new Event(REQUEST_PWA_INSTALL_EVENT))}
           className="flex items-center justify-between gap-3 rounded-lg bg-white/90 px-4 py-4 text-left shadow-soft dark:border dark:border-slate-800 dark:bg-slate-900/85"
         >
@@ -305,21 +320,6 @@ export function SettingsMenu({ isLoggedIn, currentNickname, currentProvider, app
           <ChevronRight size={18} className="text-slate-400" />
         </button>
 
-        <button
-          type="button"
-          onClick={openShareModal}
-          className="flex items-center justify-between gap-3 rounded-lg bg-white/90 px-4 py-4 text-left shadow-soft dark:border dark:border-slate-800 dark:bg-slate-900/85"
-        >
-          <span className="min-w-0">
-            <span className="flex items-center gap-2 font-black text-slate-950 dark:text-slate-50">
-              <Share2 size={17} className="text-teal-700 dark:text-teal-300" />
-              WePray 공유
-            </span>
-            <span className="mt-1 block text-xs font-bold text-slate-500 dark:text-slate-400">사이트 링크를 공유합니다.</span>
-          </span>
-          <ChevronRight size={18} className="text-slate-400" />
-        </button>
-        
         <button
           type="button"
           onClick={clearAppCache}
@@ -426,8 +426,8 @@ export function SettingsMenu({ isLoggedIn, currentNickname, currentProvider, app
           {nicknameMessage ? (
             <p
               className={`rounded-lg px-3 py-2 text-sm font-bold ${nicknameMessageType === "success"
-                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-200"
-                  : "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-200"
+                ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-200"
+                : "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-200"
                 }`}
             >
               {nicknameMessage}
