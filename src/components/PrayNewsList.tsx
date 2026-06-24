@@ -35,6 +35,7 @@ function LinkedText({ text }: { text: string }) {
               href={part}
               target="_blank"
               rel="noreferrer"
+              onClick={(event) => event.stopPropagation()}
               className="font-bold text-[#637EE1] underline decoration-[#637EE1]/30 underline-offset-4"
             >
               {part}
@@ -53,7 +54,20 @@ export function PrayNewsList({ news, initialNextCursor }: { news: PrayNewsItem[]
   const [nextCursor, setNextCursor] = useState<string | null>(initialNextCursor);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set());
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  function toggleExpanded(itemId: string) {
+    setExpandedIds((current) => {
+      const next = new Set(current);
+      if (next.has(itemId)) {
+        next.delete(itemId);
+      } else {
+        next.add(itemId);
+      }
+      return next;
+    });
+  }
 
   async function loadMore() {
     if (loading || !nextCursor) return;
@@ -96,23 +110,76 @@ export function PrayNewsList({ news, initialNextCursor }: { news: PrayNewsItem[]
 
   return (
     <section className="grid gap-3">
-      {items.map((item) => (
-        <article key={item.id} className="overflow-hidden rounded-lg bg-white shadow-soft dark:border dark:border-slate-800 dark:bg-slate-900/85">
-          <div className="p-4">
-            {item.imageUrl ? (
-              <div className="float-left mb-2 mr-3 aspect-square w-[88px] overflow-hidden rounded-lg bg-slate-100 sm:w-[112px] dark:bg-slate-800">
-                <img src={item.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
+      {items.map((item) => {
+        const expanded = expandedIds.has(item.id);
+        const previewLikelyTruncated = item.content.length > 80 || item.title.length > 30;
+
+        return (
+          <article
+            key={item.id}
+            role="button"
+            tabIndex={0}
+            onClick={() => toggleExpanded(item.id)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                toggleExpanded(item.id);
+              }
+            }}
+            className="cursor-pointer overflow-hidden rounded-lg bg-white shadow-soft transition active:scale-[0.995] dark:border dark:border-slate-800 dark:bg-slate-900/85"
+          >
+            {expanded ? (
+              <div className="p-4">
+                {item.imageUrl ? (
+                  <div className="mb-4 flex max-h-[70vh] min-h-44 w-full items-center justify-center overflow-hidden rounded-lg bg-slate-100 p-2 dark:bg-slate-800">
+                    <img src={item.imageUrl} alt="" className="h-auto max-h-[70vh] max-w-full object-contain" loading="lazy" />
+                  </div>
+                ) : null}
+                <h2 className="break-words font-black text-slate-950 dark:text-slate-50">{item.title}</h2>
+                <time className="mt-1 block text-xs font-bold text-slate-400 dark:text-slate-500">{formatKoreanDate(item.createdAt)}</time>
+                <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-slate-700 dark:text-slate-300">
+                  <LinkedText text={item.content} />
+                </p>
               </div>
-            ) : null}
-            <h2 className="break-words font-black text-slate-950 dark:text-slate-50">{item.title}</h2>
-            <time className="mt-1 block text-xs font-bold text-slate-400 dark:text-slate-500">{formatKoreanDate(item.createdAt)}</time>
-            <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-slate-700 dark:text-slate-300">
-              <LinkedText text={item.content} />
-            </p>
-            <div className="clear-both" />
-          </div>
-        </article>
-      ))}
+            ) : (
+              <div className="p-4">
+                {item.imageUrl ? (
+                  <div className="relative max-h-36 overflow-hidden pr-6 sm:max-h-[168px]">
+                    <div className="float-left mb-2 mr-3 aspect-square w-[88px] overflow-hidden rounded-lg bg-slate-100 sm:w-[112px] dark:bg-slate-800">
+                      <img src={item.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
+                    </div>
+                    <h2 className="break-words font-black text-slate-950 dark:text-slate-50 text-sm">{item.title}</h2>
+                    <time className="mt-1 block text-xs font-bold text-slate-400 dark:text-slate-500">{formatKoreanDate(item.createdAt)}</time>
+                    <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-slate-700 dark:text-slate-300">
+                      <LinkedText text={item.content} />
+                    </p>
+                    {previewLikelyTruncated ? (
+                      <span className="absolute inset-x-0 bottom-0 flex h-6 items-center justify-end bg-white pl-1 text-sm font-bold leading-6 text-slate-500 dark:bg-slate-900 dark:text-slate-400">...</span>
+                    ) : null}
+                  </div>
+                ) : (
+                  <>
+                    <h2 className="break-words font-black text-slate-950 dark:text-slate-50">{item.title}</h2>
+                    <time className="mt-1 block text-xs font-bold text-slate-400 dark:text-slate-500">{formatKoreanDate(item.createdAt)}</time>
+                    <p
+                      className="mt-3 break-words text-sm leading-6 text-slate-700 dark:text-slate-300"
+                      style={{
+                        display: "-webkit-box",
+                        overflow: "hidden",
+                        WebkitBoxOrient: "vertical",
+                        WebkitLineClamp: 3,
+                        whiteSpace: "pre-wrap"
+                      }}
+                    >
+                      <LinkedText text={item.content} />
+                    </p>
+                  </>
+                )}
+              </div>
+            )}
+          </article>
+        );
+      })}
 
       <div ref={loadMoreRef} className="min-h-4" />
       {loading ? <p className="py-3 text-center text-sm font-bold text-slate-400">불러오는 중</p> : null}
