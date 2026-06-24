@@ -346,7 +346,7 @@ export function SettingsMenu({ isLoggedIn, currentNickname, currentProvider, app
               로그아웃
             </button>
             <div className="flex justify-center pt-2">
-              <WithdrawLink />
+              <WithdrawLink currentNickname={currentNickname ?? "닉네임 없음"} />
             </div>
           </section>
         ) : (

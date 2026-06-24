@@ -2,11 +2,22 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 
-export async function DELETE() {
+type DeleteBody = {
+  nickname?: unknown;
+};
+
+export async function DELETE(req: Request) {
   const user = await getCurrentUser();
 
   if (!user) {
     return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+  }
+
+  const body = (await req.json().catch(() => ({}))) as DeleteBody;
+  const expectedNickname = user.nickname ?? "닉네임 없음";
+
+  if (body.nickname !== expectedNickname) {
+    return NextResponse.json({ error: "현재 닉네임이 일치하지 않습니다." }, { status: 400 });
   }
 
   const [ownedPrayerRoom, ownedBibleRoom] = await Promise.all([

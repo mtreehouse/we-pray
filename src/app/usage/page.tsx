@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { WithdrawLink } from "@/components/WithdrawLink";
+import { getCurrentUser } from "@/lib/permissions";
 
 const sections = [
   {
@@ -41,7 +42,9 @@ const sections = [
   }
 ];
 
-export default function UsagePage() {
+export default async function UsagePage() {
+  const user = await getCurrentUser();
+
   return (
     <main className="mx-auto min-h-dvh w-full max-w-xl px-4 py-6">
       <Link href="/" className="mb-5 inline-flex items-center gap-1 text-sm font-semibold text-slate-600">
@@ -60,9 +63,11 @@ export default function UsagePage() {
           </article>
         ))}
       </section>
-      <div className="mt-8 flex justify-center">
-        <WithdrawLink />
-      </div>
+      {user ? (
+        <div className="mt-8 flex justify-center">
+          <WithdrawLink currentNickname={user.nickname ?? "닉네임 없음"} />
+        </div>
+      ) : null}
     </main>
   );
 }
