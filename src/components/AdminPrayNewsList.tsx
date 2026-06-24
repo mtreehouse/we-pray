@@ -41,6 +41,32 @@ function formatKoreanDateTime(value: string) {
   return year + "." + month + "." + day + " " + hour + ":" + minute;
 }
 
+function LinkedText({ text }: { text: string }) {
+  const parts = text.split(/(https?:\/\/[^\s]+)/g);
+
+  return (
+    <>
+      {parts.map((part, index) => {
+        if (/^https?:\/\/[^\s]+$/.test(part)) {
+          return (
+            <a
+              key={index}
+              href={part}
+              target="_blank"
+              rel="noreferrer"
+              className="font-bold text-[#637EE1] underline decoration-[#637EE1]/30 underline-offset-4"
+            >
+              {part}
+            </a>
+          );
+        }
+
+        return <span key={index}>{part}</span>;
+      })}
+    </>
+  );
+}
+
 function formFromNews(news: AdminPrayNews): FormState {
   return { title: news.title, content: news.content, imageUrl: news.imageUrl ?? "" };
 }
@@ -227,34 +253,35 @@ export function AdminPrayNewsList({ news, initialNextCursor }: { news: AdminPray
 
       {items.map((item) => (
         <article key={item.id} className="overflow-hidden rounded-lg bg-white shadow-soft dark:border dark:border-slate-800 dark:bg-slate-900">
-          <div className={item.imageUrl ? "grid grid-cols-[88px_minmax(0,1fr)] gap-3 p-3 sm:grid-cols-[112px_minmax(0,1fr)]" : "p-4"}>
+          <div className="p-4">
             {item.imageUrl ? (
-              <div className="aspect-square overflow-hidden rounded-lg bg-slate-100 dark:bg-slate-800">
+              <div className="float-left mb-2 mr-3 aspect-square w-[88px] overflow-hidden rounded-lg bg-slate-100 sm:w-[112px] dark:bg-slate-800">
                 <img src={item.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
               </div>
             ) : null}
-            <div className="min-w-0">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <h3 className="break-words font-black text-slate-950 dark:text-slate-50">{item.title}</h3>
-                  <p className="mt-1 text-xs font-semibold text-slate-400 dark:text-slate-500">
-                    {item.authorNickname ?? "관리자"} · {formatKoreanDateTime(item.createdAt)}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-1">
-                  <button type="button" onClick={() => startEdit(item)} className="grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-200" aria-label="수정">
-                    <Pencil size={15} />
-                  </button>
-                  <button type="button" onClick={() => void remove(item)} className="grid h-9 w-9 place-items-center rounded-full bg-rose-50 text-rose-600 dark:bg-rose-500/15 dark:text-rose-300" aria-label="삭제">
-                    <Trash2 size={15} />
-                  </button>
-                </div>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="break-words font-black text-slate-950 dark:text-slate-50">{item.title}</h3>
+                <p className="mt-1 text-xs font-semibold text-slate-400 dark:text-slate-500">
+                  {item.authorNickname ?? "관리자"} · {formatKoreanDateTime(item.createdAt)}
+                </p>
               </div>
-              <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-slate-700 dark:text-slate-300">{item.content}</p>
-              {item.imageUrl ? null : (
-                <p className="mt-3 inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-[11px] font-black text-slate-500 dark:bg-slate-800 dark:text-slate-300"><ImageIcon size={12} /> 이미지 없음</p>
-              )}
+              <div className="flex shrink-0 items-center gap-1">
+                <button type="button" onClick={() => startEdit(item)} className="grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-200" aria-label="수정">
+                  <Pencil size={15} />
+                </button>
+                <button type="button" onClick={() => void remove(item)} className="grid h-9 w-9 place-items-center rounded-full bg-rose-50 text-rose-600 dark:bg-rose-500/15 dark:text-rose-300" aria-label="삭제">
+                  <Trash2 size={15} />
+                </button>
+              </div>
             </div>
+            <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-slate-700 dark:text-slate-300">
+              <LinkedText text={item.content} />
+            </p>
+            {item.imageUrl ? null : (
+              <p className="mt-3 inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-[11px] font-black text-slate-500 dark:bg-slate-800 dark:text-slate-300"><ImageIcon size={12} /> 이미지 없음</p>
+            )}
+            <div className="clear-both" />
           </div>
         </article>
       ))}
