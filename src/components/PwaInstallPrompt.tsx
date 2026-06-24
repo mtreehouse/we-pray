@@ -268,7 +268,7 @@ export function PwaInstallPrompt() {
     }
   }, [deferredPrompt, guidesDone, pathname, showIosGuide]);
 
-  if (true) {
+  if (installCompleteVisible && !isStandalone()) {
     return (
       <div className="fixed inset-0 z-[130] flex items-center justify-center bg-slate-950/55 px-5 backdrop-blur-sm">
         <section className="w-full max-w-sm rounded-2xl border border-[#8FA0F0]/55 bg-white p-5 text-center shadow-[0_22px_60px_rgba(15,23,42,0.28)] dark:border-[#8FA0F0]/40 dark:bg-slate-950 dark:text-slate-50">
