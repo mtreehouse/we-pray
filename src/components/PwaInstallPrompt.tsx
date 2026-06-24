@@ -21,7 +21,6 @@ const GUIDE_COMPLETED_EVENT = "wepray:guide-completed";
 const REQUEST_EVENT = "wepray:pwa-install-request";
 const SNOOZE_MS = 7 * 24 * 60 * 60 * 1000;
 const IOS_SNOOZE_MS = 7 * 24 * 60 * 60 * 1000;
-
 function isStandalone() {
   if (typeof window === "undefined") return false;
   const navigatorWithStandalone = window.navigator as Navigator & { standalone?: boolean };
@@ -70,6 +69,7 @@ export function PwaInstallPrompt() {
   const [mode, setMode] = useState<PromptMode | null>(null);
   const [guidesDone, setGuidesDone] = useState(false);
   const [showIosGuide, setShowIosGuide] = useState(false);
+  const [installCompleteVisible, setInstallCompleteVisible] = useState(false);
 
   useEffect(() => {
     if (!("serviceWorker" in navigator) || !window.isSecureContext) return;
@@ -92,6 +92,26 @@ export function PwaInstallPrompt() {
       window.removeEventListener(GUIDE_COMPLETED_EVENT, updateGuidesDone);
       window.removeEventListener("focus", updateGuidesDone);
     };
+  }, []);
+
+  const completeNativeInstall = useCallback((markInstalled = false) => {
+    try {
+      if (markInstalled) {
+        window.localStorage.setItem(INSTALLED_KEY, "true");
+        window.localStorage.removeItem(IOS_GUIDE_VISIBLE_KEY);
+      }
+    } catch {
+      // Ignore storage failures.
+    }
+
+    setVisible(false);
+    setShowIosGuide(false);
+    deferredPromptRef.current = null;
+    setDeferredPrompt(null);
+
+    if (!isStandalone()) {
+      setInstallCompleteVisible(true);
+    }
   }, []);
 
   const snooze = useCallback((duration = SNOOZE_MS) => {
@@ -124,17 +144,12 @@ export function PwaInstallPrompt() {
     const choice = await prompt.userChoice;
 
     if (choice.outcome === "accepted") {
-      try {
-        window.localStorage.setItem(INSTALLED_KEY, "true");
-      } catch {
-        // Ignore storage failures.
-      }
-      setVisible(false);
+      completeNativeInstall(false);
       return;
     }
 
     snooze();
-  }, [snooze]);
+  }, [completeNativeInstall, snooze]);
 
   const install = useCallback(async () => {
     if (mode === "ios") {
@@ -178,6 +193,7 @@ export function PwaInstallPrompt() {
         }
         setShowIosGuide(false);
         setVisible(false);
+        setInstallCompleteVisible(false);
         return;
       }
 
@@ -203,21 +219,17 @@ export function PwaInstallPrompt() {
   useEffect(() => {
     function handleBeforeInstallPrompt(event: Event) {
       const promptEvent = event as BeforeInstallPromptEvent;
+      try {
+        window.localStorage.removeItem(INSTALLED_KEY);
+      } catch {
+        // Ignore storage failures.
+      }
       deferredPromptRef.current = promptEvent;
       setDeferredPrompt(promptEvent);
     }
 
     function handleInstalled() {
-      try {
-        window.localStorage.setItem(INSTALLED_KEY, "true");
-        window.localStorage.removeItem(IOS_GUIDE_VISIBLE_KEY);
-      } catch {
-        // Ignore storage failures.
-      }
-      setVisible(false);
-      setShowIosGuide(false);
-      deferredPromptRef.current = null;
-      setDeferredPrompt(null);
+      completeNativeInstall(true);
     }
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
@@ -229,7 +241,7 @@ export function PwaInstallPrompt() {
       window.removeEventListener("appinstalled", handleInstalled);
       window.removeEventListener(REQUEST_EVENT, requestInstall);
     };
-  }, [requestInstall]);
+  }, [completeNativeInstall, requestInstall]);
 
   useEffect(() => {
     if (!guidesDone || !pathname || !isPromptAllowedPath(pathname) || isStandalone() || showIosGuide) return;
@@ -255,6 +267,31 @@ export function PwaInstallPrompt() {
       return;
     }
   }, [deferredPrompt, guidesDone, pathname, showIosGuide]);
+
+  if (true) {
+    return (
+      <div className="fixed inset-0 z-[130] flex items-center justify-center bg-slate-950/55 px-5 backdrop-blur-sm">
+        <section className="w-full max-w-sm rounded-2xl border border-[#8FA0F0]/55 bg-white p-5 text-center shadow-[0_22px_60px_rgba(15,23,42,0.28)] dark:border-[#8FA0F0]/40 dark:bg-slate-950 dark:text-slate-50">
+          <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-[#637EE1]/12 text-[#637EE1] dark:bg-[#637EE1]/22 dark:text-[#AEBBFF]">
+            <Download size={22} />
+          </div>
+          <p className="mt-3 text-base font-black text-slate-950 dark:text-slate-50">설치 중...</p>
+          <p className="mt-2 text-sm font-semibold leading-6 text-slate-600 dark:text-slate-300">
+            설치가 완료되면 홈 화면에서 앱으로 열어보세요!
+          </p>
+          <div className="mt-4 grid grid-cols-1 gap-2">
+            <button
+              type="button"
+              onClick={() => setInstallCompleteVisible(false)}
+              className="min-h-11 rounded-xl bg-slate-100 px-3 text-xs font-black text-slate-600 dark:bg-slate-900 dark:text-slate-300"
+            >
+              닫기
+            </button>
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   if (showIosGuide) {
     return (
