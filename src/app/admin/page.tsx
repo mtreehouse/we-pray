@@ -1,10 +1,16 @@
 import Link from "next/link";
-import { BookOpen, ChevronLeft, ChevronRight, DoorOpen, MessageSquareText, Users } from "lucide-react";
+import { BookOpen, ChevronLeft, ChevronRight, DoorOpen, MessageSquareText, Newspaper, Users } from "lucide-react";
 import { requireAdmin } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
 const menuItems = [
+  {
+    href: "/admin/pray-news",
+    icon: Newspaper,
+    title: "Pray News 관리",
+    description: "공지사항처럼 보여줄 Pray News를 작성하고 관리합니다."
+  },
   {
     href: "/admin/feedbacks",
     icon: MessageSquareText,

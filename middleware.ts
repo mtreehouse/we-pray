@@ -9,10 +9,6 @@ export default withAuth({
         return token?.role === "admin";
       }
 
-      if (pathname.startsWith("/pray-room")) {
-        return Boolean(token);
-      }
-
       return true;
     }
   },
@@ -22,5 +18,5 @@ export default withAuth({
 });
 
 export const config = {
-  matcher: ["/pray-room/:path*", "/admin/:path*"]
+  matcher: ["/admin/:path*"]
 };

@@ -15,6 +15,7 @@ import { WithdrawLink } from "@/components/WithdrawLink";
 import { APP_DARK_MODE_CHANGE_EVENT, APP_DARK_MODE_STORAGE_KEY } from "@/lib/ui-settings";
 
 const REQUEST_PWA_INSTALL_EVENT = "wepray:pwa-install-request";
+const PWA_INSTALLED_KEY = "wepray:pwa-installed:v1";
 type SettingsMenuProps = {
   isLoggedIn: boolean;
   currentNickname?: string | null;
@@ -40,6 +41,27 @@ const wePrayInfoSections = [
     body: "사용 중 불편한 점이나 개선 의견이 있다면 운영자에게 문의해 주세요. 더 편안한 공동체 도구가 되도록 반영하겠습니다."
   }
 ];
+
+function isIosDevice() {
+  const userAgent = window.navigator.userAgent;
+  return /iPad|iPhone|iPod/.test(userAgent) || (window.navigator.platform === "MacIntel" && window.navigator.maxTouchPoints > 1);
+}
+
+function isIosSafari() {
+  const userAgent = window.navigator.userAgent;
+  return isIosDevice() && /Safari/.test(userAgent) && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(userAgent);
+}
+
+function isPwaInstalled() {
+  const navigatorWithStandalone = window.navigator as Navigator & { standalone?: boolean };
+  if (window.matchMedia("(display-mode: standalone)").matches || navigatorWithStandalone.standalone === true) return true;
+
+  try {
+    return window.localStorage.getItem(PWA_INSTALLED_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
 
 function providerLabel(provider?: string | null) {
   if (provider === "google") return "Google";
@@ -118,6 +140,20 @@ export function SettingsMenu({ isLoggedIn, currentNickname, currentProvider, app
 
   function openShareModal() {
     setShareOpen(true);
+  }
+
+  function requestPwaInstall() {
+    if (isPwaInstalled()) {
+      setToast("이미 앱으로 설치되어 있습니다.");
+      return;
+    }
+
+    if (isIosDevice() && !isIosSafari()) {
+      setToast("iPhone에서는 Safari에서 열어 홈 화면에 추가해주세요.");
+      return;
+    }
+
+    window.dispatchEvent(new Event(REQUEST_PWA_INSTALL_EVENT));
   }
 
   function openNicknameModal() {
@@ -307,7 +343,7 @@ export function SettingsMenu({ isLoggedIn, currentNickname, currentProvider, app
 
         <button
           type="button"
-          onClick={() => window.dispatchEvent(new Event(REQUEST_PWA_INSTALL_EVENT))}
+          onClick={requestPwaInstall}
           className="flex items-center justify-between gap-3 rounded-lg bg-white/90 px-4 py-4 text-left shadow-soft dark:border dark:border-slate-800 dark:bg-slate-900/85"
         >
           <span className="min-w-0">

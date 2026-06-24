@@ -49,15 +49,15 @@ enum FeedbackStatus {
 }
 
 model User {
-  id             String       @id @default(cuid())
-  provider       AuthProvider
-  providerUserId String
-  nickname       String?      @unique
-  role           UserRole     @default(user)
-  bibleCopyrightAllowed Boolean @default(false)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  deletedAt      DateTime?
+  id                    String       @id @default(cuid())
+  provider              AuthProvider
+  providerUserId        String
+  nickname              String?      @unique
+  role                  UserRole     @default(user)
+  bibleCopyrightAllowed Boolean      @default(false)
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  deletedAt             DateTime?
 
   createdRooms      PrayerRoom[]       @relation("RoomCreator")
   memberships       RoomMember[]
@@ -70,6 +70,7 @@ model User {
   bibleReflectionReactions BibleReflectionReaction[]
   bibleProgress            BibleProgress[]
   feedbacks                Feedback[]
+  prayNews                 PrayNews[]
 
   @@unique([provider, providerUserId])
   @@index([deletedAt])
@@ -144,13 +145,18 @@ model PrayerPostPrayer {
 }
 
 model PrayNews {
-  id        String    @id @default(cuid())
-  title     String
-  content   String
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+  id           String    @id @default(cuid())
+  title        String
+  content      String
+  imageUrl     String?
+  authorUserId String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
 
+  author User? @relation(fields: [authorUserId], references: [id])
+
+  @@index([authorUserId])
   @@index([createdAt])
   @@index([deletedAt])
 }
