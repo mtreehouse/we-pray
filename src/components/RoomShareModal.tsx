@@ -5,7 +5,6 @@ import { MessageCircle, Share2 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { noBrowserPasswordSuggestions } from "@/lib/browser-input";
 import { absoluteUrl, shareOrCopy } from "@/lib/client-share";
-import { getKakaoJavascriptKey } from "@/lib/public-config";
 
 type RoomShareModalProps = {
   open: boolean;
@@ -32,6 +31,7 @@ const kindLabels = {
 const kakaoSdkUrl = "https://t1.kakaocdn.net/kakao_js_sdk/2.7.5/kakao.min.js";
 const kakaoTemplateId = 134577;
 const kakaoScriptId = "kakao-javascript-sdk";
+const kakaoJavascriptKey = process.env.NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY || "";
 
 declare global {
   interface Window {
@@ -114,8 +114,7 @@ export function RoomShareModal({ open, onClose, kind, roomId, roomTitle, onToast
       return;
     }
 
-    const kakaoKey = await getKakaoJavascriptKey();
-    if (!kakaoKey) {
+    if (!kakaoJavascriptKey) {
       onToast("카카오 JavaScript 키를 설정해주세요.");
       return;
     }
@@ -124,7 +123,7 @@ export function RoomShareModal({ open, onClose, kind, roomId, roomTitle, onToast
       setKakaoSharing(true);
       await loadKakaoSdk();
       if (!window.Kakao) throw new Error("Kakao SDK is not ready.");
-      if (!window.Kakao.isInitialized()) window.Kakao.init(kakaoKey);
+      if (!window.Kakao.isInitialized()) window.Kakao.init(kakaoJavascriptKey);
 
       window.Kakao.Share?.sendCustom({
         templateId: kakaoTemplateId,

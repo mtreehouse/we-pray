@@ -9,6 +9,7 @@ import { AppGuideOverlay, type GuideKind } from "@/components/AppGuideOverlay";
 import { Modal } from "@/components/ui/Modal";
 import { Toast } from "@/components/ui/Toast";
 import { noBrowserInputSuggestions } from "@/lib/browser-input";
+import { clearWePrayClientCache } from "@/lib/client-cache";
 import { SiteShareModal } from "@/components/SiteShareModal";
 import { WithdrawLink } from "@/components/WithdrawLink";
 import { APP_DARK_MODE_CHANGE_EVENT, APP_DARK_MODE_STORAGE_KEY } from "@/lib/ui-settings";
@@ -95,25 +96,24 @@ export function SettingsMenu({ isLoggedIn, currentNickname, currentProvider, app
     window.dispatchEvent(new Event(APP_DARK_MODE_CHANGE_EVENT));
   }
 
+  function resetCachedUiState() {
+    clearWePrayClientCache();
+    setAppDarkMode(false);
+    document.documentElement.classList.remove("dark");
+    window.dispatchEvent(new Event(APP_DARK_MODE_CHANGE_EVENT));
+  }
+
   function clearAppCache() {
     const confirmed = confirm("이 브라우저에 저장된 WePray 기억 내용을 모두 삭제할까요? 다크모드, 성경방 보기 설정, 마지막 읽던 위치, 사용법 확인 기록이 초기화됩니다.");
     if (confirmed === false) return;
 
-    try {
-      const keysToRemove: string[] = [];
-      for (let index = 0; index < window.localStorage.length; index += 1) {
-        const key = window.localStorage.key(index);
-        if (key?.startsWith("wepray:")) keysToRemove.push(key);
-      }
-      keysToRemove.forEach((key) => window.localStorage.removeItem(key));
-    } catch {
-      // Keep the current session usable even when storage access is restricted.
-    }
-
-    setAppDarkMode(false);
-    document.documentElement.classList.remove("dark");
-    window.dispatchEvent(new Event(APP_DARK_MODE_CHANGE_EVENT));
+    resetCachedUiState();
     setToast("저장된 기억 내용을 삭제했습니다.");
+  }
+
+  async function logout() {
+    resetCachedUiState();
+    await signOut({ callbackUrl: "/" });
   }
 
   function openShareModal() {
@@ -339,7 +339,7 @@ export function SettingsMenu({ isLoggedIn, currentNickname, currentProvider, app
           <section className="grid gap-2 rounded-lg bg-white/90 p-4 shadow-soft dark:border dark:border-slate-800 dark:bg-slate-900/85">
             <button
               type="button"
-              onClick={() => signOut({ callbackUrl: "/" })}
+              onClick={() => void logout()}
               className="flex min-h-11 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-700 shadow-soft dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
             >
               <LogOut size={17} className="text-slate-500 dark:text-slate-400" />

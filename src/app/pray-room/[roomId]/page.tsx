@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { PrayerRoomDetail } from "@/components/PrayerRoomDetail";
 import { prisma } from "@/lib/prisma";
-import { requireNickname, requireRoomMember } from "@/lib/permissions";
+import { getCurrentUser, requireRoomMember } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -12,8 +12,13 @@ type PageProps = {
 };
 
 export default async function PrayerRoomDetailPage({ params }: PageProps) {
-  const user = await requireNickname();
   const { roomId } = await params;
+  const joinPath = "/join/pray-room/" + roomId;
+  const user = await getCurrentUser();
+
+  if (!user) redirect(joinPath);
+  if (!user.nickname) redirect("/nickname?next=" + encodeURIComponent(joinPath));
+
   const membership = await requireRoomMember(roomId, user.id);
 
   if (!membership) {

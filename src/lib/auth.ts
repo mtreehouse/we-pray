@@ -1,9 +1,11 @@
 import type { NextAuthOptions } from "next-auth";
 import { getServerSession } from "next-auth";
+import { cookies } from "next/headers";
 import GoogleProvider from "next-auth/providers/google";
 import KakaoProvider from "next-auth/providers/kakao";
 import NaverProvider from "next-auth/providers/naver";
 import { prisma } from "@/lib/prisma";
+import { isRoomNextPath, LOGIN_NEXT_COOKIE_NAME, safeNextPath } from "@/lib/redirect";
 import type { AuthProvider } from "@prisma/client";
 
 function providerFromId(provider: string): AuthProvider {
@@ -18,6 +20,26 @@ function isAdminOAuth(provider: AuthProvider, providerUserId: string) {
     .filter(Boolean);
 
   return ids.includes(`${provider}:${providerUserId}`);
+}
+
+async function loginNextPathFromCookie() {
+  try {
+    const cookieStore = await cookies();
+    const path = safeNextPath(decodeCookieValue(cookieStore.get(LOGIN_NEXT_COOKIE_NAME)?.value));
+    return path !== "/" && isRoomNextPath(path) ? path : null;
+  } catch {
+    return null;
+  }
+}
+
+function decodeCookieValue(value: string | undefined) {
+  if (!value) return undefined;
+
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
 }
 
 export const authOptions: NextAuthOptions = {
@@ -39,6 +61,24 @@ export const authOptions: NextAuthOptions = {
     })
   ],
   callbacks: {
+    async redirect({ url, baseUrl }) {
+      const cookieNextPath = await loginNextPathFromCookie();
+
+      if (cookieNextPath && (url === baseUrl || url === baseUrl + "/" || url === "/")) {
+        return baseUrl + cookieNextPath;
+      }
+
+      if (url.startsWith("/")) return baseUrl + url;
+
+      try {
+        const parsedUrl = new URL(url);
+        if (parsedUrl.origin === baseUrl) return url;
+      } catch {
+        // Fall through to the safe base URL.
+      }
+
+      return baseUrl;
+    },
     async signIn({ account }) {
       if (!account?.providerAccountId) return false;
 

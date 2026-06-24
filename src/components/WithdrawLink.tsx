@@ -5,6 +5,7 @@ import { signOut } from "next-auth/react";
 import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { noBrowserInputSuggestions } from "@/lib/browser-input";
+import { clearWePrayClientCache } from "@/lib/client-cache";
 
 type WithdrawLinkProps = {
   currentNickname: string;
@@ -62,6 +63,7 @@ export function WithdrawLink({ currentNickname }: WithdrawLinkProps) {
       return;
     }
 
+    clearWePrayClientCache();
     await signOut({ callbackUrl: "/" });
   }
 

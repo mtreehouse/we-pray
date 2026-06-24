@@ -3,7 +3,7 @@ import { BibleRoomDetail } from "@/components/BibleRoomDetail";
 import { todayDateKey } from "@/lib/bible-plan";
 import { normalizeBibleTranslationSettings } from "@/lib/bible-translations";
 import { prisma } from "@/lib/prisma";
-import { requireBibleRoomMember, requireNickname } from "@/lib/permissions";
+import { getCurrentUser, requireBibleRoomMember } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -12,8 +12,13 @@ type PageProps = {
 };
 
 export default async function BibleRoomDetailPage({ params }: PageProps) {
-  const user = await requireNickname();
   const { roomId } = await params;
+  const joinPath = "/join/bible-room/" + roomId;
+  const user = await getCurrentUser();
+
+  if (!user) redirect(joinPath);
+  if (!user.nickname) redirect("/nickname?next=" + encodeURIComponent(joinPath));
+
   const membership = await requireBibleRoomMember(roomId, user.id);
 
   if (!membership) {

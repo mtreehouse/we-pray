@@ -2,6 +2,8 @@
 
 import { signIn, signOut, useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
+import { clearWePrayClientCache } from "@/lib/client-cache";
+import { LOGIN_NEXT_COOKIE_NAME, LOGIN_NEXT_STORAGE_KEY } from "@/lib/redirect";
 
 const providers = [
   { id: "google", name: "Google", label: "Google로 로그인", className: "border-slate-200 bg-white text-slate-900" },
@@ -19,10 +21,17 @@ export function LoginButtonGroup({ nextPath = "/" }: { nextPath?: string }) {
     setLastProviderId(window.localStorage.getItem(LAST_LOGIN_PROVIDER_KEY));
   }, []);
 
+  async function logout() {
+    clearWePrayClientCache();
+    await signOut({ callbackUrl: "/" });
+  }
+
   function startLogin(providerId: string) {
     window.localStorage.setItem(LAST_LOGIN_PROVIDER_KEY, providerId);
     setLastProviderId(providerId);
-    const callbackUrl = "/auth/complete?next=" + encodeURIComponent(nextPath);
+    const resolvedNextPath = resolveNextPath(nextPath);
+    const callbackUrl = "/auth/complete?next=" + encodeURIComponent(resolvedNextPath);
+    rememberLoginNextPath(resolvedNextPath);
     void signIn(providerId, { callbackUrl });
   }
 
@@ -38,7 +47,7 @@ export function LoginButtonGroup({ nextPath = "/" }: { nextPath?: string }) {
         </p>
         <button
           type="button"
-          onClick={() => signOut({ callbackUrl: "/" })}
+          onClick={() => void logout()}
           className="rounded-lg bg-slate-900 px-4 py-3 font-bold text-white shadow-soft"
         >
           로그아웃
@@ -69,6 +78,32 @@ export function LoginButtonGroup({ nextPath = "/" }: { nextPath?: string }) {
       ))}
     </div>
   );
+}
+
+function rememberLoginNextPath(nextPath: string) {
+  const maxAgeSeconds = 15 * 60;
+  document.cookie = `${LOGIN_NEXT_COOKIE_NAME}=${encodeURIComponent(nextPath)}; Max-Age=${maxAgeSeconds}; Path=/; SameSite=Lax`;
+
+  try {
+    window.localStorage.setItem(
+      LOGIN_NEXT_STORAGE_KEY,
+      JSON.stringify({ path: nextPath, expiresAt: Date.now() + maxAgeSeconds * 1000 })
+    );
+  } catch {
+    // Cookie fallback is enough when localStorage is unavailable.
+  }
+}
+
+function resolveNextPath(nextPath: string) {
+  if (nextPath && nextPath !== "/") return nextPath;
+
+  const nextParam = new URLSearchParams(window.location.search).get("next");
+  if (nextParam?.startsWith("/") && !nextParam.startsWith("//")) return nextParam;
+
+  const currentPath = window.location.pathname + window.location.search;
+  if (currentPath !== "/login") return currentPath;
+
+  return "/";
 }
 
 function ProviderIcon({ providerId }: { providerId: string }) {
