@@ -1504,8 +1504,8 @@ function BibleRoomSettingsDrawer({
                   type="button"
                   onClick={() => onFontSizeChange(size)}
                   className={`min-h-9 rounded-lg text-xs font-black transition ${fontSize === size
-                      ? "bg-teal-700 text-white"
-                      : "bg-white text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                    ? "bg-teal-700 text-white"
+                    : "bg-white text-slate-600 dark:bg-slate-800 dark:text-slate-300"
                     }`}
                 >
                   {size === "small" ? "A-" : size === "normal" ? "A" : size === "large" ? "A+" : "A++"}
@@ -1525,8 +1525,8 @@ function BibleRoomSettingsDrawer({
                   type="button"
                   onClick={() => onLineHeightChange(height)}
                   className={`min-h-9 rounded-lg text-xs font-black transition ${lineHeight === height
-                      ? "bg-teal-700 text-white"
-                      : "bg-white text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                    ? "bg-teal-700 text-white"
+                    : "bg-white text-slate-600 dark:bg-slate-800 dark:text-slate-300"
                     }`}
                 >
                   {height === "compact" ? "좁게" : height === "normal" ? "기본" : height === "relaxed" ? "넓게" : "아주 넓게"}
@@ -1709,10 +1709,10 @@ function BibleTranslationModal({
               }}
               disabled={disabled}
               className={`flex min-h-12 items-center justify-between gap-3 rounded-lg border px-4 py-3 text-left transition disabled:cursor-not-allowed disabled:opacity-70 ${disabled
-                  ? "border-slate-200 bg-slate-50 text-slate-400 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-500"
-                  : active
-                    ? "border-teal-200 bg-teal-50 text-teal-900"
-                    : "border-slate-200 bg-white text-slate-800"
+                ? "border-slate-200 bg-slate-50 text-slate-400 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-500"
+                : active
+                  ? "border-teal-200 bg-teal-50 text-teal-900"
+                  : "border-slate-200 bg-white text-slate-800"
                 }`}
             >
               <span className="min-w-0 truncate font-black">{label}</span>
@@ -2399,8 +2399,8 @@ function BibleTab({
                 disabled={displayCompleting}
                 data-guide="bible-complete"
                 className={`mt-3 flex min-h-14 w-full items-center justify-center gap-2 rounded-lg border px-4 py-3 font-black transition disabled:opacity-60 ${displayCompleted
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200"
-                    : "border-slate-200 bg-slate-100 text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400"
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200"
+                  : "border-slate-200 bg-slate-100 text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400"
                   }`}
               >
                 <span
@@ -2619,7 +2619,7 @@ ${displaySelectedReflection.content}`;
         groupedEntries.map(([date, items]) => (
           <div key={date} className="mb-6">
             <div className="mb-3 flex justify-center">
-              <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{formatDate(date)}</span>
+              <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{formatDate(date)} 플랜</span>
             </div>
             <div className="grid gap-3">
               {items.map((reflection, index) => (
@@ -3135,12 +3135,12 @@ function PlanCalendar({
               }}
               disabled={!selectable}
               className={`${compact ? "h-9" : "h-10"} relative rounded-lg pb-2 text-sm font-black transition ${!selectable
-                  ? "bg-transparent text-slate-200 dark:text-slate-700"
-                  : isToday
-                    ? "bg-teal-50 text-teal-900 dark:bg-teal-950/40 dark:text-teal-100"
-                    : plan
-                      ? "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
-                      : "bg-transparent text-slate-400 dark:text-slate-600"
+                ? "bg-transparent text-slate-200 dark:text-slate-700"
+                : isToday
+                  ? "bg-teal-50 text-teal-900 dark:bg-teal-950/40 dark:text-teal-100"
+                  : plan
+                    ? "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                    : "bg-transparent text-slate-400 dark:text-slate-600"
                 } ${active ? "ring-2 ring-inset ring-teal-600 dark:ring-teal-400" : ""} disabled:cursor-default`}
             >
               <span>{Number(date.slice(8, 10))}</span>
@@ -3429,5 +3429,10 @@ function formatDateKey(date: string) {
 }
 
 function formatDate(date: string) {
-  return new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium" }).format(new Date(`${date.slice(0, 10)}T00:00:00.000Z`));
+  return new Intl.DateTimeFormat("ko-KR", {
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    weekday: "short",
+  }).format(new Date(`${date.slice(0, 10)}T00:00:00.000Z`));
 }
