@@ -823,6 +823,7 @@ export function BibleRoomDetail({
       return;
     }
 
+    setEditingReflection(null);
     await Promise.all([loadPlans(), loadReading(), loadReflections(true), loadProgress()]);
   }
 
@@ -1070,6 +1071,11 @@ export function BibleRoomDetail({
         reflection={editingReflection}
         translation={translation}
         onClose={() => setEditingReflection(null)}
+        onDelete={() => {
+          if (editingReflection) {
+            void deleteReflection(editingReflection);
+          }
+        }}
         onSubmit={updateReflection}
       />
       <PassageModal passage={passage} translation={translation} onClose={() => setPassage(null)} />
@@ -1114,7 +1120,7 @@ const bibleActionGuideSteps: BibleActionGuideStep[] = [
   {
     key: "sharing",
     selector: '[data-guide="sharing-actions"], [data-guide="sharing-card"], [data-guide="sharing-feed"]',
-    description: "나눔 카드를 누르면 복사, 수정, 삭제 버튼이 아래에 열려요."
+    description: "나눔 카드를 누르면 복사, 수정 버튼이 아래에 열려요."
   },
   {
     key: "plan",
@@ -2657,7 +2663,7 @@ ${displaySelectedReflection.content}`;
           <p className="mb-1 truncate text-center text-[11px] font-black text-slate-500 dark:text-slate-400">
             {actionReflection.authorNickname ?? "알 수 없음"}
           </p>
-          <div className={`grid gap-1 ${actionReflection.isMine || guideActive ? "grid-cols-3" : "grid-cols-1"}`}>
+          <div className={`grid gap-1 ${actionReflection.isMine || guideActive ? "grid-cols-2" : "grid-cols-1"}`}>
             <button
               type="button"
               onClick={() => void copySelectedReflection()}
@@ -2675,17 +2681,6 @@ ${displaySelectedReflection.content}`;
               >
                 <Edit3 size={14} />
                 수정
-              </button>
-            ) : null}
-            {actionReflection.isMine || guideActive ? (
-              <button
-                type="button"
-                onClick={deleteSelectedReflection}
-                disabled={guideActive || !displaySelectedReflection?.isMine}
-                className="flex min-h-10 items-center justify-center gap-1 rounded-xl bg-rose-50 px-2.5 text-xs font-black text-rose-700 disabled:bg-rose-50 disabled:text-rose-400 dark:bg-rose-950/50 dark:text-rose-200 dark:disabled:bg-rose-950/30 dark:disabled:text-rose-300"
-              >
-                <Trash2 size={14} />
-                삭제
               </button>
             ) : null}
           </div>
@@ -3262,11 +3257,13 @@ function ReflectionEditScreen({
   reflection,
   translation,
   onClose,
+  onDelete,
   onSubmit
 }: {
   reflection: Reflection | null;
   translation: BibleTranslationCode;
   onClose: () => void;
+  onDelete: () => void;
   onSubmit: (content: string) => Promise<boolean>;
 }) {
   const [content, setContent] = useState("");
@@ -3298,6 +3295,7 @@ function ReflectionEditScreen({
       loading={loading}
       onContentChange={setContent}
       onClose={onClose}
+      onDelete={onDelete}
       onSubmit={submit}
     />
   );
@@ -3312,6 +3310,7 @@ function ReflectionEditorScreen({
   loading,
   onContentChange,
   onClose,
+  onDelete,
   onSubmit
 }: {
   open: boolean;
@@ -3322,6 +3321,7 @@ function ReflectionEditorScreen({
   loading: boolean;
   onContentChange: (content: string) => void;
   onClose: () => void;
+  onDelete?: () => void;
   onSubmit: () => void;
 }) {
   if (!open) return null;
@@ -3333,9 +3333,22 @@ function ReflectionEditorScreen({
           <X size={18} />
         </button>
         <h2 className="text-base font-black text-slate-950 dark:text-slate-50">{title}</h2>
-        <button type="button" onClick={onSubmit} disabled={loading} className="grid h-10 w-10 place-items-center rounded-full bg-teal-700 text-white disabled:opacity-60" aria-label="저장">
-          <Send size={17} />
-        </button>
+        <div className="flex items-center gap-2">
+          {onDelete ? (
+            <button
+              type="button"
+              onClick={onDelete}
+              disabled={loading}
+              className="grid h-10 w-10 place-items-center rounded-full border border-rose-200 bg-rose-50 text-rose-700 transition disabled:opacity-60 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-200"
+              aria-label="삭제"
+            >
+              <Trash2 size={16} />
+            </button>
+          ) : null}
+          <button type="button" onClick={onSubmit} disabled={loading} className="grid h-10 w-10 place-items-center rounded-full bg-teal-700 text-white disabled:opacity-60" aria-label="저장">
+            <Send size={17} />
+          </button>
+        </div>
       </header>
       <div className="flex-1 overflow-y-auto px-4 py-4">
         <div className="mb-4 rounded-lg bg-teal-50 p-4 dark:bg-teal-950/50">
