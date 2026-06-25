@@ -33,6 +33,7 @@ enum BiblePlanType {
   SEQUENTIAL    @map("정주행")
   CHRONOLOGICAL @map("연대기순")
   PARALLEL      @map("병행")
+  MCHEYNE       @map("맥체인")
 }
 
 enum BibleReflectionReactionType {

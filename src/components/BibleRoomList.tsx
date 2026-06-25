@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BookOpen, CalendarDays, Crown, Plus, Search } from "lucide-react";
+import { BookOpen, CalendarDays, Crown, Info, Plus, Search } from "lucide-react";
 import { RoomListGuide } from "@/components/RoomListGuide";
 import { Modal } from "@/components/ui/Modal";
 import { Toast } from "@/components/ui/Toast";
@@ -36,9 +36,11 @@ const planTypeLabels: Record<string, string> = {
   SEQUENTIAL: "정주행",
   CHRONOLOGICAL: "연대기순",
   PARALLEL: "병행",
+  MCHEYNE: "맥체인",
   정주행: "정주행",
   연대기순: "연대기순",
-  병행: "병행"
+  병행: "병행",
+  맥체인: "맥체인"
 };
 
 export function BibleRoomList({ rooms }: { rooms: BibleRoomSummary[] }) {
@@ -301,6 +303,7 @@ function CreateBibleRoomModal({
   const [durationMonths, setDurationMonths] = useState(12);
   const [excludeSunday, setExcludeSunday] = useState(false);
   const [planType, setPlanType] = useState("SEQUENTIAL");
+  const [planInfoOpen, setPlanInfoOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function submit() {
@@ -404,10 +407,23 @@ function CreateBibleRoomModal({
           options={[
             ["SEQUENTIAL", "정주행"],
             ["CHRONOLOGICAL", "연대기순"],
-            ["PARALLEL", "병행"]
+            ["PARALLEL", "병행"],
+            ["MCHEYNE", "맥체인"]
           ]}
           onChange={setPlanType}
+          labelAction={
+            <button
+              type="button"
+              onClick={() => setPlanInfoOpen(true)}
+              className="grid h-6 w-6 place-items-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-teal-50 hover:text-teal-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-teal-950/40 dark:hover:text-teal-200"
+              aria-label="통독 방식 설명"
+            >
+              <Info size={14} />
+            </button>
+          }
         />
+
+        <PlanTypeInfoModal open={planInfoOpen} onClose={() => setPlanInfoOpen(false)} />
 
         <p className="rounded-lg bg-teal-50 px-3 py-2 text-xs font-bold text-teal-800 dark:bg-teal-950/40 dark:text-teal-200">
           생성한 날 기준으로 플랜이 시작됩니다!
@@ -426,26 +442,51 @@ function CreateBibleRoomModal({
   );
 }
 
+function PlanTypeInfoModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const items = [
+    ["정주행", "창세기부터 요한계시록까지 성경책 순서대로 장을 균등하게 나눕니다."],
+    ["연대기순", "창세기, 욥기, 출애굽기처럼 사건 흐름에 가깝게 책 순서를 재배열해 나눕니다."],
+    ["병행", "전체 범위에서는 구약 3장과 신약 1장을 번갈아 섞습니다. 구약/신약만 선택하면 해당 범위 순서대로 갑니다."],
+    ["맥체인", "4개 트랙을 병렬로 배정합니다: 창세기 계열, 마태복음부터 신약, 에스라/시편/예언서, 사도행전부터 신약 재독과 시편 재독."]
+  ];
+
+  return (
+    <Modal title="통독 방식 안내" open={open} onClose={onClose}>
+      <div className="grid gap-3">
+        {items.map(([title, description]) => (
+          <section key={title} className="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+            <h3 className="text-sm font-black text-slate-950 dark:text-slate-50">{title}</h3>
+            <p className="mt-1 text-xs font-semibold leading-5 text-slate-600 dark:text-slate-300">{description}</p>
+          </section>
+        ))}
+      </div>
+    </Modal>
+  );
+}
+
 function OptionGroup({
   label,
   icon,
   value,
   options,
-  onChange
+  onChange,
+  labelAction
 }: {
   label: string;
   icon?: React.ReactNode;
   value: string;
   options: Array<[string, string]>;
   onChange: (value: string) => void;
+  labelAction?: React.ReactNode;
 }) {
   return (
     <div>
-      <p className="mb-2 flex items-center gap-1.5 text-sm font-black text-slate-700 dark:text-slate-300">
+      <div className="mb-2 flex items-center gap-1.5 text-sm font-black text-slate-700 dark:text-slate-300">
         {icon}
-        {label}
-      </p>
-      <div className="grid grid-cols-3 gap-2">
+        <span>{label}</span>
+        {labelAction}
+      </div>
+      <div className={`grid gap-2 ${options.length > 3 ? "grid-cols-2" : "grid-cols-3"}`}>
         {options.map(([optionValue, text]) => (
           <button
             key={optionValue}

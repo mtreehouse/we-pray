@@ -1,0 +1,1 @@
+ALTER TYPE "BiblePlanType" ADD VALUE IF NOT EXISTS '맥체인';

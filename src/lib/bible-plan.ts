@@ -1,5 +1,7 @@
 import { BiblePlanType, BibleScope, Prisma } from "@prisma/client";
 
+const MCHEYNE_PLAN_TYPE = "MCHEYNE" as BiblePlanType;
+
 export type BibleChapterRef = {
   bookNumber: number;
   bookCode: string;
@@ -87,6 +89,17 @@ const CHRONOLOGICAL_BOOK_ORDER = [
 const chronologicalRank = new Map(
   CHRONOLOGICAL_BOOK_ORDER.map((bookCode, index) => [bookCode, index])
 );
+
+const NEW_TESTAMENT_ORDER = [
+  "MAT", "MRK", "LUK", "JHN", "ACT", "ROM", "1CO", "2CO", "GAL", "EPH", "PHP", "COL", "1TH", "2TH", "1TI", "2TI", "TIT", "PHM", "HEB", "JAS", "1PE", "2PE", "1JN", "2JN", "3JN", "JUD", "REV"
+];
+
+const MCHEYNE_TRACK_BOOK_ORDERS = [
+  ["GEN", "EXO", "LEV", "NUM", "DEU", "JOS", "JDG", "RUT", "1SA", "2SA", "1KI", "2KI", "1CH", "2CH"],
+  NEW_TESTAMENT_ORDER,
+  ["EZR", "NEH", "EST", "JOB", "PSA", "PRO", "ECC", "SNG", "ISA", "JER", "LAM", "EZK", "DAN", "HOS", "JOL", "AMO", "OBA", "JON", "MIC", "NAH", "HAB", "ZEP", "HAG", "ZEC", "MAL"],
+  ["ACT", "ROM", "1CO", "2CO", "GAL", "EPH", "PHP", "COL", "1TH", "2TH", "1TI", "2TI", "TIT", "PHM", "HEB", "JAS", "1PE", "2PE", "1JN", "2JN", "3JN", "JUD", "REV", "PSA", "MAT", "MRK", "LUK", "JHN"]
+];
 
 export function startOfUtcDay(date: Date) {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
@@ -213,6 +226,42 @@ function compactDailyChapters(roomId: string, readingDate: Date, chapters: Bible
   return rows;
 }
 
+function chaptersByBookOrder(chapters: BibleChapterRef[], bookCodes: string[]) {
+  const chapterMap = new Map<string, BibleChapterRef[]>();
+
+  for (const chapter of chapters) {
+    const bookChapters = chapterMap.get(chapter.bookCode) ?? [];
+    bookChapters.push(chapter);
+    chapterMap.set(chapter.bookCode, bookChapters);
+  }
+
+  return bookCodes.flatMap((bookCode) => chapterMap.get(bookCode) ?? []);
+}
+
+function buildMcheynePlanRows(roomId: string, readingDates: Date[], chapters: BibleChapterRef[]) {
+  const canonical = [...chapters].sort(
+    (a, b) => a.bookNumber - b.bookNumber || a.chapter - b.chapter
+  );
+  const tracks = MCHEYNE_TRACK_BOOK_ORDERS
+    .map((bookCodes) => chaptersByBookOrder(canonical, bookCodes))
+    .filter((track) => track.length > 0);
+
+  const rows: BiblePlanCreateRow[] = [];
+
+  for (let dayIndex = 0; dayIndex < readingDates.length; dayIndex += 1) {
+    const dailyChapters = tracks.flatMap((track) => {
+      const start = Math.floor((dayIndex * track.length) / readingDates.length);
+      const end = Math.floor(((dayIndex + 1) * track.length) / readingDates.length);
+      return track.slice(start, end);
+    });
+
+    if (dailyChapters.length === 0) continue;
+    rows.push(...compactDailyChapters(roomId, readingDates[dayIndex], dailyChapters));
+  }
+
+  return rows;
+}
+
 export async function getBibleChapters(
   client: Prisma.TransactionClient | PrismaClientLike,
   scope: BibleScope,
@@ -251,6 +300,10 @@ export async function buildBiblePlanRows(
 
   if (readingDates.length === 0) {
     throw new Error("통독 기간에 배정 가능한 날짜가 없습니다.");
+  }
+
+  if (input.planType === MCHEYNE_PLAN_TYPE) {
+    return buildMcheynePlanRows(input.roomId, readingDates, chapters);
   }
 
   const rows: BiblePlanCreateRow[] = [];

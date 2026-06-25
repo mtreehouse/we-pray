@@ -881,7 +881,19 @@ function RoomManageModal({
   const [title, setTitle] = useState(room.title);
   const [description, setDescription] = useState(room.description);
   const [password, setPassword] = useState("");
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteConfirmTitle, setDeleteConfirmTitle] = useState("");
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setTitle(room.title);
+    setDescription(room.description);
+    setPassword("");
+    setDeleteConfirmOpen(false);
+    setDeleteConfirmTitle("");
+  }, [open, room.description, room.title]);
 
   async function save() {
     setLoading(true);
@@ -903,18 +915,32 @@ function RoomManageModal({
   }
 
   async function deleteRoom() {
-    if (!confirm("방을 삭제하시겠습니까? 모든 멤버의 목록에서 제거됩니다.")) return;
-
-    const res = await fetch(`/api/rooms/${room.id}`, { method: "DELETE" });
-    const data = (await res.json()) as { error?: string };
-
-    if (!res.ok) {
-      onToast(data.error ?? "방 삭제에 실패했습니다.");
+    if (deleteConfirmTitle !== room.title) {
+      onToast("삭제할 방 이름을 정확히 입력해주세요.");
       return;
     }
 
-    router.push("/pray-room");
-    router.refresh();
+    try {
+      setDeleting(true);
+      const res = await fetch(`/api/rooms/${room.id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: deleteConfirmTitle })
+      });
+      const data = (await res.json()) as { error?: string };
+
+      if (!res.ok) {
+        onToast(data.error ?? "방 삭제에 실패했습니다.");
+        setDeleting(false);
+        return;
+      }
+
+      router.push("/pray-room");
+      router.refresh();
+    } catch {
+      setDeleting(false);
+      onToast("방 삭제 중 오류가 발생했습니다.");
+    }
   }
 
   return (
@@ -952,13 +978,50 @@ function RoomManageModal({
         >
           저장
         </button>
-        <button
-          type="button"
-          onClick={deleteRoom}
-          className="rounded-lg border border-rose-200 px-4 py-3 font-bold text-rose-700 dark:border-rose-900 dark:text-rose-300"
-        >
-          방 삭제
-        </button>
+        {deleteConfirmOpen ? (
+          <div className="rounded-lg border border-rose-200 bg-rose-50/70 p-3 dark:border-rose-900/70 dark:bg-rose-950/25">
+            <p className="text-xs font-bold leading-5 text-rose-700 dark:text-rose-200">
+              방을 삭제하려면 방 이름을 정확히 입력해주세요.
+            </p>
+            <p className="mt-1 truncate text-sm font-black text-rose-900 dark:text-rose-100">{room.title}</p>
+            <input
+              {...noBrowserInputSuggestions}
+              value={deleteConfirmTitle}
+              onChange={(event) => setDeleteConfirmTitle(event.target.value)}
+              className="mt-3 w-full rounded-lg border border-rose-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-rose-400 dark:border-rose-900 dark:bg-slate-950 dark:text-slate-100"
+              placeholder="방 이름 입력"
+            />
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteConfirmOpen(false);
+                  setDeleteConfirmTitle("");
+                }}
+                disabled={deleting}
+                className="rounded-lg border border-slate-200 px-4 py-3 font-bold text-slate-600 transition disabled:opacity-60 dark:border-slate-700 dark:text-slate-300"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={deleteRoom}
+                disabled={deleteConfirmTitle !== room.title || deleting}
+                className="rounded-lg border border-rose-300 px-4 py-3 font-bold text-rose-700 transition disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400 dark:border-rose-800 dark:text-rose-300 dark:disabled:border-slate-800 dark:disabled:text-slate-600"
+              >
+                {deleting ? "삭제 중" : "삭제"}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setDeleteConfirmOpen(true)}
+            className="rounded-lg border border-rose-200 px-4 py-3 font-bold text-rose-700 transition hover:bg-rose-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950/25"
+          >
+            방 삭제
+          </button>
+        )}
       </div>
     </Modal>
   );

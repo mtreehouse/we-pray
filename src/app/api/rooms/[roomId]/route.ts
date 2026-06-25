@@ -45,13 +45,27 @@ export async function PATCH(req: Request, { params }: Params) {
   return NextResponse.json({ ok: true });
 }
 
-export async function DELETE(_req: Request, { params }: Params) {
+export async function DELETE(req: Request, { params }: Params) {
   const user = await requireNickname();
   const { roomId } = await params;
   const member = await requireRoomMember(roomId, user.id);
 
   if (!member || member.role !== RoomMemberRole.creator) {
     return NextResponse.json({ error: "방장만 삭제할 수 있습니다." }, { status: 403 });
+  }
+
+  const body = (await req.json().catch(() => ({}))) as { title?: string };
+  const room = await prisma.prayerRoom.findFirst({
+    where: { id: roomId, deletedAt: null },
+    select: { title: true }
+  });
+
+  if (!room) {
+    return NextResponse.json({ error: "삭제되었거나 존재하지 않는 방입니다." }, { status: 404 });
+  }
+
+  if (body.title !== room.title) {
+    return NextResponse.json({ error: "방 이름을 정확히 입력해주세요." }, { status: 400 });
   }
 
   await prisma.prayerRoom.update({

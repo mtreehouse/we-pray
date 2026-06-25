@@ -15,7 +15,7 @@ type RoomListResponse = {
 const kindLabels: Record<AdminRoomView["kind"], string> = { pray: "기도방", bible: "성경방" };
 const typeLabels: Record<AdminRoomFilter, string> = { all: "전체", pray: "기도", bible: "성경" };
 const scopeLabels: Record<string, string> = { OLD_TESTAMENT: "구약", NEW_TESTAMENT: "신약", ALL: "전체" };
-const planTypeLabels: Record<string, string> = { SEQUENTIAL: "정주행", CHRONOLOGICAL: "연대기순", PARALLEL: "병행" };
+const planTypeLabels: Record<string, string> = { SEQUENTIAL: "정주행", CHRONOLOGICAL: "연대기순", PARALLEL: "병행", MCHEYNE: "맥체인" };
 const memberStatusLabels: Record<string, string> = { active: "참여중", left: "나감", kicked: "내보냄" };
 
 function formatDate(value: string) {
