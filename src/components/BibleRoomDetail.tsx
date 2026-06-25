@@ -2713,8 +2713,12 @@ function SharingReflectionCard({
   onToggleReaction: (reflection: Reflection, type: BibleReflectionReactionType) => Promise<boolean>;
 }) {
   const burstTimerRef = useRef<number | null>(null);
+  const contentMeasureRef = useRef<HTMLParagraphElement | null>(null);
+  const cardMeasureRef = useRef<HTMLDivElement | null>(null);
   const [reactionLoading, setReactionLoading] = useState<BibleReflectionReactionType | null>(null);
   const [reactionBurst, setReactionBurst] = useState<{ emoji: string; variant: "pray" | "celebrate"; key: number } | null>(null);
+  const [contentExpanded, setContentExpanded] = useState(false);
+  const [hasCollapsibleContent, setHasCollapsibleContent] = useState(false);
 
   const showReactionBurst = useCallback((emoji: string, variant: "pray" | "celebrate" = "celebrate") => {
     if (burstTimerRef.current) {
@@ -2747,8 +2751,35 @@ function SharingReflectionCard({
     };
   }, []);
 
+  useEffect(() => {
+    const measure = () => {
+      const measureNode = contentMeasureRef.current;
+      if (!measureNode) return;
+
+      const lineHeight = Number.parseFloat(window.getComputedStyle(measureNode).lineHeight || "0");
+      if (!Number.isFinite(lineHeight) || lineHeight <= 0) return;
+
+      const isOverflowing = measureNode.getBoundingClientRect().height > lineHeight * 5 + 1;
+      setHasCollapsibleContent(isOverflowing);
+      if (!isOverflowing) setContentExpanded(false);
+    };
+
+    measure();
+
+    const observer = new ResizeObserver(() => measure());
+    if (cardMeasureRef.current) observer.observe(cardMeasureRef.current);
+
+    window.addEventListener("resize", measure);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [reflection.content]);
+
   return (
     <article
+      ref={cardMeasureRef}
       data-guide={guideTarget ? "sharing-card" : undefined}
       role="button"
       tabIndex={0}
@@ -2796,7 +2827,36 @@ function SharingReflectionCard({
           {verseText(reflection.verseContent, translation)}
         </button>
       ) : null}
-      <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700 dark:text-slate-300">{reflection.content}</p>
+      <div className="space-y-2">
+        <div className="relative">
+          <p
+            ref={contentMeasureRef}
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 top-0 -z-10 invisible whitespace-pre-wrap break-words text-sm leading-6 text-slate-700 dark:text-slate-300"
+          >
+            {reflection.content}
+          </p>
+          <p
+            className={`whitespace-pre-wrap break-words text-sm leading-6 text-slate-700 dark:text-slate-300 ${contentExpanded ? "" : "line-clamp-5"}`}
+          >
+            {reflection.content}
+          </p>
+        </div>
+        {hasCollapsibleContent ? (
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                setContentExpanded((current) => !current);
+              }}
+              className="rounded-full px-2 py-1 text-[11px] font-black text-teal-700 underline decoration-teal-300 underline-offset-2 transition hover:bg-teal-50 dark:text-teal-300 dark:decoration-teal-700/70 dark:hover:bg-teal-950/40"
+            >
+              {contentExpanded ? "접기" : "더보기"}
+            </button>
+          </div>
+        ) : null}
+      </div>
       <div className="mt-3 flex items-center justify-end gap-1.5 text-xs font-black">
         <ReactionButton
           emoji="🙏"
