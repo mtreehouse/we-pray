@@ -9,6 +9,8 @@ type ModalProps = {
   open: boolean;
   onClose: () => void;
   children: ReactNode;
+  stickyHeader?: boolean;
+  hideScrollbar?: boolean;
 };
 
 let openModalCount = 0;
@@ -18,7 +20,7 @@ let originalBodyTop = "";
 let originalBodyWidth = "";
 let lockedScrollY = 0;
 
-export function Modal({ title, open, onClose, children }: ModalProps) {
+export function Modal({ title, open, onClose, children, stickyHeader = false, hideScrollbar = false }: ModalProps) {
   useEffect(() => {
     if (!open) return;
 
@@ -51,8 +53,8 @@ export function Modal({ title, open, onClose, children }: ModalProps) {
 
   return (
     <div className="fixed inset-0 z-40 flex items-end justify-center overscroll-contain bg-slate-950/40 p-3 dark:bg-slate-950/70 sm:items-center">
-      <section className="max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto overscroll-contain rounded-lg bg-white p-5 shadow-soft dark:border dark:border-slate-800 dark:bg-slate-950 dark:shadow-[0_18px_48px_rgba(0,0,0,0.45)]">
-        <div className="mb-4 flex items-center justify-between gap-3">
+      <section className={"max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto overscroll-contain rounded-lg bg-white shadow-soft dark:border dark:border-slate-800 dark:bg-slate-950 dark:shadow-[0_18px_48px_rgba(0,0,0,0.45)] " + (stickyHeader ? "p-0" : "p-5") + (hideScrollbar ? " [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" : "")}>
+        <div className={(stickyHeader ? "sticky top-0 z-10 border-b border-slate-100 bg-white px-5 py-4 dark:border-slate-800 dark:bg-slate-950" : "mb-4") + " flex items-center justify-between gap-3"}>
           <h2 className="text-lg font-bold text-slate-900 dark:text-slate-50">{title}</h2>
           <button
             type="button"
@@ -63,7 +65,7 @@ export function Modal({ title, open, onClose, children }: ModalProps) {
             <X size={18} />
           </button>
         </div>
-        {children}
+        {stickyHeader ? <div className="p-5">{children}</div> : children}
       </section>
     </div>
   );

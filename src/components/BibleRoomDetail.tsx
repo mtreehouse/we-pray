@@ -8,6 +8,7 @@ import {
   BookOpen,
   CalendarDays,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Clipboard,
@@ -972,6 +973,7 @@ export function BibleRoomDetail({
           onNext={() => setChapterIndex((index) => Math.min(chapters.length - 1, index + 1))}
           onFirst={() => setChapterIndex(0)}
           onLast={() => setChapterIndex(Math.max(0, chapters.length - 1))}
+          onSelectChapter={setChapterIndex}
           onChapterJump={holdCompactReadingHeader}
           translation={translation}
           fontSize={bibleFontSize}
@@ -2053,6 +2055,7 @@ function BibleTab({
   onNext,
   onFirst,
   onLast,
+  onSelectChapter,
   onChapterJump,
   translation,
   fontSize,
@@ -2076,6 +2079,7 @@ function BibleTab({
   onNext: () => void;
   onFirst: () => void;
   onLast: () => void;
+  onSelectChapter: (index: number) => void;
   onChapterJump: () => void;
   translation: BibleTranslationCode;
   fontSize: BibleFontSize;
@@ -2088,8 +2092,10 @@ function BibleTab({
   const edgeSwipeGuardRef = useRef<{ x: number; y: number; active: boolean } | null>(null);
   const readingTopRef = useRef<HTMLDivElement | null>(null);
   const firstVerseRef = useRef<HTMLDivElement | null>(null);
+  const selectedChapterOptionRef = useRef<HTMLButtonElement | null>(null);
   const pendingChapterScrollRef = useRef(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [chapterPickerOpen, setChapterPickerOpen] = useState(false);
   const [selectedVerse, setSelectedVerse] = useState<VerseTarget | null>(null);
   const [swipeHint, setSwipeHint] = useState<{ direction: "prev" | "next"; strength: number; offset: number } | null>(null);
   const isBibleGuideSample = guideStepKey === "date" || guideStepKey === "reading" || guideStepKey === "verse" || guideStepKey === "complete";
@@ -2102,6 +2108,16 @@ function BibleTab({
   const displayCompleted = isBibleGuideSample ? guideStepKey === "complete" : isCompleted;
   const displayCompleting = isBibleGuideSample ? false : completing;
   const showCompleteButton = isBibleGuideSample ? guideStepKey === "complete" : displayChapterIndex >= displayChapterCount - 1 && Boolean(onToggleComplete);
+
+  useEffect(() => {
+    if (!chapterPickerOpen) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      selectedChapterOptionRef.current?.scrollIntoView({ block: "center", behavior: "auto" });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [chapterIndex, chapterPickerOpen]);
 
   function scrollToFirstVerse() {
     window.requestAnimationFrame(() => {
@@ -2382,9 +2398,23 @@ function BibleTab({
               >
                 <ChevronLeft size={19} />
               </button>
-              <div className="min-w-0 text-center">
-                <h2 className="truncate text-lg font-black text-slate-950 dark:text-slate-50">{displayChapter.bookName} {displayChapter.chapter}장</h2>
-                <p className="text-xs font-bold text-slate-400 dark:text-slate-500">{displayChapterIndex + 1} / {displayChapterCount}</p>
+              <div className="min-w-0 flex-1 text-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!isBibleGuideSample) setChapterPickerOpen(true);
+                  }}
+                  disabled={isBibleGuideSample || chapters.length === 0}
+                  className="group inline-block max-w-full text-center disabled:cursor-default"
+                  aria-label="오늘 플랜의 장 목록 열기"
+                  aria-expanded={chapterPickerOpen}
+                >
+                  <span className="flex max-w-full items-center justify-center gap-1.5">
+                    <span className="truncate text-lg font-black text-slate-950 dark:text-slate-50">{displayChapter.bookName} {displayChapter.chapter}장</span>
+                    {!isBibleGuideSample ? <ChevronDown size={16} className="shrink-0 text-slate-400 transition group-aria-expanded:rotate-180 dark:text-slate-500" /> : null}
+                  </span>
+                  <span className="block text-xs font-bold text-slate-400 dark:text-slate-500">{displayChapterIndex + 1} / {displayChapterCount}</span>
+                </button>
               </div>
               <button
                 type="button"
@@ -2521,6 +2551,39 @@ function BibleTab({
           </div>
         </div>
       ) : null}
+
+      <Modal
+        title={formatDateKey(selectedDate) + " 플랜"}
+        open={chapterPickerOpen}
+        onClose={() => setChapterPickerOpen(false)}
+        stickyHeader
+        hideScrollbar
+      >
+        <div className="grid gap-2">
+          {chapters.map((chapter, index) => {
+            const selected = index === chapterIndex;
+            return (
+              <button
+                ref={selected ? selectedChapterOptionRef : undefined}
+                key={chapter.bookCode + "-" + chapter.chapter}
+                type="button"
+                onClick={() => {
+                  onSelectChapter(index);
+                  setSelectedVerse(null);
+                  setChapterPickerOpen(false);
+                }}
+                className={"flex min-h-12 w-full items-center justify-between rounded-lg border px-4 py-3 text-left text-sm font-black transition " + (selected
+                  ? "border-[#637EE1] bg-[#637EE1]/10 text-[#4f66c8] dark:border-[#8195e8] dark:bg-[#637EE1]/20 dark:text-[#aebcf4]"
+                  : "border-slate-200 bg-white text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+                  )}
+              >
+                <span>{chapter.bookName} {chapter.chapter}장</span>
+                {selected ? <Check size={17} strokeWidth={3} /> : null}
+              </button>
+            );
+          })}
+        </div>
+      </Modal>
     </section>
   );
 }
