@@ -136,12 +136,6 @@ export async function POST(req: Request, { params }: Params) {
     return NextResponse.json({ error: "해당 날짜의 통독 플랜이 없습니다." }, { status: 404 });
   }
 
-  // 중도 참여자는 합류일 이전 플랜을 개인 완료 처리할 수 없다.
-  // 달성률 분모와 동일하게 개인 책임 범위를 합류일 이후로 맞춘다.
-  if (toDateKey(readingDate) < toDateKey(member.joinedAt)) {
-    return NextResponse.json({ error: "합류일 이전 플랜은 완료 처리할 수 없습니다." }, { status: 400 });
-  }
-
   const existing = await prisma.bibleProgress.findUnique({
     where: {
       roomId_userId_readingDate: {

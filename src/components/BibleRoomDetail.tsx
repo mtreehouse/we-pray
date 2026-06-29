@@ -1002,6 +1002,7 @@ export function BibleRoomDetail({
 
       {activeTab === "plan" ? (
         <PlanTab
+          currentUserId={currentUserId}
           members={members}
           days={planDays}
           selectedDate={planSelectedDate}
@@ -3138,6 +3139,7 @@ function ReactionEmojiBurst({ emoji, variant = "celebrate" }: { emoji: string; v
 }
 
 function PlanTab({
+  currentUserId,
   members,
   days,
   selectedDate,
@@ -3146,6 +3148,7 @@ function PlanTab({
   onSelectDate,
   guideActive = false
 }: {
+  currentUserId: string;
   members: RoomMember[];
   days: PlanDay[];
   selectedDate: string;
@@ -3211,20 +3214,32 @@ function PlanTab({
           </span>
         </div>
         <div className="grid gap-2">
-          {members.map((member) => {
+          {displayMembers.map((member) => {
             const item = progressByUser.get(member.userId);
+            const isMe = member.userId === currentUserId;
             return (
               <div key={member.id} className="flex items-center gap-3 rounded-lg border border-slate-200 p-3 dark:border-slate-800 dark:bg-slate-900">
                 <div className="grid h-9 w-9 place-items-center rounded-full bg-teal-50 text-sm font-black text-teal-800 dark:bg-teal-950/50 dark:text-teal-200">
                   {(member.nickname ?? "?").slice(0, 1)}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-bold text-slate-900 dark:text-slate-100">{member.nickname ?? "닉네임 없음"}</p>
+                  <p className="flex min-w-0 items-center gap-1.5 font-bold text-slate-900 dark:text-slate-100">
+                    <span className="truncate">{member.nickname ?? "닉네임 없음"}</span>
+                    {member.role === "creator" ? <Crown className="shrink-0 text-amber-500" size={16} /> : null}
+                    {isMe ? (
+                      <span className="shrink-0 rounded-full bg-teal-50 px-1.5 py-0.5 text-[10px] font-black leading-none text-teal-700 ring-1 ring-teal-100 dark:bg-teal-950/50 dark:text-teal-200 dark:ring-teal-900">
+                        ME
+                      </span>
+                    ) : null}
+                  </p>
                   <p className="text-xs font-semibold text-slate-400">
                     읽기 {item?.completedCount ?? 0}/{item?.totalCount ?? 0} · 나눔 {item?.reflectionCount ?? 0}/{item?.totalCount ?? 0}
                   </p>
                 </div>
-                <span className="shrink-0 text-sm font-black text-slate-700 dark:text-slate-200">{item?.rate ?? 0}%</span>
+                <div className="shrink-0 text-right">
+                  <p className="text-sm font-black text-slate-700 dark:text-slate-200">{item?.rate ?? 0}%</p>
+                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500">시작 {formatDateKey(item?.joinedAt ?? member.joinedAt)}</p>
+                </div>
               </div>
             );
           })}
