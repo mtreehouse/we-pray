@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, ChevronUp, ExternalLink, Search, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronUp, ExternalLink, KeyRound, Search, Trash2, X } from "lucide-react";
 import { Toast } from "@/components/ui/Toast";
 import type { AdminRoomFilter, AdminRoomView } from "@/lib/admin-rooms";
 
@@ -22,6 +22,27 @@ function formatDate(value: string) {
   return new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Seoul" }).format(new Date(value));
 }
 
+function seoulDateKey(value: string) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date(value));
+  const date = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return date.year + "-" + date.month + "-" + date.day;
+}
+
+function dateSerial(dateKey: string) {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  return Math.floor(Date.UTC(year, month - 1, day) / 86_400_000);
+}
+
+function relativeUpdateDate(value: string, todayDateKey: string) {
+  const days = Math.max(0, dateSerial(todayDateKey) - dateSerial(seoulDateKey(value)));
+  return days === 0 ? "오늘" : days + "일 전";
+}
+
 function roleLabel(role: string) {
   return role === "creator" ? "방장" : "멤버";
 }
@@ -34,7 +55,7 @@ function contentLabel(room: AdminRoomView) {
   return room.kind === "pray" ? "기도제목" : "나눔";
 }
 
-export function AdminRoomList({ rooms, initialNextCursor }: { rooms: AdminRoomView[]; initialNextCursor: string | null }) {
+export function AdminRoomList({ rooms, initialNextCursor, todayDateKey }: { rooms: AdminRoomView[]; initialNextCursor: string | null; todayDateKey: string }) {
   const [items, setItems] = useState(rooms);
   const [filter, setFilter] = useState<AdminRoomFilter>("all");
   const [search, setSearch] = useState("");
@@ -45,6 +66,8 @@ export function AdminRoomList({ rooms, initialNextCursor }: { rooms: AdminRoomVi
   const [deleteTarget, setDeleteTarget] = useState<AdminRoomView | null>(null);
   const [deleteInput, setDeleteInput] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [resetTarget, setResetTarget] = useState<AdminRoomView | null>(null);
+  const [resetting, setResetting] = useState(false);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   async function loadRooms(nextFilter: AdminRoomFilter, query: string, cursor: string | null, reset: boolean) {
@@ -98,6 +121,36 @@ export function AdminRoomList({ rooms, initialNextCursor }: { rooms: AdminRoomVi
     if (deleting) return;
     setDeleteTarget(null);
     setDeleteInput("");
+  }
+
+  function closeResetModal() {
+    if (!resetting) setResetTarget(null);
+  }
+
+  async function resetRoomPassword() {
+    if (!resetTarget || resetting) return;
+
+    setResetting(true);
+    const res = await fetch("/api/admin/rooms/" + resetTarget.kind + "/" + resetTarget.id, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "resetPassword" })
+    });
+    const data = await res.json().catch(() => ({})) as { updatedAt?: string; error?: string };
+    setResetting(false);
+
+    if (!res.ok) {
+      setToast(data.error ?? "비밀번호 초기화에 실패했습니다.");
+      return;
+    }
+
+    setItems((current) => current.map((room) => (
+      room.kind === resetTarget.kind && room.id === resetTarget.id
+        ? { ...room, updatedAt: data.updatedAt ?? room.updatedAt }
+        : room
+    )));
+    setResetTarget(null);
+    setToast("방 비밀번호를 0000으로 초기화했습니다.");
   }
 
   async function removeRoom() {
@@ -186,11 +239,11 @@ export function AdminRoomList({ rooms, initialNextCursor }: { rooms: AdminRoomVi
               <div className="mt-3 grid grid-cols-3 gap-2 text-center">
                 <Stat label="멤버" value={room.activeMemberCount + "/" + room.memberCount} />
                 <Stat label={contentLabel(room)} value={String(room.contentCount)} />
-                <Stat label="업데이트" value={formatDate(room.updatedAt)} small />
+                <Stat label="업데이트" value={relativeUpdateDate(room.updatedAt, todayDateKey)} />
               </div>
             </div>
 
-            {expanded ? <ExpandedRoom room={room} onDelete={() => openDeleteModal(room)} /> : null}
+            {expanded ? <ExpandedRoom room={room} onResetPassword={() => setResetTarget(room)} onDelete={() => openDeleteModal(room)} /> : null}
           </article>
         );
       })}
@@ -198,6 +251,27 @@ export function AdminRoomList({ rooms, initialNextCursor }: { rooms: AdminRoomVi
       <div ref={loadMoreRef} className="min-h-4" />
       {loading ? <p className="py-3 text-center text-sm font-bold text-slate-400">불러오는 중</p> : null}
       {!loading && items.length > 0 && !nextCursor ? <p className="py-3 text-center text-xs font-bold text-slate-400">마지막 방입니다.</p> : null}
+
+      {resetTarget ? (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/45 px-4 py-6 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-4 shadow-2xl dark:border dark:border-slate-800 dark:bg-slate-900">
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-black text-slate-950 dark:text-slate-50">방 비밀번호 초기화</h2>
+                <p className="mt-1 text-sm font-semibold leading-5 text-slate-500 dark:text-slate-400">{resetTarget.title}의 입장 비밀번호를 초기화합니다.</p>
+              </div>
+              <button type="button" onClick={closeResetModal} disabled={resetting} className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-slate-100 text-slate-600 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-200" aria-label="닫기"><X size={18} /></button>
+            </div>
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm font-bold leading-6 text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+              초기화 후 비밀번호는 <strong className="font-black">0000</strong>입니다.
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <button type="button" onClick={closeResetModal} disabled={resetting} className="min-h-10 rounded-lg bg-slate-100 px-3 text-sm font-black text-slate-700 disabled:opacity-60 dark:bg-slate-800 dark:text-slate-100">취소</button>
+              <button type="button" onClick={() => void resetRoomPassword()} disabled={resetting} className="min-h-10 rounded-lg bg-amber-500 px-3 text-sm font-black text-white disabled:opacity-60">{resetting ? "초기화 중" : "초기화"}</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {deleteTarget ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/45 px-4 py-6 backdrop-blur-sm">
@@ -222,7 +296,7 @@ export function AdminRoomList({ rooms, initialNextCursor }: { rooms: AdminRoomVi
   );
 }
 
-function ExpandedRoom({ room, onDelete }: { room: AdminRoomView; onDelete: () => void }) {
+function ExpandedRoom({ room, onResetPassword, onDelete }: { room: AdminRoomView; onResetPassword: () => void; onDelete: () => void }) {
   return (
     <div className="grid gap-3 border-t border-slate-100 px-4 py-4 dark:border-slate-800">
       <div className="grid gap-2 rounded-lg bg-slate-50 p-3 text-sm dark:bg-slate-950/60">
@@ -245,23 +319,35 @@ function ExpandedRoom({ room, onDelete }: { room: AdminRoomView; onDelete: () =>
           <h3 className="text-sm font-black text-slate-950 dark:text-slate-50">멤버 목록</h3>
           <Link href={roomHref(room)} className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs font-black text-slate-600 shadow-soft dark:border dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300"><ExternalLink size={13} />열기</Link>
         </div>
-        <div className="grid max-h-80 gap-2 overflow-y-auto pr-1">
-          {room.members.length ? room.members.map((member) => {
-            const statusClass = member.status === "active" ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300" : member.status === "kicked" ? "bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300" : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300";
-            return (
-              <div key={member.id} className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2 text-sm shadow-soft dark:border dark:border-slate-800 dark:bg-slate-950">
-                <div className="min-w-0">
-                  <p className="truncate font-black text-slate-900 dark:text-slate-100">{member.nickname ?? "닉네임 없음"}</p>
-                  <p className="mt-0.5 text-xs font-semibold text-slate-400 dark:text-slate-500">{roleLabel(member.role)} · {formatDate(member.joinedAt)}</p>
+        <div className="max-h-80 overflow-y-auto rounded-lg border border-slate-200 bg-white [scrollbar-width:none] [&::-webkit-scrollbar]:hidden dark:border-slate-800 dark:bg-slate-950">
+          {room.members.length ? <div className="divide-y divide-slate-100 dark:divide-slate-800">
+            {room.members.map((member) => {
+              const statusClass = member.status === "active" ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300" : member.status === "kicked" ? "bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300" : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300";
+              const avatarClass = member.role === "creator" ? "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300" : "bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300";
+              return (
+                <div key={member.id} className="flex min-w-0 items-center gap-3 px-3 py-3">
+                  <span className={"grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm font-black " + avatarClass}>
+                    {member.nickname?.trim().slice(0, 1) || "?"}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <p className="truncate text-sm font-black text-slate-900 dark:text-slate-100">{member.nickname ?? "닉네임 없음"}</p>
+                      <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-black text-slate-500 dark:bg-slate-800 dark:text-slate-300">{roleLabel(member.role)}</span>
+                    </div>
+                    <p className="mt-0.5 truncate text-[11px] font-semibold text-slate-400 dark:text-slate-500">가입 {formatDate(member.joinedAt)}</p>
+                  </div>
+                  <span className={"shrink-0 rounded-full px-2 py-1 text-[10px] font-black " + statusClass}>{memberStatusLabels[member.status] ?? member.status}</span>
                 </div>
-                <span className={"shrink-0 rounded-full px-2 py-1 text-[10px] font-black " + statusClass}>{memberStatusLabels[member.status] ?? member.status}</span>
-              </div>
-            );
-          }) : <div className="rounded-lg bg-white px-3 py-4 text-center text-sm font-bold text-slate-400 shadow-soft dark:border dark:border-slate-800 dark:bg-slate-950">멤버가 없습니다.</div>}
+              );
+            })}
+          </div> : <div className="px-3 py-5 text-center text-sm font-bold text-slate-400">멤버가 없습니다.</div>}
         </div>
       </div>
 
-      <button type="button" onClick={onDelete} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-black text-white shadow-soft"><Trash2 size={16} />방 삭제</button>
+      <div className="grid grid-cols-2 gap-2">
+        <button type="button" onClick={onResetPassword} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-black text-amber-800 dark:border-amber-800 dark:bg-amber-950/35 dark:text-amber-200"><KeyRound size={16} />비밀번호 초기화</button>
+        <button type="button" onClick={onDelete} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-rose-600 px-3 py-2 text-sm font-black text-white"><Trash2 size={16} />방 삭제</button>
+      </div>
     </div>
   );
 }

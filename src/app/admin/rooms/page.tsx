@@ -6,6 +6,17 @@ import { requireAdmin } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
+function seoulDateKey(date: Date) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(date);
+  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return value.year + "-" + value.month + "-" + value.day;
+}
+
 export default async function AdminRoomsPage() {
   await requireAdmin();
   const result = await listAdminRooms({ filter: "all", query: "", cursor: null });
@@ -32,7 +43,7 @@ export default async function AdminRoomsPage() {
         <h1 className="text-2xl font-black text-slate-950 dark:text-slate-50">기도 / 성경 방 관리</h1>
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">생성된 방을 조회하고 멤버, 방 정보, 삭제 상태를 관리합니다.</p>
       </header>
-      <AdminRoomList rooms={result.rooms} initialNextCursor={result.nextCursor} />
+      <AdminRoomList rooms={result.rooms} initialNextCursor={result.nextCursor} todayDateKey={seoulDateKey(new Date())} />
     </main>
   );
 }
