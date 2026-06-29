@@ -391,7 +391,16 @@ export function PrayerRoomDetail({ room, currentUserId, members, posts, nextCurs
           className="fixed left-1/2 z-30 w-[16.5rem] max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-2xl border border-slate-200/80 bg-white/95 p-2 shadow-[0_14px_40px_rgba(15,23,42,0.20)] backdrop-blur dark:border-slate-700 dark:bg-slate-900/95"
           style={{ bottom: "max(1rem, env(safe-area-inset-bottom))" }}
         >
-          <p className="mb-1 truncate text-center text-[11px] font-black text-slate-500 dark:text-slate-400">
+          <button
+            type="button"
+            onClick={() => setSelectedPost(null)}
+            className="absolute -right-1 -top-3 grid h-7 w-7 place-items-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-slate-300 hover:text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:text-slate-100"
+            aria-label="기도제목 메뉴 닫기"
+            title="닫기"
+          >
+            <X size={14} strokeWidth={2.5} />
+          </button>
+          <p className="mb-1 truncate px-6 text-center text-[11px] font-black text-slate-500 dark:text-slate-400">
             {selectedPost.authorNickname ?? "알 수 없음"}
           </p>
           <div className={`grid gap-1 ${selectedPost.userId === currentUserId ? "grid-cols-3" : "grid-cols-1"}`}>
