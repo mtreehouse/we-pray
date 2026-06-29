@@ -89,6 +89,11 @@ function formatKoreanIsoDate(value: string) {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
+function formatKoreanCopyDate(value: string) {
+  const { year, month, day } = getKoreaDateParts(value);
+  return year + "년 " + String(month).padStart(2, "0") + "월 " + String(day).padStart(2, "0") + "일";
+}
+
 export function PrayerRoomDetail({ room, currentUserId, members, posts, nextCursor: initialNextCursor }: Props) {
   const router = useRouter();
   const [toast, setToast] = useState("");
@@ -106,6 +111,7 @@ export function PrayerRoomDetail({ room, currentUserId, members, posts, nextCurs
   const [historyLoading, setHistoryLoading] = useState(false);
   const [pendingPrayerIds, setPendingPrayerIds] = useState<string[]>([]);
   const [pendingAnswerIds, setPendingAnswerIds] = useState<string[]>([]);
+  const [copyingDate, setCopyingDate] = useState<string | null>(null);
   const [prayerEffectVisible, setPrayerEffectVisible] = useState(false);
   const [prayerEffectKey, setPrayerEffectKey] = useState(0);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -264,6 +270,40 @@ export function PrayerRoomDetail({ room, currentUserId, members, posts, nextCurs
     setSelectedPost(null);
   }
 
+  async function copyDatePosts(datePosts: PrayerPost[]) {
+    const firstPost = datePosts[0];
+    if (!firstPost) return;
+
+    const dateKey = formatKoreanIsoDate(firstPost.createdAt);
+    if (copyingDate === dateKey) return;
+    setCopyingDate(dateKey);
+
+    try {
+      const res = await fetch("/api/rooms/" + room.id + "/posts?date=" + dateKey);
+      const data = await res.json().catch(() => ({})) as {
+        posts?: Array<{ id: string; authorNickname: string | null; content: string; createdAt: string }>;
+        error?: string;
+      };
+
+      if (!res.ok) {
+        setToast(data.error ?? "해당 날짜의 기도제목을 불러오지 못했습니다.");
+        return;
+      }
+
+      const allPosts = data.posts ?? [];
+      const lines = allPosts.map((post) => "[" + (post.authorNickname ?? "알 수 없음") + "] " + post.content);
+      const copyText = "[" + formatKoreanCopyDate(firstPost.createdAt) + "]\n\n" + lines.join("\n\n");
+      await navigator.clipboard.writeText(copyText);
+      setSelectedPost(null);
+      setToast(allPosts.length + "개의 기도제목을 복사했습니다.");
+      window.setTimeout(() => setToast(""), 2400);
+    } catch {
+      setToast("기도제목 복사에 실패했습니다.");
+    } finally {
+      setCopyingDate(null);
+    }
+  }
+
   function editSelectedPost() {
     if (!selectedPost || selectedPost.userId !== currentUserId) return;
 
@@ -331,7 +371,15 @@ export function PrayerRoomDetail({ room, currentUserId, members, posts, nextCurs
           Object.entries(groupedPosts).map(([date, datePosts]) => (
             <div key={date} className="mb-6">
               <div className="mb-3 flex justify-center">
-                <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{date}</span>
+                <button
+                  type="button"
+                  onClick={() => void copyDatePosts(datePosts)}
+                  disabled={copyingDate === formatKoreanIsoDate(datePosts[0].createdAt)}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-slate-200 px-3 py-1 text-xs font-bold text-slate-600 transition hover:bg-slate-300 disabled:opacity-60 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+                  aria-label={date + " 기도제목 전체 복사"}
+                >
+                  {date}
+                </button>
               </div>
               <div className="grid gap-3">
                 {datePosts.map((post) => (

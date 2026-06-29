@@ -19,6 +19,45 @@ export async function GET(req: Request, { params }: Params) {
   }
 
   const { searchParams } = new URL(req.url);
+  const date = searchParams.get("date");
+
+  if (date) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return NextResponse.json({ error: "날짜 형식이 올바르지 않습니다." }, { status: 400 });
+    }
+
+    const startDate = new Date(date + "T00:00:00+09:00");
+    const endDate = new Date(startDate.getTime() + 24 * 60 * 60 * 1000);
+
+    if (Number.isNaN(startDate.getTime())) {
+      return NextResponse.json({ error: "날짜 형식이 올바르지 않습니다." }, { status: 400 });
+    }
+
+    const datePosts = await prisma.prayerPost.findMany({
+      where: {
+        roomId,
+        deletedAt: null,
+        createdAt: { gte: startDate, lt: endDate }
+      },
+      select: {
+        id: true,
+        content: true,
+        createdAt: true,
+        user: { select: { nickname: true } }
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }]
+    });
+
+    return NextResponse.json({
+      posts: datePosts.map((post) => ({
+        id: post.id,
+        authorNickname: post.user.nickname,
+        content: post.content,
+        createdAt: post.createdAt
+      }))
+    });
+  }
+
   const cursor = searchParams.get("cursor") || undefined;
   const requestedTake = Number(searchParams.get("take") ?? 50);
   const take = Number.isFinite(requestedTake) ? Math.min(Math.max(requestedTake, 1), 50) : 50;
