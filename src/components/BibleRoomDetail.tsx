@@ -2567,6 +2567,7 @@ function BibleTab({
         onClose={() => setChapterPickerOpen(false)}
         stickyHeader
         hideScrollbar
+        closeOnBackdrop
       >
         <div className="grid gap-2">
           {chapters.map((chapter, index) => {

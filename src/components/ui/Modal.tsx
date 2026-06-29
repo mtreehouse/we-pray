@@ -11,6 +11,7 @@ type ModalProps = {
   children: ReactNode;
   stickyHeader?: boolean;
   hideScrollbar?: boolean;
+  closeOnBackdrop?: boolean;
 };
 
 let openModalCount = 0;
@@ -20,7 +21,7 @@ let originalBodyTop = "";
 let originalBodyWidth = "";
 let lockedScrollY = 0;
 
-export function Modal({ title, open, onClose, children, stickyHeader = false, hideScrollbar = false }: ModalProps) {
+export function Modal({ title, open, onClose, children, stickyHeader = false, hideScrollbar = false, closeOnBackdrop = false }: ModalProps) {
   useEffect(() => {
     if (!open) return;
 
@@ -52,7 +53,12 @@ export function Modal({ title, open, onClose, children, stickyHeader = false, hi
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center overscroll-contain bg-slate-950/40 p-3 dark:bg-slate-950/70 sm:items-center">
+    <div
+      className="fixed inset-0 z-40 flex items-end justify-center overscroll-contain bg-slate-950/40 p-3 dark:bg-slate-950/70 sm:items-center"
+      onClick={(event) => {
+        if (closeOnBackdrop && event.target === event.currentTarget) onClose();
+      }}
+    >
       <section className={"max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto overscroll-contain rounded-lg bg-white shadow-soft dark:border dark:border-slate-800 dark:bg-slate-950 dark:shadow-[0_18px_48px_rgba(0,0,0,0.45)] " + (stickyHeader ? "p-0" : "p-5") + (hideScrollbar ? " [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" : "")}>
         <div className={(stickyHeader ? "sticky top-0 z-10 border-b border-slate-100 bg-white px-5 py-4 dark:border-slate-800 dark:bg-slate-950" : "mb-4") + " flex items-center justify-between gap-3"}>
           <h2 className="text-lg font-bold text-slate-900 dark:text-slate-50">{title}</h2>
