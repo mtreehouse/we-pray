@@ -1,5 +1,78 @@
 # Changelog
 
+## 2026-06-29
+
+### Added
+- Added a Bible chapter picker for the selected reading date with a sticky header, hidden scrollbar, current-chapter positioning, and backdrop dismissal. (`9520ef4`, `8b07713`)
+- Added admin room password reset to `0000`, relative last-updated labels, and a cleaner member list. (`85a8c48`)
+- Added date-level copying for all Pray Room posts on a selected Korean calendar date, independent of list pagination. (`2e5b8ce`)
+
+### Changed
+- Added consistent floating close controls to Bible verse actions, Bible sharing actions, and Prayer Room post actions. (`158ea67`)
+- Updated Bible Plan progress member cards with owner and ME indicators, member start dates, and support for completing plans from before the member joined. (`597660c`)
+
+## 2026-06-25
+
+### Added
+- Added the M'Cheyne Bible reading plan option and plan-order information. (`cc58740`)
+- Added room-title verification and confirmation flows when deleting Prayer Rooms and Bible Rooms. (`cc58740`)
+- Added collapsible Bible sharing content for longer reflections. (`2354de1`)
+- Added reflection deletion to the full-screen reflection edit flow. (`221e2fb`)
+- Added PWA installation completion state and follow-up prompt handling. (`7edd370`, `25be1a0`)
+
+### Changed
+- Refined Bible Room date formatting, reading controls, and related visual styling. (`956534b`)
+
+## 2026-06-24
+
+### Added
+- Added integrated admin management for Prayer Rooms and Bible Rooms with filtering, search, member inspection, pagination, and verified room deletion. (`b47571b`)
+- Added nickname-confirmed account withdrawal and improved withdrawal safeguards. (`16d7b2d`)
+- Added admin Pray News CRUD, public paginated Pray News loading, and Settings navigation. (`c215f04`)
+- Added clickable URL rendering in Pray News content. (`19caa0d`)
+- Added expandable Pray News cards and improved image/content presentation. (`26cdfbf`)
+- Added sanitized rich HTML Pray News content and room-password verification before sharing. (`e969c30`)
+
+### Changed
+- Improved Kakao in-app browser handoff, post-login destination restoration, client cache clearing on logout/withdrawal, and Kakao JavaScript key handling. (`b069828`, `c6f1a15`)
+
+## 2026-06-23
+
+### Added
+- Added Prayer Room, Bible Room, and site sharing with KakaoTalk and native share flows. (`4e98882`)
+- Added shared-room join pages and preserved room destinations through login and nickname setup. (`4e98882`)
+
+### Changed
+- Updated the application version to 1.0.0. (`a53c559`)
+
+## 2026-06-22
+
+### Added
+- Added admin feedback management, user management improvements, database persistence, and email notification support. (`ff9f846`)
+- Added Bible translation administration with visibility, copyright requirements, and per-user copyright permission controls. (`5e50ded`)
+- Added login-provider identification to the Settings account display. (`c835e6f`)
+- Added richer service information and guidance content to Settings. (`79b692a`)
+
+### Changed
+- Made the Bible Room action guide use stable sample data and refined spotlight target behavior. (`3c8ad6b`, `294e226`)
+- Added an iOS edge-swipe guard to prevent browser back navigation while reading Bible text. (`f4a1997`)
+- Improved PWA install-state persistence and iOS installation guidance. (`4b3d0c4`)
+- Applied Bible translation copyright availability styling and disabled-state feedback. (`a7823cd`)
+- Included time information in admin user date displays. (`a800548`)
+
+## 2026-06-21
+
+### Added
+- Added the prayer reaction type to Bible Room reflections with counts, per-user state, and animated feedback. (`35b9d0d`)
+- Added answered-prayer state, API support, and ANSWERED presentation for Prayer Room posts. (`cee849f`)
+- Added first-entry search/create guidance shared by Prayer Room and Bible Room lists. (`717e802`)
+- Added PWA manifest, icons, service worker registration, install prompts, and Settings installation controls. (`eb15cea`)
+
+### Changed
+- Improved guide animations, pulse treatments, action colors, and guide button visibility. (`444ea4d`)
+- Standardized room-owner terminology as "방장" and refined owner-only room actions. (`e876b9c`)
+- Standardized browser input autocomplete and autofill suppression across sensitive forms. (`ca0c764`)
+
 ## 2026-06-20
 
 ### Added
