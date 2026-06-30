@@ -18,10 +18,12 @@ import {
   History,
   Info,
   MessageCircle,
+  PartyPopper,
   Pencil,
   Send,
   Settings,
   Share2,
+  Sparkles,
   Trash2,
   X
 } from "lucide-react";
@@ -297,6 +299,14 @@ export function BibleRoomDetail({
     [planDays, readingDate]
   );
   const planDateRange = useMemo(() => getPlanDateRange(room, planDays), [planDays, room]);
+  const defaultPlanSelectedDate = useMemo(
+    () => getDefaultPlanSelectedDate(initialDate, planDays, planDateRange),
+    [initialDate, planDateRange, planDays]
+  );
+  const completedPlanDate = useMemo(() => {
+    const lastPlanDate = getLastPlanDate(planDays);
+    return lastPlanDate && initialDate > lastPlanDate ? lastPlanDate : null;
+  }, [initialDate, planDays]);
   const currentChapter = chapters[chapterIndex] ?? null;
   const translationSettings = useMemo(
     () => translations.length > 0 ? translations : defaultBibleTranslationSettings,
@@ -327,11 +337,11 @@ export function BibleRoomDetail({
     }
 
     if (nextTab === "plan") {
-      setPlanSelectedDate(initialDate);
+      setPlanSelectedDate(defaultPlanSelectedDate);
     }
 
     setActiveTab(nextTab);
-  }, [activeTab, initialDate]);
+  }, [activeTab, defaultPlanSelectedDate]);
 
   const holdCompactReadingHeader = useCallback(() => {
     forceCompactHeaderUntilRef.current = Date.now() + 900;
@@ -553,6 +563,16 @@ export function BibleRoomDetail({
     void loadProgress();
     void loadReflections(true);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!planDays.length) return;
+    setPlanSelectedDate(defaultPlanSelectedDate);
+  }, [defaultPlanSelectedDate, planDays.length]);
+
+  useEffect(() => {
+    if (!storedLocationLoaded || !planDays.length || restoredLocationRef.current) return;
+    setReadingDate(defaultPlanSelectedDate);
+  }, [defaultPlanSelectedDate, planDays.length, storedLocationLoaded]);
 
   useEffect(() => {
     try {
@@ -987,6 +1007,7 @@ export function BibleRoomDetail({
       {activeTab === "sharing" ? (
         <SharingTab
           reflections={reflections}
+          completedPlanDate={completedPlanDate}
           loading={feedLoading}
           nextCursor={nextCursor}
           sentinelRef={sentinelRef}
@@ -2645,6 +2666,7 @@ function VerseRow({
 
 function SharingTab({
   reflections,
+  completedPlanDate,
   loading,
   nextCursor,
   sentinelRef,
@@ -2657,6 +2679,7 @@ function SharingTab({
   guideActive = false
 }: {
   reflections: Reflection[];
+  completedPlanDate: string | null;
   loading: boolean;
   nextCursor: string | null;
   sentinelRef: React.RefObject<HTMLDivElement>;
@@ -2760,6 +2783,7 @@ ${displaySelectedReflection.content}`;
 
   return (
     <section data-guide="sharing-feed" className={`flex-1 px-4 pt-4 dark:bg-slate-950 ${actionReflection ? "pb-28" : "pb-8"}`}>
+      {!guideActive && completedPlanDate ? <BiblePlanCompletionBanner completedPlanDate={completedPlanDate} /> : null}
       {groupedEntries.length ? (
         groupedEntries.map(([date, items]) => (
           <div key={date} className="mb-6">
@@ -2837,6 +2861,30 @@ ${displaySelectedReflection.content}`;
         </div>
       ) : null}
     </section>
+  );
+}
+
+function BiblePlanCompletionBanner({ completedPlanDate }: { completedPlanDate: string }) {
+  return (
+    <div className="relative mb-6 overflow-hidden rounded-lg border border-indigo-200 bg-indigo-50 px-5 py-6 text-center shadow-[0_10px_30px_rgba(99,126,225,0.16)] dark:border-indigo-400/30 dark:bg-indigo-950/45 dark:shadow-none">
+      <span className="absolute left-4 top-4 h-2.5 w-2.5 animate-pulse rounded-full bg-amber-400" aria-hidden="true" />
+      <span className="absolute right-5 top-7 h-2 w-2 animate-pulse rounded-full bg-rose-400 [animation-delay:300ms]" aria-hidden="true" />
+      <span className="absolute bottom-5 left-8 h-2 w-2 animate-pulse rounded-full bg-teal-400 [animation-delay:600ms]" aria-hidden="true" />
+      <span className="absolute bottom-4 right-9 h-2.5 w-2.5 animate-pulse rounded-full bg-violet-400 [animation-delay:900ms]" aria-hidden="true" />
+      <div className="relative mx-auto mb-3 flex w-fit items-center gap-2 text-indigo-600 dark:text-indigo-300">
+        <Sparkles size={20} className="animate-pulse" aria-hidden="true" />
+        <span className="grid h-12 w-12 place-items-center rounded-full bg-white text-amber-500 shadow-sm dark:bg-slate-900 dark:text-amber-300">
+          <PartyPopper size={25} aria-hidden="true" />
+        </span>
+        <Sparkles size={20} className="animate-pulse [animation-delay:500ms]" aria-hidden="true" />
+      </div>
+      <p className="relative text-[11px] font-black text-indigo-500 dark:text-indigo-300">{formatDate(completedPlanDate)} 완주</p>
+      <h2 className="relative mt-1 text-lg font-black text-slate-950 dark:text-white">통독 완주를 진심으로 축하해요!</h2>
+      <p className="relative mx-auto mt-2 max-w-sm text-sm font-semibold leading-6 text-slate-600 dark:text-slate-300">
+        끝까지 말씀의 길을 걸어온 우리 모두 정말 수고 많았어요.<br />
+        매일 마음에 심은 말씀이 삶 속에서 은혜의 열매로 이어지길 축복합니다.
+      </p>
+    </div>
   );
 }
 
@@ -3587,6 +3635,15 @@ function getPlanDateRange(room: RoomDetail, days: PlanDay[]): DateRange | null {
   const endDate = durationEndDate > lastPlanDate ? durationEndDate : lastPlanDate;
 
   return { startDate, endDate };
+}
+
+function getLastPlanDate(days: PlanDay[]) {
+  return days.reduce<string | null>((latest, day) => !latest || day.date > latest ? day.date : latest, null);
+}
+
+function getDefaultPlanSelectedDate(today: string, days: PlanDay[], range: DateRange | null) {
+  if (!range || isDateInRange(today, range)) return today;
+  return getLastPlanDate(days) ?? today;
 }
 
 function isDateInRange(date: string, range: DateRange) {
