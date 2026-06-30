@@ -36,6 +36,8 @@ export type AdminRoomView = {
     excludeSunday: boolean;
     planType: string;
     planCount: number;
+    planEndDate: string | null;
+    isPlanCompleted: boolean;
   };
 };
 
@@ -52,6 +54,17 @@ function offsetFromCursor(cursor: string | null) {
   if (!cursor) return 0;
   const offset = Number.parseInt(cursor, 10);
   return Number.isFinite(offset) && offset > 0 ? offset : 0;
+}
+
+function seoulDateKey(date: Date) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(date);
+  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return value.year + "-" + value.month + "-" + value.day;
 }
 
 function searchText(query: string) {
@@ -196,6 +209,11 @@ async function listBibleRooms(query: string, take: number, skip: number) {
       createdAt: true,
       updatedAt: true,
       creator: { select: { nickname: true } },
+      plans: {
+        select: { readingDate: true },
+        orderBy: { readingDate: "desc" },
+        take: 1
+      },
       members: {
         where: { user: { deletedAt: null } },
         select: {
@@ -216,8 +234,11 @@ async function listBibleRooms(query: string, take: number, skip: number) {
     skip
   });
 
+  const todayDateKey = seoulDateKey(new Date());
+
   return rows.map((room): AdminRoomInternal => {
     const members = room.members.map(mapMember);
+    const planEndDate = room.plans[0]?.readingDate ?? null;
     return {
       kind: "bible",
       id: room.id,
@@ -236,7 +257,9 @@ async function listBibleRooms(query: string, take: number, skip: number) {
         durationMonths: room.durationMonths,
         excludeSunday: room.excludeSunday,
         planType: room.planType,
-        planCount: room._count.plans
+        planCount: room._count.plans,
+        planEndDate: planEndDate?.toISOString() ?? null,
+        isPlanCompleted: Boolean(planEndDate && seoulDateKey(planEndDate) < todayDateKey)
       },
       sortTime: room.createdAt.getTime()
     };

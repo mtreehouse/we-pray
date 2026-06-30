@@ -44,6 +44,42 @@ textarea {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
+@keyframes bibleCompletionDriftA {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  24% { transform: translate3d(8px, -7px, 0); }
+  53% { transform: translate3d(-4px, -11px, 0); }
+  78% { transform: translate3d(-8px, 3px, 0); }
+}
+
+@keyframes bibleCompletionDriftB {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  21% { transform: translate3d(-9px, 5px, 0); }
+  49% { transform: translate3d(-3px, -9px, 0); }
+  74% { transform: translate3d(8px, -4px, 0); }
+}
+
+@keyframes bibleCompletionDriftC {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  27% { transform: translate3d(5px, 9px, 0); }
+  58% { transform: translate3d(-8px, 4px, 0); }
+  82% { transform: translate3d(4px, -8px, 0); }
+}
+
+.bible-completion-dot {
+  will-change: transform, opacity;
+}
+
+.bible-completion-dot-a { animation: bibleCompletionDriftA 4.7s ease-in-out infinite; }
+.bible-completion-dot-b { animation: bibleCompletionDriftB 5.4s ease-in-out -1.2s infinite; }
+.bible-completion-dot-c { animation: bibleCompletionDriftC 4.2s ease-in-out -2.1s infinite; }
+.bible-completion-dot-d { animation: bibleCompletionDriftA 5.8s ease-in-out -3.4s infinite reverse; }
+.bible-completion-dot-e { animation: bibleCompletionDriftB 4.9s ease-in-out -0.8s infinite reverse; }
+.bible-completion-dot-f { animation: bibleCompletionDriftC 5.2s ease-in-out -2.7s infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .bible-completion-dot { animation: none; }
+}
+
 
 @property --guide-cta-angle {
   syntax: "<angle>";

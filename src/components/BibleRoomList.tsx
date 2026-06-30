@@ -21,6 +21,7 @@ type BibleRoomSummary = {
   planType: string;
   memberCount: number;
   isJoined?: boolean;
+  isPlanCompleted?: boolean;
 };
 
 const scopeLabels: Record<string, string> = {
@@ -63,7 +64,12 @@ export function BibleRoomList({ rooms }: { rooms: BibleRoomSummary[] }) {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <h2 className="truncate font-black text-slate-950 dark:text-slate-50">{room.title}</h2>
+                  <div className="flex min-w-0 items-center gap-2">
+                    <h2 className="truncate font-black text-slate-950 dark:text-slate-50">{room.title}</h2>
+                    {room.isPlanCompleted ? (
+                      <span className="shrink-0 rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-black text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300">완주</span>
+                    ) : null}
+                  </div>
                   <p className="mt-1 line-clamp-2 text-sm leading-6 text-slate-600 dark:text-slate-300">{room.description}</p>
                 </div>
                 {room.role === "creator" ? <Crown className="shrink-0 text-amber-500" size={20} /> : null}
@@ -139,12 +145,14 @@ function FindBibleRoomModal({
   const [password, setPassword] = useState("");
   const [selectedRoom, setSelectedRoom] = useState<BibleRoomSummary | null>(null);
   const [results, setResults] = useState<BibleRoomSummary[]>([]);
+  const [hasSearched, setHasSearched] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setPassword("");
     setSelectedRoom(null);
+    setHasSearched(false);
   }, [open]);
 
   async function search() {
@@ -161,6 +169,7 @@ function FindBibleRoomModal({
     }
 
     setResults(data.rooms ?? []);
+    setHasSearched(true);
   }
 
   async function join() {
@@ -199,7 +208,12 @@ function FindBibleRoomModal({
           <input
             {...noBrowserInputSuggestions}
             value={q}
-            onChange={(event) => setQ(event.target.value)}
+            onChange={(event) => {
+              setQ(event.target.value);
+              setResults([]);
+              setSelectedRoom(null);
+              setHasSearched(false);
+            }}
             onKeyDown={(event) => {
               if (event.key === "Enter") void search();
             }}
@@ -239,7 +253,7 @@ function FindBibleRoomModal({
               <span className="mt-2 block text-xs text-slate-500 dark:text-slate-400">방장 {room.creatorNickname ?? "알 수 없음"}</span>
             </button>
           ))}
-          {!loading && q && results.length === 0 ? (
+          {!loading && hasSearched && results.length === 0 ? (
             <p className="py-6 text-center text-sm font-bold text-slate-400 dark:text-slate-500">검색 결과가 없습니다.</p>
           ) : null}
         </div>

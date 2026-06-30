@@ -2867,10 +2867,24 @@ ${displaySelectedReflection.content}`;
 function BiblePlanCompletionBanner({ completedPlanDate }: { completedPlanDate: string }) {
   return (
     <div className="relative mb-6 overflow-hidden rounded-lg border border-indigo-200 bg-indigo-50 px-5 py-6 text-center shadow-[0_10px_30px_rgba(99,126,225,0.16)] dark:border-indigo-400/30 dark:bg-indigo-950/45 dark:shadow-none">
-      <span className="absolute left-4 top-4 h-2.5 w-2.5 animate-pulse rounded-full bg-amber-400" aria-hidden="true" />
-      <span className="absolute right-5 top-7 h-2 w-2 animate-pulse rounded-full bg-rose-400 [animation-delay:300ms]" aria-hidden="true" />
-      <span className="absolute bottom-5 left-8 h-2 w-2 animate-pulse rounded-full bg-teal-400 [animation-delay:600ms]" aria-hidden="true" />
-      <span className="absolute bottom-4 right-9 h-2.5 w-2.5 animate-pulse rounded-full bg-violet-400 [animation-delay:900ms]" aria-hidden="true" />
+      <span className="bible-completion-dot bible-completion-dot-a absolute left-4 top-4 h-2.5 w-2.5" aria-hidden="true">
+        <span className="block h-full w-full animate-pulse rounded-full bg-amber-400" />
+      </span>
+      <span className="bible-completion-dot bible-completion-dot-b absolute right-5 top-7 h-2 w-2" aria-hidden="true">
+        <span className="block h-full w-full animate-pulse rounded-full bg-rose-400 [animation-delay:300ms]" />
+      </span>
+      <span className="bible-completion-dot bible-completion-dot-c absolute bottom-5 left-8 h-2 w-2" aria-hidden="true">
+        <span className="block h-full w-full animate-pulse rounded-full bg-teal-400 [animation-delay:600ms]" />
+      </span>
+      <span className="bible-completion-dot bible-completion-dot-d absolute bottom-4 right-9 h-2.5 w-2.5" aria-hidden="true">
+        <span className="block h-full w-full animate-pulse rounded-full bg-violet-400 [animation-delay:900ms]" />
+      </span>
+      <span className="bible-completion-dot bible-completion-dot-e absolute left-[18%] top-[48%] h-1.5 w-1.5" aria-hidden="true">
+        <span className="block h-full w-full animate-pulse rounded-full bg-sky-400 [animation-delay:450ms]" />
+      </span>
+      <span className="bible-completion-dot bible-completion-dot-f absolute bottom-[38%] right-[17%] h-1.5 w-1.5" aria-hidden="true">
+        <span className="block h-full w-full animate-pulse rounded-full bg-orange-400 [animation-delay:750ms]" />
+      </span>
       <div className="relative mx-auto mb-3 flex w-fit items-center gap-2 text-indigo-600 dark:text-indigo-300">
         <Sparkles size={20} className="animate-pulse" aria-hidden="true" />
         <span className="grid h-12 w-12 place-items-center rounded-full bg-white text-amber-500 shadow-sm dark:bg-slate-900 dark:text-amber-300">

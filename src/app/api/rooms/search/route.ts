@@ -29,7 +29,8 @@ export async function GET(req: Request) {
           kickedAt: null
         },
         select: { id: true }
-      }
+      },
+      _count: { select: { members: true } }
     },
     orderBy: {
       createdAt: "desc"
@@ -43,6 +44,7 @@ export async function GET(req: Request) {
       title: room.title,
       description: room.description,
       creatorNickname: room.creator.nickname,
+      memberCount: room._count.members,
       isJoined: room.members.length > 0
     }))
   });

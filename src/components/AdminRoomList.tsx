@@ -22,6 +22,10 @@ function formatDate(value: string) {
   return new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Seoul" }).format(new Date(value));
 }
 
+function formatPlanDate(value: string) {
+  return new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium", timeZone: "Asia/Seoul" }).format(new Date(value));
+}
+
 function seoulDateKey(value: string) {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "Asia/Seoul",
@@ -220,6 +224,16 @@ export function AdminRoomList({ rooms, initialNextCursor, todayDateKey }: { room
         const expandedKey = room.kind + room.id;
         const expanded = Boolean(expandedIds[expandedKey]);
         const badgeClass = room.kind === "pray" ? "bg-sky-50 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300" : "bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300";
+        const biblePlanStatus = room.bibleInfo
+          ? room.bibleInfo.planEndDate
+            ? room.bibleInfo.isPlanCompleted ? "완주" : "진행 중"
+            : "플랜 없음"
+          : null;
+        const biblePlanStatusClass = !room.bibleInfo?.planEndDate
+          ? "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300"
+          : room.bibleInfo.isPlanCompleted
+            ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300"
+            : "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300";
 
         return (
           <article key={expandedKey} className="overflow-hidden rounded-lg bg-white shadow-soft dark:border dark:border-slate-800 dark:bg-slate-900">
@@ -228,6 +242,7 @@ export function AdminRoomList({ rooms, initialNextCursor, todayDateKey }: { room
                 <span className="min-w-0 flex-1">
                   <span className="flex min-w-0 items-center gap-2">
                     <span className={"shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black " + badgeClass}>{kindLabels[room.kind]}</span>
+                    {biblePlanStatus ? <span className={"shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black " + biblePlanStatusClass}>{biblePlanStatus}</span> : null}
                     <h2 className="truncate font-black text-slate-950 dark:text-slate-50">{room.title}</h2>
                   </span>
                   <p className="mt-2 line-clamp-2 text-sm font-semibold leading-5 text-slate-500 dark:text-slate-400">{room.description || "설명 없음"}</p>
@@ -310,6 +325,8 @@ function ExpandedRoom({ room, onResetPassword, onDelete }: { room: AdminRoomView
             <InfoRow label="주일 제외" value={room.bibleInfo.excludeSunday ? "예" : "아니오"} />
             <InfoRow label="통독 방식" value={planTypeLabels[room.bibleInfo.planType] ?? room.bibleInfo.planType} />
             <InfoRow label="플랜 수" value={String(room.bibleInfo.planCount)} />
+            <InfoRow label="플랜 상태" value={room.bibleInfo.planEndDate ? room.bibleInfo.isPlanCompleted ? "완주" : "진행 중" : "플랜 없음"} />
+            {room.bibleInfo.planEndDate ? <InfoRow label="마지막 플랜" value={formatPlanDate(room.bibleInfo.planEndDate)} /> : null}
           </>
         ) : null}
       </div>

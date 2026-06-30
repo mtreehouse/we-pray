@@ -6,6 +6,17 @@ import { requireNickname } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
+function seoulDateKey(date: Date) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(date);
+  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return value.year + "-" + value.month + "-" + value.day;
+}
+
 export default async function BibleRoomPage() {
   const user = await requireNickname();
   const memberships = await prisma.bibleRoomMember.findMany({
@@ -27,6 +38,11 @@ export default async function BibleRoomPage() {
           excludeSunday: true,
           planType: true,
           creator: { select: { nickname: true } },
+          plans: {
+            select: { readingDate: true },
+            orderBy: { readingDate: "desc" },
+            take: 1
+          },
           _count: { select: { members: true } }
         }
       }
@@ -34,6 +50,7 @@ export default async function BibleRoomPage() {
     orderBy: { joinedAt: "desc" }
   });
 
+  const todayDateKey = seoulDateKey(new Date());
   const rooms = memberships.map((membership) => ({
     id: membership.room.id,
     title: membership.room.title,
@@ -44,7 +61,8 @@ export default async function BibleRoomPage() {
     durationMonths: membership.room.durationMonths,
     excludeSunday: membership.room.excludeSunday,
     planType: membership.room.planType,
-    memberCount: membership.room._count.members
+    memberCount: membership.room._count.members,
+    isPlanCompleted: Boolean(membership.room.plans[0] && seoulDateKey(membership.room.plans[0].readingDate) < todayDateKey)
   }));
 
   return (

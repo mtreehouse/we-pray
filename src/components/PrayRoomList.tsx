@@ -16,6 +16,7 @@ type RoomSummary = {
   creatorNickname: string | null;
   role?: "creator" | "member";
   isJoined?: boolean;
+  memberCount?: number;
 };
 
 export function PrayRoomList({ rooms }: { rooms: RoomSummary[] }) {
@@ -187,12 +188,14 @@ function FindRoomModal({
   const [password, setPassword] = useState("");
   const [selectedRoom, setSelectedRoom] = useState<RoomSummary | null>(null);
   const [results, setResults] = useState<RoomSummary[]>([]);
+  const [hasSearched, setHasSearched] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setPassword("");
     setSelectedRoom(null);
+    setHasSearched(false);
   }, [open]);
 
   async function search() {
@@ -209,6 +212,7 @@ function FindRoomModal({
     }
 
     setResults(data.rooms ?? []);
+    setHasSearched(true);
   }
 
   async function join() {
@@ -233,14 +237,31 @@ function FindRoomModal({
     router.refresh();
   }
 
+  function openJoinedRoom() {
+    if (!selectedRoom) return;
+    onClose();
+    router.push(`/pray-room/${selectedRoom.id}`);
+    router.refresh();
+  }
+
   return (
-    <Modal title="방 찾기" open={open} onClose={onClose}>
+    <Modal title="기도방 찾기" open={open} onClose={onClose}>
       <div className="grid gap-3">
         <div className="flex gap-2">
           <input
             {...noBrowserInputSuggestions}
             value={q}
-            onChange={(event) => setQ(event.target.value)}
+            onChange={(event) => {
+              setQ(event.target.value);
+              setResults([]);
+              setSelectedRoom(null);
+              setHasSearched(false);
+            }}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter" || event.nativeEvent.isComposing) return;
+              event.preventDefault();
+              void search();
+            }}
             className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
             placeholder="방 제목 또는 방장"
           />
@@ -248,7 +269,7 @@ function FindRoomModal({
             type="button"
             onClick={search}
             disabled={loading}
-            className="rounded-lg bg-slate-900 px-4 py-3 font-bold text-white disabled:opacity-60"
+            className="rounded-lg bg-slate-900 px-4 py-3 font-bold text-white disabled:opacity-60 dark:bg-slate-700"
           >
             검색
           </button>
@@ -263,18 +284,34 @@ function FindRoomModal({
                 setSelectedRoom(room);
                 setPassword("");
               }}
-              className="mb-2 w-full rounded-lg border border-slate-200 bg-white p-3 text-left dark:border-slate-800 dark:bg-slate-900"
+              className={`mb-2 w-full rounded-lg border p-3 text-left ${
+                selectedRoom?.id === room.id ? "border-teal-500 bg-teal-50 dark:bg-teal-950/40" : "border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
+              }`}
             >
               <span className="block font-bold text-slate-900 dark:text-slate-100">{room.title}</span>
-              <span className="text-xs text-slate-500 dark:text-slate-400">방장 {room.creatorNickname ?? "알 수 없음"}</span>
+              <span className="mt-1 line-clamp-2 block text-xs leading-5 text-slate-500 dark:text-slate-400">{room.description}</span>
+              <span className="mt-2 inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-200">멤버 {room.memberCount ?? 0}명</span>
+              <span className="mt-2 block text-xs text-slate-500 dark:text-slate-400">방장 {room.creatorNickname ?? "알 수 없음"}</span>
             </button>
           ))}
+          {!loading && hasSearched && results.length === 0 ? (
+            <p className="py-6 text-center text-sm font-bold text-slate-400 dark:text-slate-500">검색 결과가 없습니다.</p>
+          ) : null}
         </div>
 
         {selectedRoom ? (
           <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-900">
             {selectedRoom.isJoined ? (
-              <p className="text-sm font-bold text-slate-700 dark:text-slate-300">이미 참여중인 방입니다.</p>
+              <>
+                <p className="text-sm font-bold text-slate-700 dark:text-slate-300">이미 참여중인 기도방입니다.</p>
+                <button
+                  type="button"
+                  onClick={openJoinedRoom}
+                  className="mt-3 w-full rounded-lg bg-teal-700 px-4 py-3 font-bold text-white"
+                >
+                  들어가기
+                </button>
+              </>
             ) : (
               <>
                 <p className="mb-2 text-sm font-bold text-slate-800 dark:text-slate-200">{selectedRoom.title} 입장</p>
