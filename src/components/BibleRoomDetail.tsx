@@ -3035,7 +3035,7 @@ function SharingReflectionCard({
         </button>
       ) : null}
       <div className="space-y-2">
-        <div className="relative">
+        <div className="relative overflow-hidden">
           <p
             ref={contentMeasureRef}
             aria-hidden="true"
