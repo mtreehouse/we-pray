@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-06-30
+
+### Added
+- Added Bible Room plan-completion status to admin room management and completion badges to finished rooms in the Bible Room list. (`f9af90b`)
+- Added a Bible plan completion celebration card with animated floating decorations. (`a816108`, `f9af90b`, `09be343`)
+- Added five-line collapsing with More/Collapse controls to long Prayer Room posts. (`58d7936`)
+
+### Changed
+- Updated Bible reading and Plan tab defaults to use the final plan date after a plan has ended when no saved reading position exists. (`a816108`)
+- Aligned Prayer Room search results, selection styling, member details, joined-room entry, and Enter-key behavior with Bible Room search. (`f9af90b`)
+
+### Fixed
+- Prevented empty room-search results from appearing before a search is submitted. (`f9af90b`)
+- Prevented hidden full reflection text used for overflow measurement from extending the mobile page height. (`ff1bbd8`)
+
 ## 2026-06-29
 
 ### Added
