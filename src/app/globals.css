@@ -76,10 +76,6 @@ textarea {
 .bible-completion-dot-e { animation: bibleCompletionDriftB 4.9s ease-in-out -0.8s infinite reverse; }
 .bible-completion-dot-f { animation: bibleCompletionDriftC 5.2s ease-in-out -2.7s infinite; }
 
-@media (prefers-reduced-motion: reduce) {
-  .bible-completion-dot { animation: none; }
-}
-
 
 @property --guide-cta-angle {
   syntax: "<angle>";
