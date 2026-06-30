@@ -533,12 +533,44 @@ function PrayerPostCard({
   onSelect: () => void;
   onTogglePrayer: () => void;
 }) {
+  const contentMeasureRef = useRef<HTMLParagraphElement | null>(null);
+  const cardMeasureRef = useRef<HTMLElement | null>(null);
+  const [contentExpanded, setContentExpanded] = useState(false);
+  const [hasCollapsibleContent, setHasCollapsibleContent] = useState(false);
+
+  useEffect(() => {
+    const measure = () => {
+      const measureNode = contentMeasureRef.current;
+      if (!measureNode) return;
+
+      const lineHeight = Number.parseFloat(window.getComputedStyle(measureNode).lineHeight || "0");
+      if (!Number.isFinite(lineHeight) || lineHeight <= 0) return;
+
+      const isOverflowing = measureNode.getBoundingClientRect().height > lineHeight * 5 + 1;
+      setHasCollapsibleContent(isOverflowing);
+      if (!isOverflowing) setContentExpanded(false);
+    };
+
+    measure();
+
+    const observer = new ResizeObserver(measure);
+    if (cardMeasureRef.current) observer.observe(cardMeasureRef.current);
+    window.addEventListener("resize", measure);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [post.content]);
+
   return (
     <article
+      ref={cardMeasureRef}
       role="button"
       tabIndex={0}
       onClick={onSelect}
       onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) return;
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
           onSelect();
@@ -562,7 +594,34 @@ function PrayerPostCard({
             {formatKoreanTime(post.createdAt)}
           </time>
         </div>
-        <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700 dark:text-slate-300">{post.content}</p>
+        <div className="space-y-2">
+          <div className="relative">
+            <p
+              ref={contentMeasureRef}
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-0 top-0 -z-10 invisible whitespace-pre-wrap break-words text-sm leading-6 text-slate-700 dark:text-slate-300"
+            >
+              {post.content}
+            </p>
+            <p className={`whitespace-pre-wrap break-words text-sm leading-6 text-slate-700 dark:text-slate-300 ${contentExpanded ? "" : "line-clamp-5"}`}>
+              {post.content}
+            </p>
+          </div>
+          {hasCollapsibleContent ? (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setContentExpanded((current) => !current);
+                }}
+                className="rounded-full px-2 py-1 text-[11px] font-black text-teal-700 underline decoration-teal-300 underline-offset-2 transition hover:bg-teal-50 dark:text-teal-300 dark:decoration-teal-700/70 dark:hover:bg-teal-950/40"
+              >
+                {contentExpanded ? "접기" : "더보기"}
+              </button>
+            </div>
+          ) : null}
+        </div>
       </div>
       <div className="relative mt-3 flex items-center justify-between gap-3">
         {post.answeredAt ? (
