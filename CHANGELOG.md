@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-07-10
+
+### Added
+- Added Verse Room Bible memorization with user-owned passage cards, Old and New Testament passage selection, mastery tracking, and 50-item cursor pagination. (`9db84d6`)
+- Added full-screen memorization modes for full passage review, verse-by-verse review, blanks, initial-letter hints, per-verse typed recall, similarity scoring, and completion status. (`9db84d6`)
+- Added Prisma models, migration, server data helpers, and APIs for memorization cards, settings, progress updates, verse lookup, deletion, and full progress reset. (`9db84d6`)
+
+### Changed
+- Added incomplete, completed, and all-card filters with incomplete cards selected by default, plus compact card summaries and persisted start dates. (`9db84d6`)
+- Added memorization settings for Bible translation permissions, saved Bible text size, individual card deletion, full progress reset, and complete card deletion. (`9db84d6`)
+- Refined the study interface with text-only hide/show controls for full and verse views, per-verse input clearing, and direct mode selection without sequential navigation controls. (`9db84d6`)
+- Added the Verse Room entry to the main menu and aligned its floating add action with Prayer Room and Bible Room controls. (`9db84d6`)
+
 ## 2026-06-30
 
 ### Added
