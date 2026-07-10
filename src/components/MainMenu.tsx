@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookOpen, HeartHandshake, LogIn, MessageSquareText, Newspaper, Settings } from "lucide-react";
+import { BookMarked, BookOpen, HeartHandshake, LogIn, MessageSquareText, Newspaper, Settings } from "lucide-react";
 import type { UserRole } from "@prisma/client";
 
 type MainMenuProps = {
@@ -60,6 +60,14 @@ export function MainMenu({ isLoggedIn, role }: MainMenuProps) {
           </span>
         </div>
       )}
+
+      <Link href="/verse-room" className={itemClass}>
+        <BookMarked className="text-amber-700 dark:text-amber-300" size={22} />
+        <span>
+          <span className="block font-bold text-slate-900 dark:text-slate-50">Verse Room</span>
+          <span className="text-sm text-slate-500 dark:text-slate-400">성경 암송하기</span>
+        </span>
+      </Link>
 
       <Link href="/pray-news" className={itemClass}>
         <Newspaper className="text-sky-700 dark:text-sky-300" size={22} />

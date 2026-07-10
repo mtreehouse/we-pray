@@ -49,6 +49,12 @@ enum FeedbackStatus {
   CLOSED
 }
 
+enum BibleMemoryMastery {
+  DIFFICULT
+  ALMOST
+  MEMORIZED
+}
+
 model User {
   id                    String       @id @default(cuid())
   provider              AuthProvider
@@ -70,6 +76,9 @@ model User {
   bibleReflections         BibleReflection[]
   bibleReflectionReactions BibleReflectionReaction[]
   bibleProgress            BibleProgress[]
+  bibleMemorySetting       BibleMemorySetting?
+  bibleMemoryCards         BibleMemoryCard[]
+  bibleMemoryProgress      BibleMemoryProgress[]
   feedbacks                Feedback[]
   prayNews                 PrayNews[]
 
@@ -296,6 +305,50 @@ model BibleTranslationSetting {
   sortOrder         Int      @default(0)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+}
+
+model BibleMemorySetting {
+  userId          String   @id
+  translationCode String   @default("ko_krv")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model BibleMemoryCard {
+  id         String   @id @default(cuid())
+  userId     String
+  bookCode   String
+  bookName   String
+  chapter    Int
+  startVerse Int
+  endVerse   Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user     User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  progress BibleMemoryProgress?
+
+  @@unique([userId, bookCode, chapter, startVerse, endVerse])
+  @@index([userId, createdAt])
+  @@index([bookCode, chapter, startVerse, endVerse])
+}
+
+model BibleMemoryProgress {
+  id              String             @id @default(cuid())
+  cardId          String             @unique
+  userId          String
+  mastery         BibleMemoryMastery @default(DIFFICULT)
+  progressPercent Int                @default(0)
+  lastReviewedAt  DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  card BibleMemoryCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  user User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, lastReviewedAt])
 }
 
 model Feedback {
